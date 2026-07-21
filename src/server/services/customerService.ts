@@ -1,10 +1,10 @@
-import { CustomerRepository } from '@/server/repositories';
+﻿import { CustomerRepository } from '@/server/repositories';
 import { z } from 'zod';
 import { CustomerNotFoundError, ValidationError } from './errors';
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Validation Schemas
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const CreateAddressSchema = z.object({
   customerId: z.string().uuid('Invalid customer ID'),
@@ -33,9 +33,9 @@ export const UpdateSettingsSchema = z.object({
 });
 export type UpdateSettingsDTO = z.infer<typeof UpdateSettingsSchema>;
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Service Layer
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export class CustomerService {
   constructor(private readonly customerRepo: CustomerRepository = new CustomerRepository()) {}
@@ -53,6 +53,38 @@ export class CustomerService {
       throw new CustomerNotFoundError(userId);
     }
     return customer;
+  }
+
+  /**
+   * Updates or creates a customer profile.
+   */
+  async upsertProfile(customerId: string, data: { displayName?: string | null }) {
+    if (!customerId) {
+      throw new ValidationError('Customer ID is required');
+    }
+
+    const existing = await this.customerRepo.profiles.findById(customerId);
+    if (existing) {
+      return this.customerRepo.profiles.update(customerId, {
+        displayName: data.displayName,
+        updatedAt: new Date(),
+      } as never);
+    }
+
+    return this.customerRepo.profiles.create({
+      customerId,
+      displayName: data.displayName ?? null,
+    } as never);
+  }
+
+  /**
+   * Removes an address by its ID.
+   */
+  async removeAddress(addressId: string) {
+    if (!addressId) {
+      throw new ValidationError('Address ID is required');
+    }
+    return this.customerRepo.addresses.delete(addressId);
   }
 
   /**

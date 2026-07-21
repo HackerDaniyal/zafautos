@@ -1,13 +1,14 @@
-import { VehicleRepository } from '@/server/repositories';
+﻿import { VehicleRepository } from '@/server/repositories';
 import { z } from 'zod';
 import {
   ValidationError,
   VehicleNotFoundError,
 } from './errors';
+import { uploadFile, STORAGE_BUCKETS } from '@/lib/supabase/storage';
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Validation Schemas
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const CreateVehicleSchema = z.object({
   vin: z.string().optional().nullable(),
@@ -40,9 +41,9 @@ export type CreateVehicleDTO = z.infer<typeof CreateVehicleSchema>;
 export const UpdateVehicleSchema = CreateVehicleSchema.partial();
 export type UpdateVehicleDTO = z.infer<typeof UpdateVehicleSchema>;
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Service Layer
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export class VehicleService {
   constructor(private readonly vehicleRepo: VehicleRepository = new VehicleRepository()) {}
@@ -155,5 +156,58 @@ export class VehicleService {
     }
 
     return this.vehicleRepo.delete(id);
+  }
+
+  /**
+   * Adds an image record for a vehicle.
+   */
+  async addVehicleImage(vehicleId: string, imageUrl: string, sortOrder: number = 0) {
+    if (!vehicleId) {
+      throw new ValidationError('Vehicle ID is required');
+    }
+    if (!imageUrl) {
+      throw new ValidationError('Image URL is required');
+    }
+
+    const existingVehicle = await this.vehicleRepo.findById(vehicleId);
+    if (!existingVehicle) {
+      throw new VehicleNotFoundError(vehicleId);
+    }
+
+    return this.vehicleRepo.addImage(vehicleId, imageUrl, sortOrder);
+  }
+
+  /**
+   * Uploads vehicle images and creates DB records.
+   */
+  async uploadImages(vehicleId: string, files: File[]): Promise<string[]> {
+    if (!vehicleId) {
+      throw new ValidationError('Vehicle ID is required');
+    }
+    if (!files || files.length === 0) {
+      throw new ValidationError('At least one image is required');
+    }
+
+    const existingVehicle = await this.vehicleRepo.findById(vehicleId);
+    if (!existingVehicle) {
+      throw new VehicleNotFoundError(vehicleId);
+    }
+
+    const uploadedPaths: string[] = [];
+
+    for (const file of files) {
+      const ext = file.name.split('.').pop() ?? 'jpg';
+      const path = `${vehicleId}/${crypto.randomUUID()}.${ext}`;
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const result = await uploadFile(STORAGE_BUCKETS.VEHICLE_IMAGES, path, buffer, {
+        contentType: file.type,
+      });
+
+      await this.vehicleRepo.addImage(vehicleId, result.path, uploadedPaths.length);
+      uploadedPaths.push(result.path);
+    }
+
+    return uploadedPaths;
   }
 }

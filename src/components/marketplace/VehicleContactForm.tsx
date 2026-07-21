@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { Send, Phone, Mail, MessageSquare } from 'lucide-react';
@@ -51,12 +51,12 @@ export function VehicleContactForm({ vehicleTitle, className, onSubmit }: Vehicl
 
   if (status === 'success') {
     return (
-      <div className={cn('rounded-xl border border-border bg-card p-6 text-center space-y-2', className)}>
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-          <Send className="h-5 w-5 text-green-600 dark:text-green-400" />
+      <div className={cn('rounded-[10px] border border-iron bg-carbon p-6 text-center space-y-2', className)}>
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-900/30">
+          <Send className="h-5 w-5 text-green-400" />
         </div>
-        <h3 className="font-semibold text-base">Enquiry Sent!</h3>
-        <p className="text-sm text-muted-foreground">We&apos;ll get back to you within 24 hours.</p>
+        <h3 className="font-[Oswald] font-bold uppercase tracking-wider text-base text-pure-white">Enquiry Sent!</h3>
+        <p className="text-sm text-ash">We&apos;ll get back to you within 24 hours.</p>
         <Button variant="outline" size="sm" onClick={() => setStatus('idle')} className="mt-2">
           Send Another
         </Button>
@@ -65,13 +65,13 @@ export function VehicleContactForm({ vehicleTitle, className, onSubmit }: Vehicl
   }
 
   return (
-    <section className={cn('rounded-xl border border-border bg-card p-5 space-y-4', className)}>
+    <section id="enquiry-form" className={cn('rounded-[10px] border border-iron bg-carbon p-5 space-y-4', className)}>
       <div className="space-y-1">
-        <h2 className="text-base font-semibold flex items-center gap-2">
-          <MessageSquare className="h-4 w-4 text-primary" />
+        <h2 className="font-[Oswald] text-base font-bold uppercase tracking-wider text-pure-white flex items-center gap-2">
+          <MessageSquare className="h-4 w-4 text-signal-red" />
           Send an Enquiry
         </h2>
-        <p className="text-xs text-muted-foreground">Our team typically responds within a few hours.</p>
+        <p className="text-xs text-ash">Our team typically responds within a few hours.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3" noValidate>
@@ -126,11 +126,11 @@ export function VehicleContactForm({ vehicleTitle, className, onSubmit }: Vehicl
           <textarea
             id="contact-message"
             rows={4}
-            placeholder="Tell us what you are looking for…"
+            placeholder="Tell us what you are looking forâ€¦"
             value={values.message}
             onChange={set('message')}
             required
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+            className="w-full rounded-[6px] border border-iron bg-deep-carbon px-3 py-2 text-sm text-pure-white placeholder:text-steel focus:outline-none focus:border-steel/50 resize-none"
           />
         </div>
 
@@ -146,7 +146,7 @@ export function VehicleContactForm({ vehicleTitle, className, onSubmit }: Vehicl
           {status === 'loading' ? (
             <span className="flex items-center gap-2">
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              Sending…
+              Sendingâ€¦
             </span>
           ) : (
             <span className="flex items-center gap-2">

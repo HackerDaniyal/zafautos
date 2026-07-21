@@ -1,8 +1,7 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { requireAuth, getCurrentUser } from './session';
 import type { AuthContext } from './types';
-import type { RequestContext } from '@/lib/api/errorHandler';
-import { withErrorHandler } from '@/lib/api/errorHandler';
+import { type RequestContext, withErrorHandler } from '@/lib/api/errorHandler';
 import { apiError } from '@/lib/api/response';
 import { DomainError } from '@/server/services/errors';
 import { ZodError } from 'zod';
@@ -22,7 +21,7 @@ export type OptionalAuthRequestHandler = (
 
 /**
  * Wraps a route handler with session resolution and error handling.
- * Requires a valid Supabase session — throws UnauthorizedError (401) if absent.
+ * Requires a valid Supabase session â€” throws UnauthorizedError (401) if absent.
  *
  * Usage:
  * ```ts
@@ -76,7 +75,7 @@ export function withAuth(handler: AuthedRequestHandler) {
 
 /**
  * Same as `withAuth` but does NOT require a session.
- * Injects `AuthContext | null` — null for unauthenticated/guest users.
+ * Injects `AuthContext | null` â€” null for unauthenticated/guest users.
  *
  * Usage:
  * ```ts

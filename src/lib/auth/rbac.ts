@@ -1,8 +1,8 @@
-import { UnauthorizedError } from '@/server/services/errors';
+﻿import { UnauthorizedError } from '@/server/services/errors';
 import type { AuthContext, UserRole } from './types';
 
 /**
- * Role hierarchy — higher index = more privileges.
+ * Role hierarchy â€” higher index = more privileges.
  * Used for `hasMinRole()` checks.
  */
 const ROLE_HIERARCHY: UserRole[] = [
@@ -12,9 +12,9 @@ const ROLE_HIERARCHY: UserRole[] = [
   'super_admin',
 ];
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Boolean helpers
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Returns true if the user has one of the specified roles.
@@ -38,9 +38,9 @@ export function hasMinRole(
   return userIndex >= minIndex;
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Throwing guards
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Throws UnauthorizedError if the user does NOT have one of the specified roles.
@@ -71,7 +71,7 @@ export function requireMinRole(
 }
 
 /**
- * TODO: Phase 6 — Implement granular permission checks against the database.
+ * TODO: Phase 6 â€” Implement granular permission checks against the database.
  *
  * Currently a placeholder. In Phase 6, this will:
  * 1. Load the user's role permissions from `role_permissions` + `permissions` tables.

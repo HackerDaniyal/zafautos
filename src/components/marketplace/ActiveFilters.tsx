@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { X, SlidersHorizontal } from 'lucide-react';
@@ -24,13 +24,13 @@ function buildFilterChips(filters: Partial<FilterState>) {
 
   if (filters.priceRange) {
     chips.push({
-      label: `$${filters.priceRange[0].toLocaleString()} – $${filters.priceRange[1].toLocaleString()}`,
+      label: `$${filters.priceRange[0].toLocaleString()} â€“ $${filters.priceRange[1].toLocaleString()}`,
       key: 'priceRange',
     });
   }
   if (filters.yearRange) {
     chips.push({
-      label: `${filters.yearRange[0]} – ${filters.yearRange[1]}`,
+      label: `${filters.yearRange[0]} â€“ ${filters.yearRange[1]}`,
       key: 'yearRange',
     });
   }
@@ -51,7 +51,7 @@ export function ActiveFilters({ filters, onRemove, onClearAll, className }: Acti
 
   return (
     <div className={cn('flex flex-wrap items-center gap-2', className)}>
-      <span className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium shrink-0">
+      <span className="flex items-center gap-1.5 text-xs text-steel font-medium shrink-0">
         <SlidersHorizontal className="h-3.5 w-3.5" />
         Active Filters:
       </span>
@@ -67,7 +67,7 @@ export function ActiveFilters({ filters, onRemove, onClearAll, className }: Acti
             type="button"
             aria-label={`Remove filter: ${chip.label}`}
             onClick={() => onRemove(chip.key, chip.value)}
-            className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
+            className="ml-0.5 rounded-full p-0.5 hover:bg-steel/20 transition-colors"
           >
             <X className="h-3 w-3" />
           </button>
@@ -78,7 +78,7 @@ export function ActiveFilters({ filters, onRemove, onClearAll, className }: Acti
         variant="ghost"
         size="sm"
         onClick={onClearAll}
-        className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+        className="h-6 px-2 text-xs text-steel hover:text-pure-white hover:bg-transparent"
       >
         Clear all
       </Button>

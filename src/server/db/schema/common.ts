@@ -1,4 +1,4 @@
-import { pgEnum } from 'drizzle-orm/pg-core';
+﻿import { pgEnum } from 'drizzle-orm/pg-core';
 
 export const userRoleEnum = pgEnum('user_role_enum', ['customer', 'dealer', 'admin', 'super_admin']);
 export const vehicleStatusEnum = pgEnum('vehicle_status_enum', ['draft', 'active', 'sold', 'archived']);

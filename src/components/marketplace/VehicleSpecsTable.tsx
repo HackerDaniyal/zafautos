@@ -1,5 +1,5 @@
-import React from 'react';
-import { cn } from '@/lib/utils';
+﻿import React from 'react';
+import { cn, formatMileage } from '@/lib/utils';
 
 export interface VehicleSpecs {
   make?: string;
@@ -29,11 +29,11 @@ interface SpecRowProps {
 
 function SpecRow({ label, value }: SpecRowProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-1 py-3 border-b border-border/50 last:border-0">
-      <dt className="w-full sm:w-40 text-xs font-medium text-muted-foreground uppercase tracking-wide shrink-0">
+    <div className="flex items-center gap-4 py-2.5 border-b border-iron/30 last:border-0">
+      <dt className="w-32 shrink-0 text-[11px] font-medium text-[#6E6E6E] uppercase tracking-[0.08em]">
         {label}
       </dt>
-      <dd className="text-sm font-medium text-foreground">{value}</dd>
+      <dd className="text-[13px] font-medium text-white">{value}</dd>
     </div>
   );
 }
@@ -71,16 +71,16 @@ export function VehicleSpecsTable({ specs, className }: VehicleSpecsTableProps) 
   if (entries.length === 0) return null;
 
   return (
-    <section className={cn('rounded-xl border border-border bg-card p-4', className)}>
-      <h2 className="text-base font-semibold mb-2">Vehicle Specifications</h2>
-      <dl className="divide-y divide-border/50">
+    <section className={cn('rounded-[10px] border border-iron bg-carbon p-4', className)}>
+      <h2 className="font-[Oswald] text-base font-bold uppercase tracking-wider text-pure-white mb-2">Vehicle Specifications</h2>
+      <dl className="divide-y divide-iron/50">
         {entries.map(([key, value]) => (
           <SpecRow
             key={key}
             label={SPEC_LABELS[key] ?? key}
             value={
               key === 'mileage' && typeof value === 'number'
-                ? `${value.toLocaleString()} km`
+                ? `${formatMileage(value)} km`
                 : String(value)
             }
           />

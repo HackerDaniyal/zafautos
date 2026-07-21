@@ -1,4 +1,4 @@
-import { type ClassValue, clsx } from 'clsx';
+﻿import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 /**
@@ -27,21 +27,15 @@ export function formatPrice(
 }
 
 /**
- * Generates a URL-friendly slug from a string.
+ * Formats mileage in kilometers with comma separators.
  */
-export function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+export function formatMileage(km: number): string {
+  return km.toLocaleString('en-US');
 }
 
 /**
- * Delays execution for the specified number of milliseconds.
- * Useful for debouncing and testing loading states.
+ * Generates a placeholder image URL for a vehicle.
  */
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+export function vehiclePlaceholderImage(make: string, model: string, year: number): string {
+  return `https://placehold.co/800x500/1A1A1A/E5231B?text=${encodeURIComponent(`${year}\n${make}\n${model}`)}`;
 }

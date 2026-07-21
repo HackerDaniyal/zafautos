@@ -1,8 +1,9 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { Scale, X, Trash2, ChevronDown, ChevronUp, Check } from 'lucide-react';
-import { placeholderVehicles, type VehicleCardData } from '@/components/marketplace/VehicleCard';
+import { type VehicleCardData } from '@/components/marketplace/VehicleCard';
+import { placeholderVehicles } from '@/data/placeholderVehicles';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SectionWrapper, PageHeader } from '@/components/layout/ResponsiveLayout';
@@ -10,11 +11,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type CompareVehicle = VehicleCardData;
 
-// ─── Spec row used in comparison table ──────────────────────────────────────
+// â”€â”€â”€ Spec row used in comparison table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const SPEC_KEYS: { label: string; key: keyof VehicleCardData; format?: (v: string | number | boolean | undefined) => string }[] = [
   { label: 'Year', key: 'year' },
@@ -35,7 +36,7 @@ const SPEC_KEYS: { label: string; key: keyof VehicleCardData; format?: (v: strin
   { label: 'Condition', key: 'condition' },
 ];
 
-// ─── Vehicle Picker ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Vehicle Picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface VehiclePickerProps {
   onSelect: (vehicle: CompareVehicle) => void;
@@ -78,7 +79,7 @@ function VehiclePicker({ onSelect, excluded }: VehiclePickerProps) {
           <div className="p-3 border-b border-border/50 bg-muted/30">
             <input
               type="text"
-              placeholder="Search vehicles to compare…"
+              placeholder="Search vehicles to compareâ€¦"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               autoFocus
@@ -113,7 +114,7 @@ function VehiclePicker({ onSelect, excluded }: VehiclePickerProps) {
   );
 }
 
-// ─── Compare Column Header ────────────────────────────────────────────────────
+// â”€â”€â”€ Compare Column Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface CompareColumnProps {
   vehicle: CompareVehicle;
@@ -157,7 +158,7 @@ function CompareColumn({ vehicle, onRemove }: CompareColumnProps) {
   );
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const MAX_COMPARE = 4;
 
@@ -252,7 +253,7 @@ export default function ComparePage() {
                         </th>
                         {selected.map((v) => {
                           const raw = v[key];
-                          const display = format ? format(raw) : String(raw ?? '—');
+                          const display = format ? format(raw) : String(raw ?? 'â€”');
                           return (
                             <td
                               key={v.id}

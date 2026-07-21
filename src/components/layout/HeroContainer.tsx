@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { cn } from '@/lib/utils';
 import { MainContainer } from './MainContainer';
 
@@ -18,24 +18,26 @@ export function HeroContainer({
   ...props
 }: HeroContainerProps) {
   return (
-    <div className={cn("relative overflow-hidden bg-background py-20 md:py-32", className)} {...props}>
+    <div className={cn("relative overflow-hidden bg-race-black py-24 md:py-32 lg:py-40", className)} {...props}>
       {backgroundSlot && (
-        <div className="absolute inset-0 z-0 opacity-20 md:opacity-50 pointer-events-none">
+        <div className="absolute inset-0 z-0">
           {backgroundSlot}
         </div>
       )}
+      {/* Dark vignette overlay */}
+      <div className="absolute inset-0 z-[1] bg-gradient-to-t from-race-black via-race-black/60 to-race-black/30" />
       <MainContainer className="relative z-10">
         <div className="flex max-w-[800px] flex-col items-start gap-6">
-          <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+          <h1 className="font-[Oswald] text-5xl font-bold uppercase leading-[0.95] tracking-[0.5px] text-pure-white sm:text-6xl md:text-7xl lg:text-[72px]">
             {title}
           </h1>
           {subtitle && (
-            <p className="max-w-[600px] text-lg text-muted-foreground sm:text-xl">
+            <p className="max-w-[600px] text-lg leading-relaxed text-smoke sm:text-xl">
               {subtitle}
             </p>
           )}
           {actions && (
-            <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center mt-4">
+            <div className="mt-4 flex w-full flex-col gap-4 sm:flex-row sm:items-center">
               {actions}
             </div>
           )}

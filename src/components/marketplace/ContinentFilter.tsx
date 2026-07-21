@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import {
@@ -6,6 +8,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { placeholderCountries } from '@/data/placeholderCountries';
 
 export interface Country {
   code: string;
@@ -20,118 +23,138 @@ export interface Continent {
   countries: Country[];
 }
 
-const defaultContinents: Continent[] = [
-  {
-    id: 'africa',
-    name: 'Africa',
-    countries: [
-      { code: 'gh', name: 'Ghana', flag: '🇬🇭', count: 124 },
-      { code: 'ng', name: 'Nigeria', flag: '🇳🇬', count: 342 },
-      { code: 'ke', name: 'Kenya', flag: '🇰🇪', count: 89 },
-      { code: 'ug', name: 'Uganda', flag: '🇺🇬', count: 56 },
-    ],
-  },
-  {
-    id: 'europe',
-    name: 'Europe',
-    countries: [
-      { code: 'uk', name: 'England', flag: '🇬🇧', count: 45 },
-      { code: 'de', name: 'Germany', flag: '🇩🇪', count: 23 },
-      { code: 'ie', name: 'Ireland', flag: '🇮🇪', count: 78 },
-      { code: 'nl', name: 'Netherlands', flag: '🇳🇱', count: 12 },
-    ],
-  },
-  {
-    id: 'asia',
-    name: 'Asia',
-    countries: [
-      { code: 'jp', name: 'Japan', flag: '🇯🇵', count: 1205 },
-      { code: 'pk', name: 'Pakistan', flag: '🇵🇰', count: 430 },
-      { code: 'ae', name: 'UAE', flag: '🇦🇪', count: 156 },
-      { code: 'sa', name: 'Saudi Arabia', flag: '🇸🇦', count: 88 },
-    ],
-  },
-  {
-    id: 'america',
-    name: 'America',
-    countries: [
-      { code: 'us', name: 'USA', flag: '🇺🇸', count: 45 },
-      { code: 'ca', name: 'Canada', flag: '🇨🇦', count: 21 },
-    ],
-  },
-  {
-    id: 'oceania',
-    name: 'Oceania',
-    countries: [
-      { code: 'au', name: 'Australia', flag: '🇦🇺', count: 234 },
-      { code: 'nz', name: 'New Zealand', flag: '🇳🇿', count: 187 },
-    ],
-  },
-];
-
 interface ContinentFilterProps {
   continents?: Continent[];
   selectedCountry?: string;
   onCountrySelect?: (countryCode: string) => void;
   className?: string;
+  variant?: 'default' | 'sidebar';
 }
 
 export function ContinentFilter({
-  continents = defaultContinents,
+  continents = placeholderCountries,
   selectedCountry,
   onCountrySelect,
   className,
+  variant = 'default',
 }: ContinentFilterProps) {
   const [activeCountry, setActiveCountry] = useState<string | undefined>(selectedCountry);
 
   const handleSelect = (code: string) => {
     const newSelected = activeCountry === code ? undefined : code;
     setActiveCountry(newSelected);
-    if (onCountrySelect && newSelected) {
-      onCountrySelect(newSelected);
+    if (onCountrySelect) {
+      onCountrySelect(newSelected || '');
     }
   };
 
+  const isSidebar = variant === 'sidebar';
+
   return (
-    <div className={cn("w-full", className)}>
-      <Accordion type="single" collapsible className="w-full bg-card rounded-lg border">
-        {continents.map((continent) => (
-          <AccordionItem key={continent.id} value={continent.id} className="border-b last:border-none px-4">
-            <AccordionTrigger className="font-semibold text-lg hover:no-underline py-4">
-              {continent.name}
-            </AccordionTrigger>
-            <AccordionContent className="pb-4">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                {continent.countries.map((country) => {
-                  const isActive = activeCountry === country.code;
-                  return (
-                    <button
-                      key={country.code}
-                      onClick={() => handleSelect(country.code)}
-                      className={cn(
-                        "flex items-center justify-between p-3 rounded-md border text-left transition-colors hover:shadow-sm",
-                        isActive
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "border-border bg-background text-card-foreground hover:border-primary/50"
-                      )}
-                    >
-                      <div className="flex items-center space-x-2 truncate">
-                        <span className="text-xl shrink-0">{country.flag}</span>
-                        <span className="text-sm font-medium truncate">{country.name}</span>
-                      </div>
-                      <span className={cn(
-                        "ml-2 shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold",
-                        isActive ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                      )}>
-                        {country.count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        ))}
+    <div className={cn('w-full', className)}>
+      <Accordion
+        type="single"
+        collapsible
+        className={cn(
+          'w-full',
+          isSidebar ? 'flex flex-col gap-1' : 'rounded-[6px] border border-iron bg-carbon'
+        )}
+      >
+        {continents.map((continent) => {
+          const totalCount = continent.countries.reduce(
+            (sum, c) => sum + c.count,
+            0
+          );
+
+          return (
+            <AccordionItem
+              key={continent.id}
+              value={continent.id}
+              className={cn(
+                isSidebar
+                  ? 'rounded-[6px] border border-[#222222] bg-[#111111] px-2.5 overflow-hidden'
+                  : 'border-b border-iron/50 last:border-none px-3'
+              )}
+            >
+              <AccordionTrigger
+                className={cn(
+                  'font-[Oswald] uppercase tracking-wide hover:no-underline hover:text-[#E5231B] transition-colors',
+                  isSidebar ? 'py-2 text-[10px] tracking-[0.12em]' : 'py-3 text-lg'
+                )}
+              >
+                <div className="flex items-center justify-between w-full pr-2">
+                  <span className={cn(isSidebar && 'text-[#9A9A9A]')}>
+                    {continent.name}
+                  </span>
+                  <span
+                    className={cn(
+                      'text-[9px] font-sans tracking-normal font-semibold rounded-[3px] border',
+                      isSidebar
+                        ? 'text-[#5A5A5A] bg-[#0E0E0E] border-[#222222] px-1.5 py-[1px]'
+                        : 'text-steel bg-deep-carbon px-2 py-0.5 border-iron/50'
+                    )}
+                  >
+                    {totalCount}
+                  </span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className={cn(isSidebar ? 'pb-2 pt-1' : 'pb-3 pt-1')}>
+                <div
+                  className={cn(
+                    'grid gap-1.5 pr-1',
+                    isSidebar
+                      ? 'grid-cols-1 max-h-[200px] overflow-y-auto scrollbar-thin'
+                      : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6'
+                  )}
+                >
+                  {continent.countries.map((country) => {
+                    const isActive = activeCountry === country.code;
+                    return (
+                      <button
+                        key={country.code}
+                        onClick={() => handleSelect(country.code)}
+                        className={cn(
+                          'flex items-center justify-between rounded-[4px] border text-left transition-all duration-150',
+                          isSidebar ? 'p-[7px] px-2' : 'p-2',
+                          isActive
+                            ? 'border-[#E5231B]/40 bg-[#E5231B]/[0.08] text-[#FFFFFF]'
+                            : 'border-transparent bg-[#0E0E0E] hover:border-[#2A2A2A] hover:bg-[#141414] text-[#9A9A9A]'
+                        )}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <span className={cn(isSidebar ? 'text-base' : 'text-lg')}>
+                            {country.flag}
+                          </span>
+                          <span
+                            className={cn(
+                              'font-medium truncate',
+                              isSidebar ? 'text-[10px]' : 'text-xs'
+                            )}
+                          >
+                            {country.name}
+                          </span>
+                        </div>
+                        <span
+                          className={cn(
+                            'ml-2 shrink-0 rounded-[3px] font-semibold',
+                            isSidebar
+                              ? 'px-1.5 py-[1px] text-[8px]'
+                              : 'rounded-full px-1.5 py-0.5 text-[10px]',
+                            isActive
+                              ? 'bg-[#E5231B]/15 text-[#E5231B]'
+                              : 'text-[#5A5A5A]'
+                          )}
+                        >
+                          {country.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          );
+        })}
       </Accordion>
     </div>
   );

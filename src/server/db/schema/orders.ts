@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+﻿import { index, integer, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 import { orderStatusEnum } from './common';
 import { customers } from './customers';
 import { dealers } from './dealers';

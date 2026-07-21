@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm';
+﻿import { relations } from 'drizzle-orm';
 import { analyticsEvents, pageViews, searchHistory } from './analytics';
 import { permissions, profiles, rolePermissions, roles, sessions, users } from './auth';
 import { customerAddresses, customerAlerts, customerProfiles, customers, customerSettings, customerWishlist } from './customers';

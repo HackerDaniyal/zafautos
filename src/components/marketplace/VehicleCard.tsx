@@ -1,11 +1,11 @@
+"use client";
+
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, Scale, Fuel, Gauge, Calendar, MapPin, Share2, Camera, Ship } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { cn, formatPrice, formatMileage } from '@/lib/utils';
 
 export interface VehicleCardData {
   id: string;
@@ -21,6 +21,7 @@ export interface VehicleCardData {
   bodyType: string;
   location: string;
   condition: string;
+  destinationCountry?: string;
   isFeatured?: boolean;
   isReserved?: boolean;
   imageUrl?: string;
@@ -65,324 +66,254 @@ export function VehicleCard({
 
   const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
-    // In a real app, this might open a share dialog or use navigator.share
-    console.log('Share clicked for', vehicle.id);
   };
 
-  const priceFormatted = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: vehicle.currency,
-    maximumFractionDigits: 0,
-  }).format(vehicle.price);
+  const priceFormatted = formatPrice(vehicle.price, vehicle.currency);
 
   if (variant === 'list') {
     return (
-      <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+      <div className="group overflow-hidden rounded-[10px] border border-iron bg-carbon transition-all duration-300 hover:border-steel/30">
         <div className="flex flex-col sm:flex-row h-full">
-          <Link href={`/vehicles/${vehicle.slug}`} className="relative shrink-0 sm:w-64 xl:w-72 block overflow-hidden group">
-            <div className="aspect-[4/3] sm:aspect-auto sm:h-full bg-muted flex items-center justify-center text-muted-foreground text-sm relative">
+          <Link href={`/vehicles/${vehicle.slug}`} className="relative shrink-0 sm:w-64 xl:w-72 block overflow-hidden">
+            <div className="aspect-[16/10] sm:aspect-auto sm:h-full bg-deep-carbon flex items-center justify-center text-steel text-sm relative">
               {vehicle.imageUrl ? (
-                <Image 
-                  src={vehicle.imageUrl} 
-                  alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} 
-                  fill 
-                  unoptimized 
-                  className="object-cover transition-transform duration-500 group-hover:scale-110" 
+                <Image
+                  src={vehicle.imageUrl}
+                  alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                  fill
+                  unoptimized
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center gap-2">
                   <Camera className="h-8 w-8 opacity-20" />
-                  <span>No Photo</span>
+                  <span className="text-xs uppercase tracking-wider">No Photo</span>
                 </div>
               )}
-              {/* Image Count Indicator */}
               {vehicle.imageCount && vehicle.imageCount > 0 && (
-                <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm z-10">
+                <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded bg-race-black/80 px-2 py-1 text-[10px] font-medium text-pure-white backdrop-blur-sm z-10">
                   <Camera className="h-3 w-3" />
                   {vehicle.imageCount}
                 </div>
               )}
             </div>
-            
-            {/* Badges Top Left */}
-            <div className="absolute left-2 top-2 flex flex-col gap-1.5 items-start z-10">
+            <div className="absolute left-2 top-2 flex flex-col gap-1 items-start z-10">
               {vehicle.isFeatured && (
-                <Badge className="bg-amber-500 hover:bg-amber-600 text-white shadow-sm border-none shadow-amber-900/20">Featured</Badge>
+                <span className="badge-auction">Featured</span>
               )}
               {vehicle.recentlyAdded && (
-                <Badge className="bg-green-600 hover:bg-green-700 text-white shadow-sm border-none shadow-green-900/20">New Arrival</Badge>
+                <span className="badge-available">New</span>
               )}
             </div>
-
-            {/* Badges Top Right */}
             {vehicle.isReserved && (
-              <Badge variant="secondary" className="absolute right-2 top-2 bg-red-100 text-red-700 hover:bg-red-200 border-none shadow-sm z-10">Reserved</Badge>
+              <span className="absolute right-2 top-2 badge-sold">Reserved</span>
             )}
           </Link>
-          
+
           <div className="flex flex-1 flex-col justify-between">
-            <CardContent className="p-4 sm:p-5">
+            <div className="p-4 sm:p-5">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground mb-1">
-                    {vehicle.stockId && <span>Ref: {vehicle.stockId}</span>}
-                    {vehicle.stockId && <span className="w-1 h-1 rounded-full bg-muted-foreground/30"></span>}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {vehicle.stockId && (
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-steel">{vehicle.stockId}</span>
+                    )}
                     <span className={cn(
-                      "font-medium",
-                      vehicle.condition.includes('Grade S') || vehicle.condition.includes('Grade 5') ? "text-amber-600" : ""
+                      "text-[11px] font-medium uppercase tracking-wider",
+                      vehicle.condition.includes('Grade S') ? "text-auction-amber" : "text-ash"
                     )}>{vehicle.condition}</span>
                   </div>
-                  
-                  <Link href={`/vehicles/${vehicle.slug}`} className="hover:text-primary transition-colors inline-block group-hover:text-primary">
-                    <h3 className="font-bold text-lg leading-tight text-foreground">
+                  <Link href={`/vehicles/${vehicle.slug}`} className="group/title">
+                    <h3 className="font-[Oswald] text-lg font-bold uppercase tracking-[0.3px] text-pure-white group-hover/title:text-signal-red transition-colors">
                       {vehicle.year} {vehicle.make} {vehicle.model}
                     </h3>
                   </Link>
                 </div>
-                
-                <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-1 shrink-0">
-                  <div className="flex flex-col items-start sm:items-end">
-                    <p className="text-2xl font-bold text-primary leading-none">{priceFormatted}</p>
-                    {vehicle.fobPrice && <span className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider mt-1">FOB Price</span>}
-                  </div>
+                <div className="shrink-0">
+                  <p className="price-tag">{priceFormatted}</p>
+                  {vehicle.fobPrice && <span className="text-[10px] uppercase font-medium text-steel tracking-wider">FOB Price</span>}
                 </div>
               </div>
 
               {vehicle.arrivalEstimate && (
-                <div className="mt-3 flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50/50 w-fit px-2 py-1 rounded-md border border-blue-100">
-                  <Ship className="h-3.5 w-3.5" />
-                  <span>Est. Arrival: <span className="font-semibold">{vehicle.arrivalEstimate}</span></span>
+                <div className="mt-3 flex items-center gap-1.5 text-[11px] text-chrome-silver bg-iron/50 w-fit px-2 py-1 rounded">
+                  <Ship className="h-3 w-3" />
+                  <span>Est. Arrival: <span className="font-medium text-pure-white">{vehicle.arrivalEstimate}</span></span>
                 </div>
               )}
 
-              <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <Gauge className="h-4 w-4 shrink-0 opacity-70" />
-                  <span className="font-medium text-foreground">{vehicle.mileage.toLocaleString()} km</span>
+              <div className="mt-4 border-t border-iron pt-3 grid grid-cols-2 gap-x-6 gap-y-2">
+                <div className="flex items-center gap-2">
+                  <Gauge className="h-3.5 w-3.5 shrink-0 text-[#5A5A5A]" />
+                  <span className="text-[10px] uppercase tracking-wider text-[#6E6E6E]">Mileage</span>
+                  <span className="text-[11px] font-medium text-white">{formatMileage(vehicle.mileage)} km</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Fuel className="h-4 w-4 shrink-0 opacity-70" />
-                  <span className="font-medium text-foreground">{vehicle.fuelType}</span>
+                <div className="flex items-center gap-2">
+                  <Fuel className="h-3.5 w-3.5 shrink-0 text-[#5A5A5A]" />
+                  <span className="text-[10px] uppercase tracking-wider text-[#6E6E6E]">Fuel</span>
+                  <span className="text-[11px] font-medium text-white">{vehicle.fuelType}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4 shrink-0 opacity-70" />
-                  <span className="font-medium text-foreground">{vehicle.year}</span>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-3.5 w-3.5 shrink-0 text-[#5A5A5A]" />
+                  <span className="text-[10px] uppercase tracking-wider text-[#6E6E6E]">Year</span>
+                  <span className="text-[11px] font-medium text-white">{vehicle.year}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="h-4 w-4 shrink-0 opacity-70" />
-                  <span className="font-medium text-foreground truncate max-w-[120px]">{vehicle.location}</span>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-[#5A5A5A]" />
+                  <span className="text-[10px] uppercase tracking-wider text-[#6E6E6E]">Location</span>
+                  <span className="text-[11px] font-medium text-white truncate">{vehicle.location}</span>
                 </div>
               </div>
-            </CardContent>
-            
-            <CardFooter className="border-t bg-muted/10 p-3 sm:px-5 flex items-center justify-between gap-3">
-              <div className="flex gap-1.5">
-                <Button
-                  variant="ghost"
-                  size="icon"
+            </div>
+
+            <div className="border-t border-iron p-3 sm:px-5 flex items-center justify-between">
+              <div className="flex gap-1">
+                <button
                   onClick={handleWishlist}
                   className={cn(
-                    'h-8 w-8 rounded-full transition-colors',
-                    wishlisted ? 'text-red-500 hover:text-red-600 hover:bg-red-50' : 'text-muted-foreground hover:text-red-500 hover:bg-red-50'
+                    'flex h-8 w-8 items-center justify-center rounded transition-colors',
+                    wishlisted ? 'text-signal-red' : 'text-steel hover:text-pure-white'
                   )}
                   title="Add to wishlist"
                 >
                   <Heart className={cn('h-4 w-4', wishlisted && 'fill-current')} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
+                </button>
+                <button
                   onClick={handleCompare}
                   className={cn(
-                    'h-8 w-8 rounded-full transition-colors',
-                    compared ? 'text-primary hover:bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-primary/10'
+                    'flex h-8 w-8 items-center justify-center rounded transition-colors',
+                    compared ? 'text-signal-red' : 'text-steel hover:text-pure-white'
                   )}
                   title="Compare"
                 >
                   <Scale className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
+                </button>
+                <button
                   onClick={handleShare}
-                  className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
+                  className="flex h-8 w-8 items-center justify-center rounded text-steel hover:text-pure-white transition-colors"
                   title="Share"
                 >
                   <Share2 className="h-4 w-4" />
-                </Button>
+                </button>
               </div>
-              <Button asChild size="sm" className="shrink-0 font-medium px-6 shadow-sm hover:shadow">
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="shrink-0 border-iron text-pure-white hover:bg-white/5 hover:border-pure-white rounded-[6px] px-5 py-2 text-xs font-medium uppercase tracking-wider"
+              >
                 <Link href={`/vehicles/${vehicle.slug}`}>View Details</Link>
               </Button>
-            </CardFooter>
+            </div>
           </div>
         </div>
-      </Card>
+      </div>
     );
   }
 
   // Grid variant
   return (
-    <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group flex flex-col h-full border-border/60">
+    <div className="group overflow-hidden rounded-[10px] border border-iron bg-carbon transition-all duration-300 hover:border-steel/30 flex flex-col h-full">
       <Link href={`/vehicles/${vehicle.slug}`} className="relative block shrink-0 overflow-hidden">
-        <div className="aspect-[4/3] bg-muted flex items-center justify-center text-muted-foreground text-sm relative">
+        <div className="aspect-[16/10] bg-deep-carbon flex items-center justify-center text-steel text-sm relative">
           {vehicle.imageUrl ? (
             <Image
               src={vehicle.imageUrl}
               alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
               fill
               unoptimized
-              className="object-cover transition-transform duration-700 group-hover:scale-110"
+              className="object-cover transition-transform duration-700 group-hover:scale-105"
             />
           ) : (
             <div className="flex flex-col items-center justify-center gap-2">
               <Camera className="h-8 w-8 opacity-20" />
-              <span>No Photo</span>
-            </div>
-          )}
-          
-          {/* Overlay gradient for better text readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10" />
-          
-          {/* Image Count Indicator */}
-          {vehicle.imageCount && vehicle.imageCount > 0 && (
-            <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm z-20">
-              <Camera className="h-3 w-3" />
-              {vehicle.imageCount}
+              <span className="text-xs uppercase tracking-wider">No Photo</span>
             </div>
           )}
         </div>
-        
-        {/* Badges Top Left */}
-        <div className="absolute left-2 top-2 flex flex-col gap-1.5 items-start z-20">
+        <div className="absolute left-2 top-2 flex flex-col gap-1 items-start z-20">
           {vehicle.isFeatured && (
-            <Badge className="bg-amber-500 hover:bg-amber-600 text-white shadow-sm border-none shadow-amber-900/20">Featured</Badge>
+            <span className="badge-auction">Featured</span>
           )}
           {vehicle.recentlyAdded && (
-            <Badge className="bg-green-600 hover:bg-green-700 text-white shadow-sm border-none shadow-green-900/20">New Arrival</Badge>
+            <span className="badge-available">New</span>
           )}
         </div>
-        
-        {/* Badges Top Right */}
         {vehicle.isReserved && (
-          <Badge variant="secondary" className="absolute right-2 top-2 bg-red-100 text-red-700 hover:bg-red-200 border-none shadow-sm z-20">Reserved</Badge>
+          <span className="absolute right-2 top-2 badge-sold">Reserved</span>
         )}
       </Link>
-      
-      <CardContent className="p-4 flex flex-col flex-1">
-        <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-          <div className="flex items-center gap-1.5">
-            {vehicle.stockId && <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-[10px]">{vehicle.stockId}</span>}
+
+      <div className="p-4 flex flex-col flex-1">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            {vehicle.stockId && (
+              <span className="font-mono bg-iron/50 px-1.5 py-0.5 rounded text-[10px] text-steel uppercase">{vehicle.stockId}</span>
+            )}
           </div>
           <span className={cn(
-            "font-medium",
-            vehicle.condition.includes('Grade S') || vehicle.condition.includes('Grade 5') ? "text-amber-600" : ""
+            "text-[11px] font-medium uppercase tracking-wider",
+            vehicle.condition.includes('Grade S') ? "text-auction-amber" : "text-ash"
           )}>{vehicle.condition}</span>
         </div>
 
-        <Link href={`/vehicles/${vehicle.slug}`} className="hover:text-primary transition-colors inline-block group-hover:text-primary mb-1">
-          <h3 className="font-bold text-base leading-tight line-clamp-1 text-foreground" title={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}>
+        <Link href={`/vehicles/${vehicle.slug}`} className="group/title">
+          <h3 className="font-[Oswald] text-base font-bold uppercase tracking-[0.3px] text-pure-white line-clamp-1 group-hover/title:text-signal-red transition-colors" title={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}>
             {vehicle.year} {vehicle.make} {vehicle.model}
           </h3>
         </Link>
-        
-        <div className="flex items-end gap-2 mt-1 mb-3">
-          <p className="text-xl font-bold text-primary leading-none">{priceFormatted}</p>
-          {vehicle.fobPrice && <span className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider mb-0.5">FOB</span>}
+
+        <div className="flex items-center gap-1.5 text-[10px] leading-none text-[#6E6E6E] mt-2 mb-3 flex-wrap">
+          <Gauge className="h-3 w-3 shrink-0 text-[#5A5A5A]" />
+          <span className="tabular-nums">{formatMileage(vehicle.mileage)} km</span>
+          <span className="text-[#2A2A2A]">·</span>
+          <Fuel className="h-3 w-3 shrink-0 text-[#5A5A5A]" />
+          <span>{vehicle.fuelType}</span>
+          <span className="text-[#2A2A2A]">·</span>
+          <Calendar className="h-3 w-3 shrink-0 text-[#5A5A5A]" />
+          <span>{vehicle.year}</span>
+          <span className="text-[#2A2A2A]">·</span>
+          <MapPin className="h-3 w-3 shrink-0 text-[#5A5A5A]" />
+          <span className="truncate">{vehicle.location}</span>
         </div>
 
-        {vehicle.arrivalEstimate && (
-          <div className="mb-3 flex items-center gap-1.5 text-[11px] text-blue-600 bg-blue-50/50 px-2 py-1 rounded-md border border-blue-100 w-full">
-            <Ship className="h-3 w-3 shrink-0" />
-            <span className="truncate">Est. Arrival: <span className="font-semibold">{vehicle.arrivalEstimate}</span></span>
+        <div className="mt-auto flex items-end justify-between border-t border-iron pt-3">
+          <div>
+            <p className="price-tag text-lg">{priceFormatted}</p>
+            {vehicle.fobPrice && <span className="text-[10px] uppercase font-medium text-steel tracking-wider">FOB</span>}
           </div>
-        )}
-
-        {/* Specifications Grid */}
-        <div className="mt-auto grid grid-cols-2 gap-y-2.5 gap-x-2 text-xs text-muted-foreground border-t border-border/50 pt-3">
-          <div className="flex items-center gap-1.5" title="Mileage">
-            <Gauge className="h-3.5 w-3.5 shrink-0 opacity-70" />
-            <span className="font-medium text-foreground truncate">{vehicle.mileage.toLocaleString()} km</span>
-          </div>
-          <div className="flex items-center gap-1.5" title="Fuel Type">
-            <Fuel className="h-3.5 w-3.5 shrink-0 opacity-70" />
-            <span className="font-medium text-foreground truncate">{vehicle.fuelType}</span>
-          </div>
-          <div className="flex items-center gap-1.5" title="Transmission">
-            <Calendar className="h-3.5 w-3.5 shrink-0 opacity-70" />
-            <span className="font-medium text-foreground truncate">{vehicle.transmission}</span>
-          </div>
-          <div className="flex items-center gap-1.5" title="Location">
-            <MapPin className="h-3.5 w-3.5 shrink-0 opacity-70" />
-            <span className="font-medium text-foreground truncate">{vehicle.location}</span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleWishlist}
+              className={cn(
+                'flex h-8 w-8 items-center justify-center rounded transition-colors',
+                wishlisted ? 'text-signal-red' : 'text-steel hover:text-pure-white'
+              )}
+              title="Add to wishlist"
+            >
+              <Heart className={cn('h-4 w-4', wishlisted && 'fill-current')} />
+            </button>
+            <button
+              onClick={handleCompare}
+              className={cn(
+                'flex h-8 w-8 items-center justify-center rounded transition-colors',
+                compared ? 'text-signal-red' : 'text-steel hover:text-pure-white'
+              )}
+              title="Compare"
+            >
+              <Scale className="h-4 w-4" />
+            </button>
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="h-8 border-iron text-pure-white hover:bg-white/5 hover:border-pure-white rounded-[6px] px-3 text-[11px] font-medium uppercase tracking-wider"
+            >
+              <Link href={`/vehicles/${vehicle.slug}`}>Details</Link>
+            </Button>
           </div>
         </div>
-      </CardContent>
-      
-      <CardFooter className="border-t bg-muted/10 p-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1 -ml-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleWishlist}
-            className={cn(
-              'h-8 w-8 rounded-full transition-colors',
-              wishlisted ? 'text-red-500 hover:text-red-600 hover:bg-red-50' : 'text-muted-foreground hover:text-red-500 hover:bg-red-50'
-            )}
-            title="Add to wishlist"
-          >
-            <Heart className={cn('h-4 w-4', wishlisted && 'fill-current')} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleCompare}
-            className={cn(
-              'h-8 w-8 rounded-full transition-colors',
-              compared ? 'text-primary hover:bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-primary/10'
-            )}
-            title="Compare"
-          >
-            <Scale className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleShare}
-            className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
-            title="Share"
-          >
-            <Share2 className="h-4 w-4" />
-          </Button>
-        </div>
-        <Button asChild size="sm" className="shrink-0 h-8 font-medium shadow-sm hover:shadow text-xs px-4">
-          <Link href={`/vehicles/${vehicle.slug}`}>Details</Link>
-        </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 }
-
-// Placeholder data for development
-export const placeholderVehicles: VehicleCardData[] = Array.from({ length: 12 }, (_, i) => ({
-  id: `v-${i + 1}`,
-  slug: `toyota-land-cruiser-prado-2019-${i + 1}`,
-  make: ['Toyota', 'Honda', 'Nissan', 'Mazda', 'Subaru'][i % 5],
-  model: ['Land Cruiser Prado', 'CR-V', 'X-Trail', 'CX-5', 'Forester'][i % 5],
-  year: 2018 + (i % 5),
-  price: 15000 + i * 3500,
-  currency: 'USD',
-  mileage: 25000 + i * 8000,
-  fuelType: i % 3 === 0 ? 'Hybrid' : 'Petrol',
-  transmission: i % 4 === 0 ? 'Manual' : 'Automatic',
-  bodyType: ['SUV', 'Sedan', 'Hatchback', 'SUV', 'Wagon'][i % 5],
-  location: ['Tokyo', 'Osaka', 'Nagoya', 'Yokohama', 'Kobe'][i % 5],
-  condition: i % 6 === 0 ? 'Grade 4.5' : (i % 5 === 0 ? 'Grade S' : 'Grade 4.0'),
-  isFeatured: i < 3,
-  isReserved: i === 7,
-  imageCount: 15 + (i % 10),
-  stockId: `ZAF-${1000 + i}`,
-  fobPrice: true,
-  arrivalEstimate: i % 4 === 0 ? 'Mid August' : undefined,
-  recentlyAdded: i % 3 === 0,
-}));

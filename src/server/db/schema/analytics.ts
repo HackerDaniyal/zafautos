@@ -1,4 +1,4 @@
-import { index, pgTable, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+﻿import { index, pgTable, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 import { users } from './auth';
 
 export const analyticsEvents = pgTable('analytics_events', {

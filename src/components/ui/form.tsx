@@ -1,8 +1,7 @@
-"use client"
+﻿"use client"
 
 import * as React from "react"
-import type { Label as LabelPrimitive } from "radix-ui"
-import { Slot } from "radix-ui"
+import { type Label as LabelPrimitive, Slot } from "radix-ui"
 import {
   Controller,
   FormProvider,
@@ -129,7 +128,7 @@ function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
     <p
       data-slot="form-description"
       id={formDescriptionId}
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("text-sm text-ash", className)}
       {...props}
     />
   )

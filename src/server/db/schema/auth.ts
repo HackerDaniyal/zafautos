@@ -1,4 +1,4 @@
-import { index, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+﻿import { index, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 import { userRoleEnum } from './common';
 import { countries, languages } from './settings';
 

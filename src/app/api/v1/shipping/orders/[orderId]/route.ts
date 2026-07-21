@@ -1,11 +1,11 @@
-import { ShippingService } from '@/server/services';
-import { RequestContext, withErrorHandler } from '@/lib/api/errorHandler';
+﻿import { SettingsService } from '@/server/services';
+import { withErrorHandler } from '@/lib/api/errorHandler';
 import { apiSuccess } from '@/lib/api/response';
 
-const shippingService = new ShippingService();
+const settingsService = new SettingsService();
 
-export const GET = withErrorHandler(async (req: Request, context?: RequestContext) => {
-  const { orderId } = await (context as { params: Promise<{ orderId: string }> }).params;
-  const shipments = await shippingService.getShipmentsByOrderId(orderId);
-  return apiSuccess(shipments);
+export const PATCH = withErrorHandler(async (req: Request) => {
+  const body = await req.json();
+  const setting = await settingsService.updateSiteSetting(body);
+  return apiSuccess(setting, undefined, 'Site setting updated successfully');
 });

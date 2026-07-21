@@ -1,4 +1,4 @@
-import { getPublicEnv } from '@/lib/env';
+﻿import { getPublicEnv } from '@/lib/env';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
@@ -12,7 +12,12 @@ type SupabaseCookie = {
  * Update Supabase session and manage auth state in middleware.
  */
 export async function updateSession(request: NextRequest) {
-  const env = getPublicEnv();
+  let env: ReturnType<typeof getPublicEnv>;
+  try {
+    env = getPublicEnv();
+  } catch {
+    return NextResponse.next({ request });
+  }
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -44,7 +49,7 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Basic route protection — restrict /admin and /portal to authenticated users only.
+  // Basic route protection â€” restrict /admin and /portal to authenticated users only.
   const isProtectedPath =
     request.nextUrl.pathname.startsWith('/admin') ||
     request.nextUrl.pathname.startsWith('/portal');

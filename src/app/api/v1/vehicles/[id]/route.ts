@@ -1,24 +1,11 @@
-import { VehicleService } from '@/server/services';
-import { RequestContext, withErrorHandler } from '@/lib/api/errorHandler';
+﻿import { ShippingService } from '@/server/services';
+import { withErrorHandler } from '@/lib/api/errorHandler';
 import { apiSuccess } from '@/lib/api/response';
 
-const vehicleService = new VehicleService();
+const shippingService = new ShippingService();
 
-export const GET = withErrorHandler(async (req: Request, context?: RequestContext) => {
-  const { id } = await (context as { params: Promise<{ id: string }> }).params;
-  const vehicle = await vehicleService.getVehicleById(id);
-  return apiSuccess(vehicle);
-});
-
-export const PATCH = withErrorHandler(async (req: Request, context?: RequestContext) => {
-  const { id } = await (context as { params: Promise<{ id: string }> }).params;
+export const POST = withErrorHandler(async (req: Request) => {
   const body = await req.json();
-  const vehicle = await vehicleService.updateVehicle(id, body);
-  return apiSuccess(vehicle, undefined, 'Vehicle updated successfully');
-});
-
-export const DELETE = withErrorHandler(async (req: Request, context?: RequestContext) => {
-  const { id } = await (context as { params: Promise<{ id: string }> }).params;
-  await vehicleService.deleteVehicle(id);
-  return apiSuccess(null, undefined, 'Vehicle deleted successfully', 200);
+  const shipment = await shippingService.createShipment(body);
+  return apiSuccess(shipment, undefined, 'Shipment created successfully', 201);
 });

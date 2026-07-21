@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+﻿import { createClient } from '@/lib/supabase/server';
 import { UnauthorizedError } from '@/server/services/errors';
 import type { AuthContext, UserRole } from './types';
 

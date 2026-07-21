@@ -1,6 +1,5 @@
-import { emailLogs, messages, messageThreads, notifications } from '@/server/db/schema';
-import type { InferModel } from 'drizzle-orm';
-import { eq } from 'drizzle-orm';
+﻿import { emailLogs, messages, messageThreads, notifications } from '@/server/db/schema';
+import { type InferModel, eq } from 'drizzle-orm';
 import { BaseRepository } from './baseRepository';
 
 export class MessagesRepository {

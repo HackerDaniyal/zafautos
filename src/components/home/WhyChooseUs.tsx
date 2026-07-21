@@ -1,7 +1,6 @@
-import React from 'react';
+﻿import React from 'react';
 import { SectionWrapper, PageHeader } from '@/components/layout/ResponsiveLayout';
 import { ShieldCheck, Globe2, Wrench, BadgeJapaneseYen } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 const features = [
   {
@@ -35,17 +34,13 @@ export function WhyChooseUs() {
       />
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {features.map((feature, i) => (
-          <Card key={i} className="border-none shadow-none bg-muted/30 text-center">
-            <CardHeader className="flex flex-col items-center pb-2">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <feature.icon className="h-8 w-8" />
-              </div>
-              <CardTitle className="text-lg">{feature.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{feature.description}</p>
-            </CardContent>
-          </Card>
+          <div key={i} className="rounded-[10px] border border-iron bg-carbon p-6 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-signal-red/10 text-signal-red mx-auto">
+              <feature.icon className="h-8 w-8" />
+            </div>
+            <h3 className="font-[Oswald] text-lg font-bold uppercase tracking-[0.3px] text-pure-white mb-2">{feature.title}</h3>
+            <p className="text-sm text-ash">{feature.description}</p>
+          </div>
         ))}
       </div>
     </SectionWrapper>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -33,8 +33,8 @@ export function SortSelect({
 }: SortSelectProps) {
   return (
     <Select defaultValue={defaultValue} onValueChange={onChange}>
-      <SelectTrigger className={cn('w-[200px] rounded-md border border-input bg-background text-foreground shadow-sm', className)}>
-        <ArrowUpDown className="mr-2 h-4 w-4 text-muted-foreground" />
+      <SelectTrigger className={cn('w-[200px] rounded-[6px] border border-iron bg-deep-carbon text-pure-white', className)}>
+        <ArrowUpDown className="mr-2 h-4 w-4 text-steel" />
         <SelectValue placeholder="Sort by" />
       </SelectTrigger>
       <SelectContent>

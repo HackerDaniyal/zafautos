@@ -1,14 +1,15 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { Heart, Trash2, ShoppingBag, SlidersHorizontal, AlertCircle } from 'lucide-react';
-import { placeholderVehicles, VehicleCard, type VehicleCardData } from '@/components/marketplace/VehicleCard';
+import { VehicleCard, type VehicleCardData } from '@/components/marketplace/VehicleCard';
+import { placeholderVehicles } from '@/data/placeholderVehicles';
 import { SortSelect } from '@/components/marketplace/SortSelect';
 import { Button } from '@/components/ui/button';
 import { SectionWrapper, PageHeader } from '@/components/layout/ResponsiveLayout';
 import Link from 'next/link';
 
-// ─── Empty State ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Empty State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function WishlistEmpty() {
   return (
@@ -29,7 +30,7 @@ function WishlistEmpty() {
   );
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // Seed: first 6 placeholder vehicles are pre-wishlisted for demo
 const INITIAL_WISHLIST_IDS = placeholderVehicles.slice(0, 6).map((v) => v.id);
@@ -145,7 +146,7 @@ export default function WishlistPage() {
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Price Range</p>
                   <p className="text-sm font-bold">
                     ${Math.min(...wishlistedVehicles.map((v) => v.price)).toLocaleString()}
-                    {' – '}
+                    {' â€“ '}
                     ${Math.max(...wishlistedVehicles.map((v) => v.price)).toLocaleString()}
                   </p>
                 </div>

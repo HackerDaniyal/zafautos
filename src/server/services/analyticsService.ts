@@ -1,10 +1,9 @@
-import { BaseRepository } from '@/server/repositories';
-import { analyticsEvents, pageViews, searchHistory } from '@/server/db/schema';
+﻿import { AnalyticsEventsRepository, PageViewsRepository, SearchHistoryRepository } from '@/server/repositories';
 import { z } from 'zod';
 
-// ─────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────
 // Validation Schemas
-// ─────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────
 
 export const CreateAnalyticsEventSchema = z.object({
   eventName: z.string().min(1, 'Event name is required'),
@@ -24,14 +23,14 @@ export const CreateSearchHistorySchema = z.object({
 });
 export type CreateSearchHistoryDTO = z.infer<typeof CreateSearchHistorySchema>;
 
-// ─────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────
 // Service Layer
-// ─────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────
 
 export class AnalyticsService {
-  private eventsRepo = new BaseRepository(analyticsEvents);
-  private viewsRepo = new BaseRepository(pageViews);
-  private searchRepo = new BaseRepository(searchHistory);
+  private eventsRepo = new AnalyticsEventsRepository();
+  private viewsRepo = new PageViewsRepository();
+  private searchRepo = new SearchHistoryRepository();
 
   /**
    * Tracks a custom analytics event.

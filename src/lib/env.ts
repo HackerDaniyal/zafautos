@@ -1,4 +1,4 @@
-import { z } from 'zod';
+﻿import { z } from 'zod';
 
 /**
  * Schema for server-only environment variables.
@@ -43,7 +43,7 @@ export function validateEnv(): Env {
 
   if (!parsed.success) {
     console.error(
-      '❌ Invalid environment variables:',
+      'âŒ Invalid environment variables:',
       parsed.error.flatten().fieldErrors,
     );
     throw new Error('Invalid environment variables');
@@ -66,7 +66,7 @@ export function getPublicEnv(): PublicEnv {
 
   if (!parsed.success) {
     console.error(
-      '❌ Invalid public environment variables:',
+      'âŒ Invalid public environment variables:',
       parsed.error.flatten().fieldErrors,
     );
     throw new Error('Invalid public environment variables');

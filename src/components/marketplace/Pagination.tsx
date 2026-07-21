@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -54,7 +54,7 @@ export function Pagination({
             {page}
           </Button>
           {/* Insert ellipsis when there is a gap */}
-          {idx < visiblePages.length - 1 && visiblePages[idx + 1] - page > 1 && <span className="px-1 text-muted-foreground">…</span>}
+          {idx < visiblePages.length - 1 && visiblePages[idx + 1] - page > 1 && <span className="px-1 text-steel">…</span>}
         </React.Fragment>
       ))}
       <Button variant="ghost" size="icon" onClick={handleNext} disabled={currentPage === totalPages} aria-label="Next page">

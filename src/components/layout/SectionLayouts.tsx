@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { cn } from '@/lib/utils';
 import { MainContainer } from './MainContainer';
 
@@ -9,7 +9,7 @@ interface SectionProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export function FeatureSection({ children, className, containerClassName, ...props }: SectionProps) {
   return (
-    <section className={cn("py-16 md:py-24 bg-muted/30", className)} {...props}>
+    <section className={cn("py-16 md:py-24 bg-carbon", className)} {...props}>
       <MainContainer className={containerClassName}>
         {children}
       </MainContainer>
@@ -19,7 +19,7 @@ export function FeatureSection({ children, className, containerClassName, ...pro
 
 export function ContentSection({ children, className, containerClassName, ...props }: SectionProps) {
   return (
-    <section className={cn("py-12 md:py-20 bg-background", className)} {...props}>
+    <section className={cn("py-12 md:py-20 bg-race-black", className)} {...props}>
       <MainContainer className={containerClassName}>
         {children}
       </MainContainer>
@@ -29,7 +29,7 @@ export function ContentSection({ children, className, containerClassName, ...pro
 
 export function CTASection({ children, className, containerClassName, ...props }: SectionProps) {
   return (
-    <section className={cn("py-16 md:py-24 bg-primary text-primary-foreground", className)} {...props}>
+    <section className={cn("py-16 md:py-24 bg-signal-red text-pure-white", className)} {...props}>
       <MainContainer className={cn("flex flex-col items-center text-center", containerClassName)}>
         {children}
       </MainContainer>
@@ -39,7 +39,7 @@ export function CTASection({ children, className, containerClassName, ...props }
 
 export function StatsSection({ children, className, containerClassName, ...props }: SectionProps) {
   return (
-    <section className={cn("py-12 border-y bg-background", className)} {...props}>
+    <section className={cn("py-12 border-y border-iron bg-carbon", className)} {...props}>
       <MainContainer className={containerClassName}>
         {children}
       </MainContainer>
@@ -49,7 +49,7 @@ export function StatsSection({ children, className, containerClassName, ...props
 
 export function FAQSection({ children, className, containerClassName, ...props }: SectionProps) {
   return (
-    <section className={cn("py-16 md:py-24 bg-muted/10", className)} {...props}>
+    <section className={cn("py-16 md:py-24 bg-race-black", className)} {...props}>
       <MainContainer className={cn("max-w-4xl", containerClassName)}>
         {children}
       </MainContainer>

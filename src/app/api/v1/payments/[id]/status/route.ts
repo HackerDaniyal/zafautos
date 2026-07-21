@@ -1,12 +1,11 @@
-import { PaymentService } from '@/server/services';
-import { RequestContext, withErrorHandler } from '@/lib/api/errorHandler';
+﻿import { PaymentService } from '@/server/services';
+import { withErrorHandler } from '@/lib/api/errorHandler';
 import { apiSuccess } from '@/lib/api/response';
 
 const paymentService = new PaymentService();
 
-export const PATCH = withErrorHandler(async (req: Request, context?: RequestContext) => {
-  const { id } = await (context as { params: Promise<{ id: string }> }).params;
+export const POST = withErrorHandler(async (req: Request) => {
   const body = await req.json();
-  const payment = await paymentService.updatePaymentStatus(id, body.status);
-  return apiSuccess(payment, undefined, 'Payment status updated successfully');
+  const invoice = await paymentService.createInvoice(body);
+  return apiSuccess(invoice, undefined, 'Invoice created successfully', 201);
 });

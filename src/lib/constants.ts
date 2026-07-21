@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Application-wide constants.
  * Never hardcode these values elsewhere in the codebase.
  */

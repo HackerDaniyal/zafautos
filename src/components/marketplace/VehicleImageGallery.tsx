@@ -1,9 +1,8 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Expand, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,11 +13,11 @@ interface VehicleImageGalleryProps {
 }
 
 const placeholderImages = [
-  '/placeholder-car-1.jpg',
-  '/placeholder-car-2.jpg',
-  '/placeholder-car-3.jpg',
-  '/placeholder-car-4.jpg',
-  '/placeholder-car-5.jpg',
+  'https://placehold.co/800x500/1A1A1A/E5231B?text=Front+View',
+  'https://placehold.co/800x500/1A1A1A/E5231B?text=Side+View',
+  'https://placehold.co/800x500/1A1A1A/E5231B?text=Rear+View',
+  'https://placehold.co/800x500/1A1A1A/E5231B?text=Interior',
+  'https://placehold.co/800x500/1A1A1A/E5231B?text=Engine+Bay',
 ];
 
 export function VehicleImageGallery({ images = placeholderImages, className }: VehicleImageGalleryProps) {
@@ -32,18 +31,16 @@ export function VehicleImageGallery({ images = placeholderImages, className }: V
     <div className={cn("space-y-4", className)}>
       {/* Main Image View */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <div className="relative group overflow-hidden rounded-xl border border-border bg-muted">
+        <div className="relative group overflow-hidden rounded-[10px] border border-iron bg-deep-carbon">
           <div className="aspect-[4/3] relative w-full flex items-center justify-center">
             {displayImages[selectedIndex] ? (
-              <Image 
+              <img 
                 src={displayImages[selectedIndex]} 
                 alt={`Vehicle main view ${selectedIndex + 1}`} 
-                fill 
-                className="object-cover transition-transform duration-500" 
-                priority
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500"
               />
             ) : (
-              <div className="flex flex-col items-center text-muted-foreground gap-2">
+              <div className="flex flex-col items-center text-steel gap-2">
                 <Camera className="h-10 w-10 opacity-20" />
                 <span>No Image Available</span>
               </div>
@@ -52,7 +49,7 @@ export function VehicleImageGallery({ images = placeholderImages, className }: V
           
           {/* Top Overlays */}
           <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
-            <div className="bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium shadow-sm">
+            <div className="bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium">
               {selectedIndex + 1} / {displayImages.length}
             </div>
           </div>
@@ -62,7 +59,7 @@ export function VehicleImageGallery({ images = placeholderImages, className }: V
             <Button 
               size="icon" 
               variant="secondary" 
-              className="absolute top-3 right-3 z-10 rounded-full bg-white/80 hover:bg-white text-foreground shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute top-3 right-3 z-10 rounded-full bg-race-black/80 hover:bg-race-black text-pure-white opacity-0 group-hover:opacity-100 transition-opacity"
               aria-label="View fullscreen"
             >
               <Expand className="h-4 w-4" />
@@ -71,7 +68,7 @@ export function VehicleImageGallery({ images = placeholderImages, className }: V
         </div>
 
         {/* Fullscreen Dialog Content */}
-        <DialogContent className="max-w-7xl w-full h-[90vh] p-0 bg-black/95 border-none shadow-2xl flex flex-col justify-center overflow-hidden">
+        <DialogContent className="max-w-7xl w-full h-[90vh] p-0 bg-black/95 border-none flex flex-col justify-center overflow-hidden">
           <Carousel 
             className="w-full h-full flex flex-col" 
             opts={{ startIndex: selectedIndex, loop: true }}
@@ -88,12 +85,10 @@ export function VehicleImageGallery({ images = placeholderImages, className }: V
               {displayImages.map((src, idx) => (
                 <CarouselItem key={idx} className="relative h-full flex items-center justify-center pl-0">
                   <div className="relative w-full h-full p-8 md:p-16">
-                    <Image 
+                    <img 
                       src={src} 
                       alt={`Vehicle full view ${idx + 1}`} 
-                      fill 
-                      className="object-contain"
-                      quality={100}
+                      className="absolute inset-0 h-full w-full object-contain"
                     />
                   </div>
                 </CarouselItem>
@@ -101,10 +96,10 @@ export function VehicleImageGallery({ images = placeholderImages, className }: V
             </CarouselContent>
             
             <div className="absolute inset-y-0 left-4 flex items-center">
-              <CarouselPrevious className="relative left-0 translate-y-0 h-12 w-12 bg-white/10 hover:bg-white/20 text-white border-none shadow-lg backdrop-blur-sm" />
+              <CarouselPrevious className="relative left-0 translate-y-0 h-12 w-12 bg-white/10 hover:bg-white/20 text-white border-none backdrop-blur-sm" />
             </div>
             <div className="absolute inset-y-0 right-4 flex items-center">
-              <CarouselNext className="relative right-0 translate-y-0 h-12 w-12 bg-white/10 hover:bg-white/20 text-white border-none shadow-lg backdrop-blur-sm" />
+              <CarouselNext className="relative right-0 translate-y-0 h-12 w-12 bg-white/10 hover:bg-white/20 text-white border-none backdrop-blur-sm" />
             </div>
           </Carousel>
         </DialogContent>
@@ -125,11 +120,11 @@ export function VehicleImageGallery({ images = placeholderImages, className }: V
                   className={cn(
                     "relative aspect-[4/3] w-full overflow-hidden rounded-lg border-2 transition-all duration-200",
                     selectedIndex === idx 
-                      ? "border-primary ring-2 ring-primary/20 ring-offset-1" 
-                      : "border-transparent opacity-70 hover:opacity-100 hover:border-primary/50"
+                      ? "border-signal-red ring-2 ring-signal-red/20 ring-offset-1" 
+                      : "border-transparent opacity-70 hover:opacity-100 hover:border-steel/50"
                   )}
                 >
-                  <Image src={src} alt={`Thumbnail ${idx + 1}`} fill className="object-cover" />
+                  <img src={src} alt={`Thumbnail ${idx + 1}`} className="absolute inset-0 h-full w-full object-cover" />
                 </button>
               </CarouselItem>
             ))}

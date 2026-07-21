@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { LayoutGrid, List } from 'lucide-react';
@@ -20,10 +20,10 @@ export function VehicleGrid({ vehicles, className }: VehicleGridProps) {
     <div className={cn('space-y-4', className)}>
       {/* Toolbar */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">{vehicles.length}</span> vehicles found
+        <p className="text-sm text-ash">
+          <span className="font-medium text-pure-white">{vehicles.length}</span> vehicles found
         </p>
-        <div className="flex items-center gap-1 rounded-lg border p-1">
+        <div className="flex items-center gap-1 rounded-lg border border-iron p-1">
           <Button
             variant={viewMode === 'grid' ? 'default' : 'ghost'}
             size="icon"
@@ -47,8 +47,8 @@ export function VehicleGrid({ vehicles, className }: VehicleGridProps) {
 
       {/* Vehicle Cards */}
       {vehicles.length === 0 ? (
-        <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-dashed">
-          <p className="text-muted-foreground">No vehicles found matching your criteria.</p>
+        <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-iron border-dashed">
+          <p className="text-ash">No vehicles found matching your criteria.</p>
         </div>
       ) : (
         <div

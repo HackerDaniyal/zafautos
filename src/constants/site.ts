@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Site metadata constants used across layouts and SEO tags.
  */
 export const siteConfig = {

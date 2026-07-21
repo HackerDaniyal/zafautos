@@ -1,4 +1,4 @@
-import {
+﻿import {
     currencies,
     exchangeRates,
     invoices,
@@ -6,8 +6,7 @@ import {
     paymentMethods,
     payments,
 } from '@/server/db/schema';
-import type { InferModel } from 'drizzle-orm';
-import { eq } from 'drizzle-orm';
+import { type InferModel, eq } from 'drizzle-orm';
 import { BaseRepository } from './baseRepository';
 
 export class PaymentsRepository {

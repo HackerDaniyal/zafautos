@@ -1,4 +1,4 @@
-import {
+﻿import {
     customerAddresses,
     customerAlerts,
     customerProfiles,
@@ -6,8 +6,7 @@ import {
     customerSettings,
     customerWishlist,
 } from '@/server/db/schema';
-import type { InferModel } from 'drizzle-orm';
-import { and, eq } from 'drizzle-orm';
+import { type InferModel, and, eq } from 'drizzle-orm';
 import { BaseRepository } from './baseRepository';
 
 export class CustomerRepository {

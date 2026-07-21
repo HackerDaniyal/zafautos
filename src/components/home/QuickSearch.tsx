@@ -1,68 +1,60 @@
+﻿"use client";
+
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Search } from 'lucide-react';
-import { CurrencySwitcher } from '@/components/marketplace/CurrencySwitcher';
 
 export function QuickSearch() {
   return (
-    <div className="relative -mt-16 z-20 mx-auto w-full max-w-5xl px-4 flex flex-col gap-6">
-      <div className="mx-auto w-full max-w-2xl bg-card rounded-xl p-4 shadow-sm border">
-        <h3 className="text-sm font-medium mb-3 text-center text-muted-foreground">Select Your Currency</h3>
-        <CurrencySwitcher />
+    <div className="relative -mt-14 z-20 mx-auto w-full max-w-5xl px-4 flex flex-col">
+      <div className="rounded-[8px] border border-[#222222] bg-[#161616] px-5 py-4">
+        <form className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-6" onSubmit={(e) => e.preventDefault()}>
+          <div className="space-y-1.5">
+            <Label htmlFor="make" className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#6E6E6E]">Make</Label>
+            <select id="make" className="flex h-9 w-full rounded-[5px] border border-[#2A2A2A] bg-[#111111] px-2.5 py-1.5 text-[12px] text-white placeholder:text-[#5A5A5A] focus:outline-none focus:border-[#3D3D3D]">
+              <option value="">Any Make</option>
+              <option value="toyota">Toyota</option>
+              <option value="honda">Honda</option>
+              <option value="nissan">Nissan</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="model" className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#6E6E6E]">Model</Label>
+            <select id="model" className="flex h-9 w-full rounded-[5px] border border-[#2A2A2A] bg-[#111111] px-2.5 py-1.5 text-[12px] text-white placeholder:text-[#5A5A5A] focus:outline-none focus:border-[#3D3D3D]">
+              <option value="">Any Model</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="year" className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#6E6E6E]">Min Year</Label>
+            <input id="year" type="number" placeholder="e.g. 2015" className="flex h-9 w-full rounded-[5px] border border-[#2A2A2A] bg-[#111111] px-2.5 py-1.5 text-[12px] text-white placeholder:text-[#5A5A5A] focus:outline-none focus:border-[#3D3D3D]" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="price" className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#6E6E6E]">Max Price</Label>
+            <input id="price" type="number" placeholder="USD" className="flex h-9 w-full rounded-[5px] border border-[#2A2A2A] bg-[#111111] px-2.5 py-1.5 text-[12px] text-white placeholder:text-[#5A5A5A] focus:outline-none focus:border-[#3D3D3D]" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="bodyType" className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#6E6E6E]">Body Type</Label>
+            <select id="bodyType" className="flex h-9 w-full rounded-[5px] border border-[#2A2A2A] bg-[#111111] px-2.5 py-1.5 text-[12px] text-white placeholder:text-[#5A5A5A] focus:outline-none focus:border-[#3D3D3D]">
+              <option value="">Any Type</option>
+              <option value="sedan">Sedan</option>
+              <option value="suv">SUV</option>
+              <option value="truck">Truck</option>
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <Button type="button" className="w-full h-9 bg-[#E5231B] hover:bg-[#E5231B]/90 text-white rounded-[5px] font-[Oswald] uppercase tracking-wider text-[12px]">
+              <Search className="mr-1.5 h-3.5 w-3.5" />
+              Search
+            </Button>
+          </div>
+        </form>
       </div>
-      <Card className="shadow-lg">
-        <CardContent className="p-6">
-          <form className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-6" onSubmit={(e) => e.preventDefault()}>
-            
-            <div className="space-y-2">
-              <Label htmlFor="make">Make</Label>
-              <select id="make" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                <option value="">Any Make</option>
-                <option value="toyota">Toyota</option>
-                <option value="honda">Honda</option>
-                <option value="nissan">Nissan</option>
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="model">Model</Label>
-              <select id="model" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                <option value="">Any Model</option>
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="year">Min Year</Label>
-              <Input id="year" type="number" placeholder="e.g. 2015" />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="price">Max Price</Label>
-              <Input id="price" type="number" placeholder="USD" />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bodyType">Body Type</Label>
-              <select id="bodyType" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                <option value="">Any Type</option>
-                <option value="sedan">Sedan</option>
-                <option value="suv">SUV</option>
-                <option value="truck">Truck</option>
-              </select>
-            </div>
-
-            <div className="flex items-end">
-              <Button type="button" className="w-full h-10">
-                <Search className="mr-2 h-4 w-4" />
-                Search
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
     </div>
   );
 }

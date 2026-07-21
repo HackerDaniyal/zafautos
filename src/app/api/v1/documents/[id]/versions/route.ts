@@ -1,12 +1,18 @@
-import { DocumentService } from '@/server/services';
-import { RequestContext, withErrorHandler } from '@/lib/api/errorHandler';
+﻿import { DealerService } from '@/server/services';
+import { withErrorHandler } from '@/lib/api/errorHandler';
 import { apiSuccess } from '@/lib/api/response';
+import { ValidationError } from '@/server/services/errors';
 
-const documentService = new DocumentService();
+const dealerService = new DealerService();
 
-export const POST = withErrorHandler(async (req: Request, context?: RequestContext) => {
-  const { id } = await (context as { params: Promise<{ id: string }> }).params;
-  const body = await req.json();
-  const version = await documentService.createDocumentVersion({ ...body, documentId: id });
-  return apiSuccess(version, undefined, 'Document version created successfully', 201);
+export const GET = withErrorHandler(async (req: Request) => {
+  const { searchParams } = new URL(req.url);
+  const userId = searchParams.get('userId');
+
+  if (!userId) {
+    throw new ValidationError('User ID is required');
+  }
+
+  const profile = await dealerService.getDealerByUserId(userId);
+  return apiSuccess(profile);
 });

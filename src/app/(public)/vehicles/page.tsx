@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useMemo } from 'react';
 import { SlidersHorizontal, BookmarkPlus, RotateCcw } from 'lucide-react';
@@ -11,12 +11,13 @@ import { SortSelect } from '@/components/marketplace/SortSelect';
 import { VehicleGrid } from '@/components/marketplace/VehicleGrid';
 import { Pagination } from '@/components/marketplace/Pagination';
 import { CompareBar } from '@/components/marketplace/CompareBar';
-import { placeholderVehicles, type VehicleCardData } from '@/components/marketplace/VehicleCard';
+import { type VehicleCardData } from '@/components/marketplace/VehicleCard';
+import { placeholderVehicles } from '@/data/placeholderVehicles';
 import { SectionWrapper } from '@/components/layout/ResponsiveLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const PAGE_SIZE = 12;
 
@@ -73,7 +74,7 @@ function applySort(vehicles: VehicleCardData[], sort: string): VehicleCardData[]
   }
 }
 
-// ─── Loading skeleton ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Loading skeleton â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function LoadingSkeleton() {
   return (
@@ -101,7 +102,7 @@ function LoadingSkeleton() {
   );
 }
 
-// ─── Empty State ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Empty State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function EmptyState({ onReset }: { onReset: () => void }) {
   return (
@@ -127,7 +128,7 @@ function EmptyState({ onReset }: { onReset: () => void }) {
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function VehiclesPage() {
   const [query, setQuery] = useState('');
@@ -137,7 +138,7 @@ export default function VehiclesPage() {
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [loading] = useState(false); // set to true to preview skeleton
 
-  // ── Derived data ────────────────────────────────────────────────────────
+  // â”€â”€ Derived data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const filtered = useMemo(
     () => applySort(applyFilters(placeholderVehicles, query, filters), sort),
     [query, filters, sort],
@@ -150,7 +151,7 @@ export default function VehiclesPage() {
   const startCount = filtered.length > 0 ? (safePage - 1) * PAGE_SIZE + 1 : 0;
   const endCount = Math.min(safePage * PAGE_SIZE, filtered.length);
 
-  // ── Handlers ────────────────────────────────────────────────────────────
+  // â”€â”€ Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleFilterChange = (partial: Partial<FilterState>) => {
     setFilters((prev) => ({ ...prev, ...partial }));
     setPage(1);
@@ -192,7 +193,7 @@ export default function VehiclesPage() {
   return (
     <>
       <SectionWrapper className="space-y-0 pb-4 pt-6 md:pt-10">
-        {/* ── Page Header ─────────────────────────────────────────────────── */}
+        {/* â”€â”€ Page Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
             <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">Marketplace</h1>
@@ -207,7 +208,7 @@ export default function VehiclesPage() {
           </div>
         </div>
 
-        {/* ── Search bar ────────────────────────────────────────────────── */}
+        {/* â”€â”€ Search bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="max-w-3xl mb-6">
           <SearchBar
             value={query}
@@ -218,7 +219,7 @@ export default function VehiclesPage() {
           />
         </div>
 
-        {/* ── Active filter chips ───────────────────────────────────────── */}
+        {/* â”€â”€ Active filter chips â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {hasActiveFilters && (
           <ActiveFilters
             filters={filters}
@@ -232,8 +233,8 @@ export default function VehiclesPage() {
       <SectionWrapper className="pt-0 pb-20">
         <div className="flex flex-col gap-8 md:flex-row md:items-start relative">
 
-          {/* ── Desktop Sidebar ───────────────────────────────────────────── */}
-          <aside className="hidden md:block w-64 xl:w-72 shrink-0 sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto pr-2 pb-6 custom-scrollbar">
+          {/* â”€â”€ Desktop Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          <aside className="hidden md:block w-64 xl:w-72 shrink-0 sticky top-20 h-[calc(100vh-5rem)] overflow-hidden rounded-[10px] border border-iron bg-carbon p-4">
             <FilterSidebar
               filters={filters}
               onFilterChange={handleFilterChange}
@@ -241,7 +242,7 @@ export default function VehiclesPage() {
             />
           </aside>
 
-          {/* ── Main content ─────────────────────────────────────────────── */}
+          {/* â”€â”€ Main content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <div className="flex-1 min-w-0 flex flex-col">
 
             {/* Toolbar: mobile filter + sort + result count */}
@@ -258,7 +259,7 @@ export default function VehiclesPage() {
                   ) : (
                     <>
                       <span className="text-muted-foreground">Showing </span>
-                      <span className="font-medium text-foreground">{startCount}–{endCount}</span>
+                      <span className="font-medium text-foreground">{startCount}â€“{endCount}</span>
                       <span className="text-muted-foreground"> of </span>
                       <span className="font-semibold text-foreground">{filtered.length}</span>
                       <span className="text-muted-foreground"> Vehicles</span>
@@ -314,7 +315,7 @@ export default function VehiclesPage() {
         </div>
       </SectionWrapper>
 
-      {/* ── Sticky compare bar ─────────────────────────────────────────── */}
+      {/* â”€â”€ Sticky compare bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <CompareBar
         selectedIds={compareIds}
         onRemove={handleCompareToggle}

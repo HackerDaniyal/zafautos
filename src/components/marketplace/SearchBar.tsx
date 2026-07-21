@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
 import { Search, X, Clock, TrendingUp, History } from 'lucide-react';
@@ -36,7 +36,6 @@ export function SearchBar({
   const [isFocused, setIsFocused] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
-  // Load recent searches from localStorage
   useEffect(() => {
     try {
       const stored = localStorage.getItem('zaf_recent_searches');
@@ -47,7 +46,6 @@ export function SearchBar({
     }
   }, []);
 
-  // Handle click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -119,7 +117,7 @@ export function SearchBar({
         <Search
           className={cn(
             "pointer-events-none absolute left-3.5 h-4 w-4 transition-colors",
-            isFocused ? "text-primary" : "text-muted-foreground"
+            isFocused ? "text-signal-red" : "text-steel"
           )}
           aria-hidden="true"
         />
@@ -135,10 +133,10 @@ export function SearchBar({
           onFocus={() => setIsFocused(true)}
           placeholder={placeholder}
           className={cn(
-            'w-full rounded-full border border-input bg-background/95 backdrop-blur py-3 pl-10 pr-10 text-sm shadow-sm transition-all',
-            'ring-offset-background placeholder:text-muted-foreground',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary',
-            isFocused && showDropdown && 'rounded-b-none border-b-transparent shadow-none ring-0'
+            'w-full rounded-full border border-iron bg-deep-carbon py-3 pl-10 pr-10 text-sm text-pure-white transition-all',
+            'placeholder:text-steel',
+            'focus:outline-none focus:border-steel/50',
+            isFocused && showDropdown && 'rounded-b-none border-b-transparent shadow-none'
           )}
         />
         {value && (
@@ -146,7 +144,7 @@ export function SearchBar({
             type="button"
             onClick={handleClear}
             aria-label="Clear search"
-            className="absolute right-3.5 flex h-5 w-5 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-muted-foreground hover:text-background transition-colors"
+            className="absolute right-3.5 flex h-5 w-5 items-center justify-center rounded-full bg-iron text-steel hover:bg-steel hover:text-race-black transition-colors"
           >
             <X className="h-3 w-3" />
           </button>
@@ -155,15 +153,14 @@ export function SearchBar({
 
       {/* Dropdown Suggestions */}
       {showDropdown && (
-        <div className="absolute top-full left-0 right-0 z-50 overflow-hidden rounded-b-xl border border-t-0 border-primary shadow-lg bg-background animate-in fade-in slide-in-from-top-1">
+        <div className="absolute top-full left-0 right-0 z-50 overflow-hidden rounded-b-[10px] border border-iron border-t-0 bg-carbon animate-in fade-in slide-in-from-top-1">
           <div className="max-h-[60vh] overflow-y-auto p-2">
             
-            {/* Search Suggestions (if typing) */}
             {value.trim().length > 0 && (
               <div className="mb-2">
                 <Button 
                   variant="ghost" 
-                  className="w-full justify-start font-medium text-primary py-2 px-3 h-auto"
+                  className="w-full justify-start font-medium text-signal-red py-2 px-3 h-auto hover:bg-iron/30"
                   onClick={() => handleSuggestionClick(value)}
                 >
                   <Search className="mr-2 h-4 w-4" />
@@ -172,16 +169,15 @@ export function SearchBar({
               </div>
             )}
 
-            {/* Recent Searches */}
             {recentSearches.length > 0 && !value.trim() && (
               <div className="mb-4">
                 <div className="flex items-center justify-between px-3 py-1.5">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-steel flex items-center gap-1.5">
                     <History className="h-3.5 w-3.5" /> Recent
                   </h4>
                   <button 
                     onClick={clearRecentSearches}
-                    className="text-[10px] uppercase font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-[10px] uppercase font-medium text-steel hover:text-pure-white transition-colors"
                   >
                     Clear All
                   </button>
@@ -191,7 +187,7 @@ export function SearchBar({
                     <li key={`recent-${term}`} className="flex items-center justify-between group">
                       <Button
                         variant="ghost"
-                        className="flex-1 justify-start h-8 px-3 text-sm font-normal text-muted-foreground hover:text-foreground"
+                        className="flex-1 justify-start h-8 px-3 text-sm font-normal text-ash hover:text-pure-white hover:bg-iron/30"
                         onClick={() => handleSuggestionClick(term)}
                       >
                         <Clock className="mr-2 h-3.5 w-3.5 opacity-50" />
@@ -199,7 +195,7 @@ export function SearchBar({
                       </Button>
                       <button 
                         onClick={(e) => removeRecentSearch(e, term)}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 mr-1 text-muted-foreground hover:text-destructive transition-all rounded-md"
+                        className="opacity-0 group-hover:opacity-100 p-1.5 mr-1 text-steel hover:text-signal-red transition-all rounded-md"
                         title="Remove"
                       >
                         <X className="h-3 w-3" />
@@ -210,11 +206,10 @@ export function SearchBar({
               </div>
             )}
 
-            {/* Popular Searches */}
             {!value.trim() && (
               <div>
                 <div className="px-3 py-1.5">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-steel flex items-center gap-1.5">
                     <TrendingUp className="h-3.5 w-3.5" /> Popular Searches
                   </h4>
                 </div>
@@ -223,7 +218,7 @@ export function SearchBar({
                     <li key={`popular-${term}`}>
                       <Button
                         variant="ghost"
-                        className="w-full justify-start h-8 px-3 text-sm font-normal text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                        className="w-full justify-start h-8 px-3 text-sm font-normal text-ash hover:text-pure-white hover:bg-iron/30"
                         onClick={() => handleSuggestionClick(term)}
                       >
                         <Search className="mr-2 h-3.5 w-3.5 opacity-50" />

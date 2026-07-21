@@ -1,4 +1,4 @@
-import { DomainError } from '@/server/services/errors';
+﻿import { DomainError } from '@/server/services/errors';
 
 export class RateLimitExceededError extends DomainError {
   constructor(message = 'Too many requests') {

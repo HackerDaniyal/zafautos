@@ -1,4 +1,4 @@
-import type { User } from '@supabase/supabase-js';
+﻿import type { User } from '@supabase/supabase-js';
 
 /**
  * The roles available in the ZafAutos system.
@@ -9,10 +9,10 @@ export type UserRole = 'customer' | 'dealer' | 'admin' | 'super_admin';
 /**
  * The authenticated user context injected into API route handlers.
  *
- * - `supabaseUser` — the raw Supabase Auth user object.
- * - `userId`       — the Supabase Auth user ID (UUID), used as the FK into `users`.
- * - `email`        — verified email from Supabase Auth.
- * - `role`         — the app-level role resolved from `users.role` in the database,
+ * - `supabaseUser` â€” the raw Supabase Auth user object.
+ * - `userId`       â€” the Supabase Auth user ID (UUID), used as the FK into `users`.
+ * - `email`        â€” verified email from Supabase Auth.
+ * - `role`         â€” the app-level role resolved from `users.role` in the database,
  *                    or defaulted to `customer` if not yet synced.
  */
 export interface AuthContext {

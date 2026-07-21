@@ -6,40 +6,22 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-
-const faqs = [
-  {
-    question: 'How long does shipping take?',
-    answer: 'Shipping duration varies by destination. On average, it takes 3 to 6 weeks to reach most major ports worldwide after the vessel departs from Japan.',
-  },
-  {
-    question: 'Do you provide inspection certificates?',
-    answer: 'Yes, we can arrange for JAAI, JEVIC, EAA, or other required pre-export inspections depending on your country\'s import regulations.',
-  },
-  {
-    question: 'What payment methods do you accept?',
-    answer: 'We primarily accept Telegraphic Transfer (TT / Bank Transfer). All payments must be made in US Dollars or Japanese Yen as per the invoice.',
-  },
-  {
-    question: 'Can you help with customs clearance?',
-    answer: 'While we handle all the export procedures in Japan and shipping to your destination port, you or your local customs broker will be responsible for clearing customs upon arrival.',
-  },
-];
+import { placeholderFaq } from '@/data/placeholderFaq';
 
 export function FaqSection() {
   return (
     <FAQSectionLayout>
       <div className="text-center mb-12">
-        <h2 className="text-3xl font-bold tracking-tight">Frequently Asked Questions</h2>
-        <p className="mt-4 text-muted-foreground">Everything you need to know about importing a vehicle with ZafAutos.</p>
+        <h2 className="font-[Oswald] text-3xl font-bold uppercase tracking-[0.3px] text-pure-white">Frequently Asked Questions</h2>
+        <p className="mt-4 text-ash">Everything you need to know about importing a vehicle with ZafAutos.</p>
       </div>
-      <Accordion type="single" collapsible className="w-full bg-card rounded-lg p-4 shadow-sm border">
-        {faqs.map((faq, index) => (
-          <AccordionItem key={index} value={`item-${index}`}>
-            <AccordionTrigger className="text-left font-medium">
+      <Accordion type="single" collapsible className="w-full rounded-[10px] border border-iron bg-carbon p-4">
+        {placeholderFaq.map((faq, index) => (
+          <AccordionItem key={index} value={`item-${index}`} className="border-iron">
+            <AccordionTrigger className="text-left font-medium text-pure-white hover:text-signal-red">
               {faq.question}
             </AccordionTrigger>
-            <AccordionContent className="text-muted-foreground leading-relaxed">
+            <AccordionContent className="text-ash leading-relaxed">
               {faq.answer}
             </AccordionContent>
           </AccordionItem>

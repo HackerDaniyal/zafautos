@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 
 export interface ApiResponse<T = unknown> {
   success: boolean;
