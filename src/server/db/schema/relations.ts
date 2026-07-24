@@ -1,13 +1,14 @@
 ﻿import { relations } from 'drizzle-orm';
 import { analyticsEvents, pageViews, searchHistory } from './analytics';
-import { permissions, profiles, rolePermissions, roles, sessions, users } from './auth';
+import { auditLogs } from './audit';
+import { permissions, profiles, rolePermissions, roles, users } from './auth';
 import { customerAddresses, customerAlerts, customerProfiles, customers, customerSettings, customerWishlist } from './customers';
 import { dealerActivity, dealerAssignments, dealerProfiles, dealers } from './dealers';
 import { documentCategories, documents, documentVersions } from './documents';
 import { featuredVehicles, vehicleCompare, vehicleEnquiries, vehicleViews, vehicleWishlist } from './marketplace';
 import { emailLogs, messages, messageThreads, notifications } from './messages';
 import { orderDocuments, orderItems, orderNotes, orders, orderStatus, orderTimeline } from './orders';
-import { currencies, exchangeRates, invoices, paymentHistory, paymentMethods, payments } from './payments';
+import { currencies, exchangeRates, invoices, paymentHistory, paymentMethods, paymentTransactions, payments } from './payments';
 import { countries, emailTemplates, languages, siteSettings, systemSettings } from './settings';
 import { containers, ports, shipments, shipmentTracking, shippingDocuments } from './shipping';
 import {
@@ -29,7 +30,6 @@ import {
 
 export const usersRelations = relations(users, ({ one, many }) => ({
   profile: one(profiles, { fields: [users.id], references: [profiles.userId] }),
-  sessions: many(sessions),
   orders: many(orders),
   messagesSent: many(messages, { relationName: 'messages_sender' }),
   messagesReceived: many(messages, { relationName: 'messages_recipient' }),
@@ -53,10 +53,6 @@ export const usersRelations = relations(users, ({ one, many }) => ({
 
 export const profilesRelations = relations(profiles, ({ one }) => ({
   user: one(users, { fields: [profiles.userId], references: [users.id] }),
-}));
-
-export const sessionsRelations = relations(sessions, ({ one }) => ({
-  user: one(users, { fields: [sessions.userId], references: [users.id] }),
 }));
 
 export const rolesRelations = relations(roles, ({ many }) => ({
@@ -268,6 +264,7 @@ export const paymentsRelations = relations(payments, ({ one, many }) => ({
   order: one(orders, { fields: [payments.orderId], references: [orders.id] }),
   user: one(users, { fields: [payments.userId], references: [users.id] }),
   history: many(paymentHistory),
+  transactions: many(paymentTransactions),
 }));
 
 export const paymentHistoryRelations = relations(paymentHistory, ({ one }) => ({
@@ -276,6 +273,15 @@ export const paymentHistoryRelations = relations(paymentHistory, ({ one }) => ({
 
 export const paymentMethodsRelations = relations(paymentMethods, ({ one }) => ({
   user: one(users, { fields: [paymentMethods.userId], references: [users.id] }),
+}));
+
+export const invoicesRelations = relations(invoices, ({ one }) => ({
+  order: one(orders, { fields: [invoices.orderId], references: [orders.id] }),
+}));
+
+export const paymentTransactionsRelations = relations(paymentTransactions, ({ one }) => ({
+  payment: one(payments, { fields: [paymentTransactions.paymentId], references: [payments.id] }),
+  order: one(orders, { fields: [paymentTransactions.orderId], references: [orders.id] }),
 }));
 
 export const currenciesRelations = relations(currencies, ({ many }) => ({
@@ -309,10 +315,6 @@ export const colorsRelations = relations(colors, ({ many }) => ({
 
 export const exchangeRatesRelations = relations(exchangeRates, ({ one }) => ({
   currency: one(currencies, { fields: [exchangeRates.currencyId], references: [currencies.id] }),
-}));
-
-export const invoicesRelations = relations(invoices, ({ one }) => ({
-  order: one(orders, { fields: [invoices.orderId], references: [orders.id] }),
 }));
 
 export const messagesRelations = relations(messages, ({ one }) => ({
@@ -357,6 +359,10 @@ export const pageViewsRelations = relations(pageViews, ({ one }) => ({
 
 export const searchHistoryRelations = relations(searchHistory, ({ one }) => ({
   user: one(users, { fields: [searchHistory.userId], references: [users.id] }),
+}));
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  user: one(users, { fields: [auditLogs.userId], references: [users.id] }),
 }));
 
 export const countriesRelations = relations(countries, ({ many }) => ({

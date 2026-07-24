@@ -1,0 +1,80 @@
+﻿Ôû▓ Next.js 16.2.10 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+Ô£ô Compiled successfully in 10.6s
+  Running TypeScript ...
+  Finished TypeScript in 9.7s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/44) ...
+  Generating static pages using 7 workers (11/44) 
+  Generating static pages using 7 workers (22/44) 
+  Generating static pages using 7 workers (33/44) 
+Ô£ô Generating static pages using 7 workers (44/44) in 1333ms
+  Finalizing page optimization ...
+
+Route (app)
+Ôöî Ôùï /
+Ôö£ Ôùï /_not-found
+Ôö£ ãÆ /admin
+Ôö£ ãÆ /api/v1/analytics/events
+Ôö£ ãÆ /api/v1/analytics/search
+Ôö£ ãÆ /api/v1/analytics/views
+Ôö£ ãÆ /api/v1/auth/permissions
+Ôö£ ãÆ /api/v1/customers/addresses
+Ôö£ ãÆ /api/v1/customers/alerts
+Ôö£ ãÆ /api/v1/customers/profile
+Ôö£ ãÆ /api/v1/customers/settings
+Ôö£ ãÆ /api/v1/dealers/activity
+Ôö£ ãÆ /api/v1/dealers/assignments
+Ôö£ ãÆ /api/v1/dealers/profile
+Ôö£ ãÆ /api/v1/documents
+Ôö£ ãÆ /api/v1/documents/[id]/versions
+Ôö£ ãÆ /api/v1/documents/vehicles/[vehicleId]
+Ôö£ ãÆ /api/v1/marketplace/compare
+Ôö£ ãÆ /api/v1/marketplace/enquiries
+Ôö£ ãÆ /api/v1/marketplace/featured
+Ôö£ ãÆ /api/v1/marketplace/views
+Ôö£ ãÆ /api/v1/marketplace/wishlist
+Ôö£ ãÆ /api/v1/orders
+Ôö£ ãÆ /api/v1/orders/[id]
+Ôö£ ãÆ /api/v1/orders/[id]/items
+Ôö£ ãÆ /api/v1/orders/[id]/status
+Ôö£ ãÆ /api/v1/payments
+Ôö£ ãÆ /api/v1/payments/[id]/status
+Ôö£ ãÆ /api/v1/payments/invoices
+Ôö£ ãÆ /api/v1/payments/orders/[orderId]
+Ôö£ ãÆ /api/v1/payments/users/[userId]
+Ôö£ ãÆ /api/v1/settings/countries
+Ôö£ ãÆ /api/v1/settings/languages
+Ôö£ ãÆ /api/v1/settings/site
+Ôö£ ãÆ /api/v1/settings/site/[key]
+Ôö£ ãÆ /api/v1/settings/system/[key]
+Ôö£ ãÆ /api/v1/shipping
+Ôö£ ãÆ /api/v1/shipping/[id]/containers
+Ôö£ ãÆ /api/v1/shipping/[id]/tracking
+Ôö£ ãÆ /api/v1/shipping/orders/[orderId]
+Ôö£ ãÆ /api/v1/vehicles
+Ôö£ ãÆ /api/v1/vehicles/[id]
+Ôö£ Ôùï /auth/auth-code-error
+Ôö£ ãÆ /auth/callback
+Ôö£ Ôùï /compare
+Ôö£ Ôùï /contact
+Ôö£ ãÆ /customer
+Ôö£ Ôùï /customer/settings/password
+Ôö£ ãÆ /dealer
+Ôö£ Ôùï /forgot-password
+Ôö£ Ôùï /login
+Ôö£ Ôùï /register
+Ôö£ Ôùï /reset-password
+Ôö£ Ôùï /vehicles
+Ôö£ ãÆ /vehicles/[slug]
+Ôö£ Ôùï /verify-email
+Ôöö Ôùï /wishlist
+
+
+ãÆ Proxy (Middleware)
+
+Ôùï  (Static)   prerendered as static content
+ãÆ  (Dynamic)  server-rendered on demand
+

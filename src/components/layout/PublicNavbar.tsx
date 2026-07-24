@@ -48,7 +48,7 @@ export function PublicNavbar() {
 
         {/* CTA & Mobile Nav */}
         <div className="flex items-center gap-3">
-          <Link href="/contact" className="hidden md:block">
+          <Link href="/login" className="hidden md:block">
             <Button variant="ghost" className="text-ash hover:text-pure-white hover:bg-white/5">
               Login
             </Button>
@@ -87,7 +87,7 @@ export function PublicNavbar() {
                   </Link>
                 ))}
                 <div className="h-4" />
-                <Link href="/contact" className="w-full">
+                <Link href="/login" className="w-full">
                   <Button variant="outline" className="w-full justify-start border-iron text-pure-white hover:bg-white/5 rounded-[6px]">
                     Login
                   </Button>

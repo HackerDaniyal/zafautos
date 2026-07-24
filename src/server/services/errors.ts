@@ -150,6 +150,44 @@ export class DuplicatePaymentError extends DomainError {
   }
 }
 
+export class InvoiceNotFoundError extends DomainError {
+  constructor(id: string) {
+    super(`Invoice not found: ${id}`, 'INVOICE_NOT_FOUND');
+    this.name = 'InvoiceNotFoundError';
+  }
+}
+
+export class DuplicateInvoiceError extends DomainError {
+  constructor(invoiceNumber: string) {
+    super(`Invoice already exists with number: ${invoiceNumber}`, 'DUPLICATE_INVOICE');
+    this.name = 'DuplicateInvoiceError';
+  }
+}
+
+export class InvalidInvoiceStatusTransitionError extends DomainError {
+  constructor(from: string, to: string) {
+    super(
+      `Invalid invoice status transition: ${from} to ${to}`,
+      'INVALID_INVOICE_STATUS_TRANSITION',
+    );
+    this.name = 'InvalidInvoiceStatusTransitionError';
+  }
+}
+
+export class TransactionNotFoundError extends DomainError {
+  constructor(id: string) {
+    super(`Transaction not found: ${id}`, 'TRANSACTION_NOT_FOUND');
+    this.name = 'TransactionNotFoundError';
+  }
+}
+
+export class InvalidRefundError extends DomainError {
+  constructor(message: string) {
+    super(message, 'INVALID_REFUND');
+    this.name = 'InvalidRefundError';
+  }
+}
+
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Shipping errors
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

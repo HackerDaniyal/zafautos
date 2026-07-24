@@ -8,8 +8,32 @@ type SupabaseCookie = {
   options?: CookieOptions;
 };
 
+function isProtectedPath(pathname: string): boolean {
+  return (
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/dealer') ||
+    pathname.startsWith('/customer')
+  );
+}
+
+function isGuestOnlyPath(pathname: string): boolean {
+  return pathname === '/login' || pathname === '/register';
+}
+
 /**
- * Update Supabase session and manage auth state in middleware.
+ * Middleware handles ONLY Supabase session refresh and basic auth redirects.
+ *
+ * This runs in Edge runtime — no Drizzle, no postgres.js, no database queries.
+ * user_metadata is NEVER read for authorization decisions.
+ *
+ * Responsibilities:
+ * - Auto-refresh JWT session tokens
+ * - Redirect unauthenticated users from protected routes to /login
+ * - Redirect authenticated users away from guest-only routes to /
+ *
+ * All role checks, account status checks, and email verification checks
+ * occur in requireAuth()/requireRole() within server components, layouts,
+ * server actions, or route handlers — where the database is accessible.
  */
 export async function updateSession(request: NextRequest) {
   let env: ReturnType<typeof getPublicEnv>;
@@ -18,6 +42,7 @@ export async function updateSession(request: NextRequest) {
   } catch {
     return NextResponse.next({ request });
   }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -49,14 +74,21 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Basic route protection â€” restrict /admin and /portal to authenticated users only.
-  const isProtectedPath =
-    request.nextUrl.pathname.startsWith('/admin') ||
-    request.nextUrl.pathname.startsWith('/portal');
+  const pathname = request.nextUrl.pathname;
 
-  if (!user && isProtectedPath) {
+  // ── Protected routes: redirect unauthenticated users to /login ──────────
+  if (!user && isProtectedPath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
+    url.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(url);
+  }
+
+  // ── Guest-only routes: redirect authenticated users to / ───────────────
+  // No role resolution in middleware. Server components handle that.
+  if (user && isGuestOnlyPath(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/';
     return NextResponse.redirect(url);
   }
 

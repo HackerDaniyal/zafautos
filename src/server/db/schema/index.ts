@@ -1,5 +1,6 @@
 ﻿export * from './analytics';
 export * from './auth';
+export * from './audit';
 export * from './common';
 export * from './customers';
 export * from './dealers';

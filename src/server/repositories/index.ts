@@ -1,4 +1,5 @@
 ﻿export * from './analyticsRepository';
+export * from './auditRepository';
 export * from './authRepository';
 export * from './baseRepository';
 export * from './customerRepository';

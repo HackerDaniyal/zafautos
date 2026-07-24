@@ -1,11 +1,16 @@
 ﻿import { createClient } from '@/lib/supabase/server';
+import { AuthRepository } from '@/server/repositories';
 import { UnauthorizedError } from '@/server/services/errors';
 import type { AuthContext, UserRole } from './types';
+
+const authRepo = new AuthRepository();
 
 /**
  * Resolves the current Supabase session into an AuthContext.
  *
  * Uses `supabase.auth.getUser()` which validates the JWT server-side.
+ * Role is resolved from the database `users.role` column (source of truth),
+ * NOT from user_metadata. This ensures admin role changes take effect immediately.
  * Returns null for unauthenticated requests.
  */
 export async function getSession(): Promise<AuthContext | null> {
@@ -19,10 +24,9 @@ export async function getSession(): Promise<AuthContext | null> {
     return null;
   }
 
-  // Resolve app-level role from user metadata (set during Supabase sign-up/admin)
-  // Falls back to 'customer' if not set.
-  const role: UserRole =
-    (user.user_metadata?.role as UserRole | undefined) ?? 'customer';
+  // Resolve role from database (source of truth)
+  const dbUser = await authRepo.findUserById(user.id);
+  const role: UserRole = (dbUser?.role as string as UserRole) ?? 'customer';
 
   return {
     supabaseUser: user,

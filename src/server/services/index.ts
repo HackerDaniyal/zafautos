@@ -1,4 +1,5 @@
 ﻿export * from './analyticsService';
+export * from './auditService';
 export * from './authService';
 export * from './customerService';
 export * from './dealerService';
@@ -9,4 +10,5 @@ export * from './orderService';
 export * from './paymentService';
 export * from './settingsService';
 export * from './shippingService';
+export * from './userProvisioningService';
 export * from './vehicleService';

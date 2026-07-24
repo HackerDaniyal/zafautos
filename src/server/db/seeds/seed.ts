@@ -127,7 +127,7 @@ async function clearDatabase() {
     "vehicle_specifications", "vehicle_features", "vehicle_documents", "vehicle_videos", "vehicle_images", "vehicle_status", "vehicles",
     "body_types", "fuel_types", "transmissions", "drive_types", "colors", "manufacturers", "models", "ports",
     "document_versions", "documents", "document_categories",
-    "sessions", "profiles", "role_permissions", "permissions", "roles", "users",
+    "profiles", "role_permissions", "permissions", "roles", "users",
     "email_templates", "system_settings", "site_settings", "languages", "countries"
     CASCADE`);
   console.log('✅ Database cleared');
@@ -297,6 +297,7 @@ async function seedUsers(roleIds: Record<string, string>, countryIds: string[]) 
     id: superAdminUserId,
     email: 'admin@zafautos.com',
     role: 'super_admin',
+    status: 'active',
     roleId: roleIds.super_admin,
   }).onConflictDoNothing();
   await db.insert(schema.profiles).values({
@@ -312,6 +313,7 @@ async function seedUsers(roleIds: Record<string, string>, countryIds: string[]) 
       id,
       email: `admin${i + 1}@zafautos.com`,
       role: 'admin',
+      status: 'active',
       roleId: roleIds.admin,
     }).onConflictDoNothing();
     await db.insert(schema.profiles).values({
@@ -331,6 +333,7 @@ async function seedUsers(roleIds: Record<string, string>, countryIds: string[]) 
       id: userId,
       email: generateEmail(firstName, lastName),
       role: 'dealer',
+      status: 'active',
       roleId: roleIds.dealer,
     }).onConflictDoNothing();
     await db.insert(schema.profiles).values({
@@ -357,6 +360,7 @@ async function seedUsers(roleIds: Record<string, string>, countryIds: string[]) 
       id: userId,
       email: generateEmail(firstName, lastName),
       role: 'customer',
+      status: 'active',
       roleId: roleIds.customer,
     }).onConflictDoNothing();
     await db.insert(schema.profiles).values({

@@ -5,17 +5,13 @@ import { createClient } from '@/lib/supabase/server';
 // ---------------------------------------------------------------------------
 
 export const STORAGE_BUCKETS = {
-  VEHICLE_IMAGES: 'vehicle-images',
-  VEHICLE_DOCUMENTS: 'vehicle-documents',
-  CUSTOMER_DOCUMENTS: 'customer-documents',
-  DEALER_DOCUMENTS: 'dealer-documents',
-  PAYMENT_RECEIPTS: 'payment-receipts',
-  SHIPPING_DOCUMENTS: 'shipping-documents',
-  AVATARS: 'avatars',
+  vehicles: 'vehicles',
+  documents: 'documents',
+  media: 'media',
+  avatars: 'avatars',
 } as const;
 
-export type StorageBucket =
-  (typeof STORAGE_BUCKETS)[keyof typeof STORAGE_BUCKETS];
+export type StorageBucket = keyof typeof STORAGE_BUCKETS;
 
 // ---------------------------------------------------------------------------
 // Typed storage error
@@ -53,6 +49,27 @@ function assertPath(path: string): void {
   if (!path || path.trim().length === 0) {
     throw new StorageError('File path is required', 'MISSING_PATH');
   }
+}
+
+// ---------------------------------------------------------------------------
+// URL helpers
+// ---------------------------------------------------------------------------
+
+export function getStorageUrl(bucket: string, path: string): string | null {
+  if (!bucket || !path) return null;
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  if (!supabaseUrl) return null;
+
+  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
+}
+
+export function getPublicUrl(bucket: string, path: string): string {
+  assertBucket(bucket);
+  assertPath(path);
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -144,19 +161,6 @@ export async function getSignedUrl(
   }
 
   return data.signedUrl;
-}
-
-// ---------------------------------------------------------------------------
-// Public URL
-// ---------------------------------------------------------------------------
-
-export function getPublicUrl(bucket: string, path: string): string {
-  assertBucket(bucket);
-  assertPath(path);
-
-  const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
 }
 
 // ---------------------------------------------------------------------------

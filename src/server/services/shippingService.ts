@@ -1,6 +1,7 @@
 ﻿import { ShippingRepository } from '@/server/repositories';
 import { z } from 'zod';
-import { ShipmentNotFoundError, ValidationError } from './errors';
+import { ShipmentNotFoundError, ValidationError, InvalidOrderStatusTransitionError } from './errors';
+import { isValidShipmentTransition, type ShipmentStatus } from '@/lib/types/shipping';
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Validation Schemas
@@ -8,12 +9,7 @@ import { ShipmentNotFoundError, ValidationError } from './errors';
 
 export const CreateShipmentSchema = z.object({
   orderId: z.string().uuid('Invalid order ID'),
-  shippingCompany: z.string().optional().nullable(),
-  trackingNumber: z.string().optional().nullable(),
-  estimatedDeparture: z.date().optional().nullable(),
-  estimatedArrival: z.date().optional().nullable(),
-  actualDeparture: z.date().optional().nullable(),
-  actualArrival: z.date().optional().nullable(),
+  carrier: z.string().optional().nullable(),
   status: z.enum(['pending', 'in_transit', 'delivered', 'delayed', 'cancelled']).default('pending'),
 });
 export type CreateShipmentDTO = z.infer<typeof CreateShipmentSchema>;
@@ -61,32 +57,213 @@ export class ShippingService {
   }
 
   /**
-   * Adds a tracking event to a shipment.
+   * Lists shipments with filtering, pagination, and sorting.
    */
-  async addTrackingEvent(data: AddTrackingEventDTO) {
-    const validatedData = AddTrackingEventSchema.parse(data);
-    
-    // Typically verify shipment exists first
-    const shipment = await this.shippingRepo.shipments.findById(validatedData.shipmentId);
-    if (!shipment) {
-      throw new ShipmentNotFoundError(validatedData.shipmentId);
-    }
-
-    return this.shippingRepo.addTrackingEvent(validatedData as unknown as Parameters<typeof this.shippingRepo.addTrackingEvent>[0]);
+  async listShipments(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: ShipmentStatus;
+    orderId?: string;
+    carrier?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    sortColumn?: string;
+    sortDirection?: 'asc' | 'desc';
+  } = {}) {
+    return this.shippingRepo.listShipments(params);
   }
 
   /**
-   * Associates a shipping container with a shipment.
+   * Returns shipment with all related data.
    */
-  async addContainer(data: AddContainerDTO) {
-    const validatedData = AddContainerSchema.parse(data);
-
-    // Verify shipment exists
-    const shipment = await this.shippingRepo.shipments.findById(validatedData.shipmentId);
+  async getShipmentDetail(shipmentId: string) {
+    const shipment = await this.shippingRepo.getShipmentWithRelations(shipmentId);
     if (!shipment) {
-      throw new ShipmentNotFoundError(validatedData.shipmentId);
+      throw new ShipmentNotFoundError(shipmentId);
+    }
+    return shipment;
+  }
+
+  /**
+   * Changes shipment status with validation.
+   */
+  async changeShipmentStatus(
+    shipmentId: string,
+    newStatus: ShipmentStatus,
+    userId?: string,
+    note?: string
+  ) {
+    const shipment = await this.shippingRepo.shipments.findById(shipmentId) as unknown as { id: string; status: string } | null;
+    if (!shipment) {
+      throw new ShipmentNotFoundError(shipmentId);
     }
 
-    return this.shippingRepo.addContainer(validatedData as unknown as Parameters<typeof this.shippingRepo.addContainer>[0]);
+    const currentStatus = shipment.status as ShipmentStatus;
+    if (!isValidShipmentTransition(currentStatus, newStatus)) {
+      throw new InvalidOrderStatusTransitionError(currentStatus, newStatus);
+    }
+
+    await this.shippingRepo.updateShipmentStatus(shipmentId, newStatus);
+
+    // Add tracking event for status change
+    const trackingNote = note || `Status changed from ${currentStatus} to ${newStatus}`;
+    await this.shippingRepo.addTrackingEvent(shipmentId, null, trackingNote, userId);
+
+    return { success: true };
+  }
+
+  /**
+   * Adds a note as a tracking event.
+   */
+  async addNote(shipmentId: string, note: string, userId?: string) {
+    const shipment = await this.shippingRepo.shipments.findById(shipmentId);
+    if (!shipment) {
+      throw new ShipmentNotFoundError(shipmentId);
+    }
+
+    return this.shippingRepo.addTrackingEvent(shipmentId, null, note, userId);
+  }
+
+  /**
+   * Adds a document to a shipment.
+   */
+  async addDocument(shipmentId: string, documentUrl: string, userId?: string) {
+    const shipment = await this.shippingRepo.shipments.findById(shipmentId);
+    if (!shipment) {
+      throw new ShipmentNotFoundError(shipmentId);
+    }
+
+    return this.shippingRepo.addDocument(shipmentId, documentUrl, userId);
+  }
+
+  /**
+   * Deletes a document.
+   */
+  async deleteDocument(documentId: string) {
+    return this.shippingRepo.deleteDocument(documentId);
+  }
+
+  /**
+   * Adds a container to a shipment.
+   */
+  async addContainerByShipmentId(shipmentId: string, containerNumber: string, userId?: string) {
+    const shipment = await this.shippingRepo.shipments.findById(shipmentId);
+    if (!shipment) {
+      throw new ShipmentNotFoundError(shipmentId);
+    }
+
+    return this.shippingRepo.addContainer(shipmentId, containerNumber, userId);
+  }
+
+  /**
+   * Deletes a container.
+   */
+  async deleteContainer(containerId: string) {
+    return this.shippingRepo.deleteContainer(containerId);
+  }
+
+  /**
+   * Soft deletes a shipment.
+   */
+  async softDeleteShipment(shipmentId: string, userId?: string) {
+    const shipment = await this.shippingRepo.shipments.findById(shipmentId) as unknown as { deletedAt: Date | null } | null;
+    if (!shipment) {
+      throw new ShipmentNotFoundError(shipmentId);
+    }
+
+    if (shipment.deletedAt) {
+      throw new ValidationError('Shipment is already deleted');
+    }
+
+    return this.shippingRepo.softDeleteShipment(shipmentId, userId);
+  }
+
+  /**
+   * Restores a soft-deleted shipment.
+   */
+  async restoreShipment(shipmentId: string) {
+    const shipment = await this.shippingRepo.shipments.findById(shipmentId) as unknown as { deletedAt: Date | null } | null;
+    if (!shipment) {
+      throw new ShipmentNotFoundError(shipmentId);
+    }
+
+    if (!shipment.deletedAt) {
+      throw new ValidationError('Shipment is not deleted');
+    }
+
+    return this.shippingRepo.restoreShipment(shipmentId);
+  }
+
+  /**
+   * Bulk updates status for multiple shipments.
+   */
+  async bulkUpdateStatus(ids: string[], status: ShipmentStatus, userId?: string) {
+    const results = [];
+    for (const id of ids) {
+      try {
+        await this.changeShipmentStatus(id, status, userId);
+        results.push({ id, success: true });
+      } catch (error) {
+        results.push({
+          id,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+    return results;
+  }
+
+  /**
+   * Bulk soft deletes multiple shipments.
+   */
+  async bulkDelete(ids: string[], userId?: string) {
+    const results = [];
+    for (const id of ids) {
+      try {
+        await this.softDeleteShipment(id, userId);
+        results.push({ id, success: true });
+      } catch (error) {
+        results.push({
+          id,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+    return results;
+  }
+
+  /**
+   * Returns shipment statistics.
+   */
+  async getShipmentStats() {
+    return this.shippingRepo.getShipmentStats();
+  }
+
+  /**
+   * Updates shipment details.
+   */
+  async updateShipment(
+    shipmentId: string,
+    data: {
+      carrier?: string;
+      orderId?: string;
+    },
+    userId?: string,
+  ) {
+    const shipment = await this.shippingRepo.shipments.findById(shipmentId) as unknown as { id: string; deletedAt: Date | null } | null;
+    if (!shipment) {
+      throw new ShipmentNotFoundError(shipmentId);
+    }
+    if (shipment.deletedAt) {
+      throw new ValidationError('Cannot update a deleted shipment');
+    }
+
+    return this.shippingRepo.shipments.update(shipmentId, {
+      ...data,
+      updatedBy: userId ?? null,
+    } as Parameters<typeof this.shippingRepo.shipments.update>[1]);
   }
 }

@@ -6,6 +6,8 @@
  */
 export type UserRole = 'customer' | 'dealer' | 'admin' | 'super_admin';
 
+export type UserStatus = 'active' | 'pending' | 'suspended' | 'blocked';
+
 /**
  * The authenticated user context injected into API route handlers.
  *

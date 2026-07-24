@@ -1,5 +1,5 @@
 ﻿import { index, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
-import { userRoleEnum } from './common';
+import { userRoleEnum, userStatusEnum } from './common';
 import { countries, languages } from './settings';
 
 export const roles = pgTable('roles', {
@@ -51,6 +51,7 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 255 }).notNull().unique(),
   roleId: uuid('role_id').references(() => roles.id, { onDelete: 'set null' }),
   role: userRoleEnum('role').default('customer').notNull(),
+  status: userStatusEnum('status').default('active').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   createdBy: uuid('created_by'),
@@ -60,6 +61,7 @@ export const users = pgTable('users', {
 }, (table) => ({
   emailIdx: index('users_email_idx').on(table.email),
   roleIdx: index('users_role_idx').on(table.role),
+  statusIdx: index('users_status_idx').on(table.status),
 }));
 
 export const profiles = pgTable('profiles', {

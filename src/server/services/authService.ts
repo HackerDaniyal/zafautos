@@ -1,16 +1,12 @@
 ﻿import { AuthRepository } from '@/server/repositories';
 import { z } from 'zod';
 import {
-  InvalidCredentialsError,
-  SessionExpiredError,
   UserAlreadyExistsError,
   UserNotFoundError,
   ValidationError,
 } from './errors';
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Validation Schemas
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Validation Schemas ─────────────────────────────────────────────────────
 
 export const CreateUserSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -19,17 +15,13 @@ export const CreateUserSchema = z.object({
 });
 export type CreateUserDTO = z.infer<typeof CreateUserSchema>;
 
-export const CreateSessionSchema = z.object({
-  userId: z.string().uuid('Invalid user ID'),
-  refreshToken: z.string().min(1, 'Refresh token is required'),
-  expiresAt: z.date(),
-});
-export type CreateSessionDTO = z.infer<typeof CreateSessionSchema>;
+// ─── Service Layer ──────────────────────────────────────────────────────────
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Service Layer
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
+/**
+ * @deprecated Authentication is now handled by Supabase Auth via server actions.
+ * This service is retained only for non-auth user lookups (admin, permissions).
+ * Do NOT use for login, registration, or session management.
+ */
 export class AuthService {
   constructor(private readonly authRepo: AuthRepository = new AuthRepository()) {}
 
@@ -65,6 +57,9 @@ export class AuthService {
 
   /**
    * Creates a new user after verifying the email doesn't already exist.
+   *
+   * @deprecated Use the register() server action instead, which handles
+   * Supabase Auth + DB sync with proper rollback.
    */
   async createUser(data: CreateUserDTO) {
     const validatedData = CreateUserSchema.parse(data);
@@ -92,43 +87,5 @@ export class AuthService {
    */
   async getPermissions() {
     return this.authRepo.getPermissions();
-  }
-
-  /**
-   * Creates a new session for a user.
-   */
-  async createSession(data: CreateSessionDTO) {
-    const validatedData = CreateSessionSchema.parse(data);
-    return this.authRepo.createSession(validatedData);
-  }
-
-  /**
-   * Retrieves a session by its refresh token.
-   */
-  async getSessionByRefreshToken(refreshToken: string) {
-    if (!refreshToken) {
-      throw new ValidationError('Refresh token is required');
-    }
-
-    const session = await this.authRepo.findSessionByRefreshToken(refreshToken);
-    if (!session) {
-      throw new InvalidCredentialsError();
-    }
-
-    if (session.expiresAt < new Date()) {
-      throw new SessionExpiredError();
-    }
-
-    return session;
-  }
-
-  /**
-   * Deletes a session (logout).
-   */
-  async deleteSession(sessionId: string) {
-    if (!sessionId) {
-      throw new ValidationError('Session ID is required');
-    }
-    return this.authRepo.deleteSession(sessionId);
   }
 }

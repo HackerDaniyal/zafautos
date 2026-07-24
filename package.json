@@ -14,7 +14,8 @@
     "db:studio": "drizzle-kit studio",
     "db:check": "drizzle-kit check",
     "db:seed": "npx tsx src/server/db/seeds/seed.ts",
-    "db:reset": "drizzle-kit push && npx tsx src/server/db/seeds/seed.ts"
+    "db:reset": "drizzle-kit push && npx tsx src/server/db/seeds/seed.ts",
+    "db:bootstrap-admin": "npx tsx src/server/db/seeds/bootstrap-admin.ts"
   },
   "dependencies": {
     "@eslint/eslintrc": "^3.3.6",
@@ -24,6 +25,7 @@
     "@tanstack/react-query": "^5.28.9",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.2",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^11.0.24",

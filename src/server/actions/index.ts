@@ -1,18 +1,19 @@
 export {
+  getEntityAuditTrailAction,
+  getRecentActivityAction,
+} from './auditActions';
+
+export {
   createVehicle,
   updateVehicle,
   deleteVehicle,
   publishVehicle,
   archiveVehicle,
-  featureVehicle,
   uploadVehicleImages,
 } from './vehicleActions';
 
 export {
   createOrder,
-  updateOrderStatus,
-  cancelOrder,
-  assignDealerToOrder,
 } from './orderActions';
 
 export {
@@ -23,8 +24,21 @@ export {
 
 export {
   createShipment,
-  addTrackingEvent,
-  addContainer,
+  listShipments,
+  getShipment,
+  changeShipmentStatus,
+  addShipmentNote,
+  addShipmentDocument,
+  deleteShipmentDocument,
+  addShipmentContainer,
+  deleteShipmentContainer,
+  deleteShipment,
+  restoreShipment,
+  bulkUpdateShipmentStatus,
+  bulkDeleteShipments,
+  getShippingStats,
+  updateShipment,
+  exportShipmentsCsv,
 } from './shippingActions';
 
 export {
@@ -33,4 +47,13 @@ export {
   removeAddress,
   addToWishlist,
   removeFromWishlist,
+  listCustomers,
+  getCustomer,
+  getCustomerStats,
+  changeCustomerStatus,
+  deleteCustomer,
+  restoreCustomer,
+  bulkUpdateCustomerStatus,
+  bulkDeleteCustomers,
+  exportCustomersCsv,
 } from './customerActions';
