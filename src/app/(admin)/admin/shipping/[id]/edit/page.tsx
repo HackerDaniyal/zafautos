@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
 import { requireAuth } from '@/lib/auth';
 import { notFound } from 'next/navigation';
-import { db } from '@/server/db/client';
-import { shipments } from '@/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { getShipmentForEditAction } from '@/server/actions/shippingActions';
 import { ShipmentFormPage } from '../../components/shipment-form-page';
 
 export const metadata: Metadata = {
@@ -17,15 +15,18 @@ export default async function EditShipmentPage({
 }) {
   await requireAuth();
   const { id } = await params;
-  const [shipment] = await db
-    .select()
-    .from(shipments)
-    .where(eq(shipments.id, id))
-    .limit(1);
+  const result = await getShipmentForEditAction(id);
 
-  if (!shipment) {
+  if (!result.success || !result.data) {
     notFound();
   }
+
+  const shipment = result.data as {
+    id: string;
+    orderId: string;
+    carrier: string | null;
+    status: string;
+  };
 
   return (
     <ShipmentFormPage
@@ -34,7 +35,7 @@ export default async function EditShipmentPage({
         id: shipment.id,
         orderId: shipment.orderId,
         carrier: shipment.carrier,
-        status: shipment.status as string,
+        status: shipment.status,
       }}
     />
   );

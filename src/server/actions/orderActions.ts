@@ -4,38 +4,15 @@ import { requireAuth } from '@/lib/auth';
 import {
   OrderService,
   CreateOrderSchema,
-  DomainError,
 } from '@/server/services';
-import { db } from '@/server/db/client';
-import { auditLogs } from '@/server/db/schema';
+import { handleError, type ActionResult } from '@/lib/errors/action-error';
+import { AuditService } from '@/server/services/auditService';
+import { UUIDSchema } from '@/lib/validation/common';
 import type { OrderListParams } from '@/lib/types/order';
 import { z } from 'zod';
 
 const orderService = new OrderService();
-
-type ActionResult<T = unknown> =
-  | { success: true; data: T }
-  | { success: false; error: string; code?: string };
-
-function handleError(error: unknown): { success: false; error: string; code?: string } {
-  if (error instanceof z.ZodError) {
-    return {
-      success: false,
-      error: error.errors.map((e) => e.message).join(', '),
-      code: 'VALIDATION_ERROR',
-    };
-  }
-  if (error instanceof DomainError) {
-    return { success: false, error: error.message, code: error.code };
-  }
-  return {
-    success: false,
-    error: error instanceof Error ? error.message : 'An unexpected error occurred',
-    code: 'INTERNAL_ERROR',
-  };
-}
-
-const UUIDSchema = z.string().uuid('Invalid ID');
+const auditService = new AuditService();
 
 const OrderStatusSchema = z.enum([
   'pending',
@@ -86,6 +63,17 @@ export async function getOrderDetail(orderId: string): Promise<ActionResult> {
   }
 }
 
+export async function getOrderForEditAction(orderId: string): Promise<ActionResult> {
+  try {
+    await requireAuth();
+    UUIDSchema.parse(orderId);
+    const order = await orderService.getOrderForEdit(orderId);
+    return { success: true, data: order };
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
 export async function changeOrderStatus(
   orderId: string,
   status: string,
@@ -102,12 +90,11 @@ export async function changeOrderStatus(
       note,
     );
 
-    await db.insert(auditLogs).values({
+    await auditService.logAction({
       action: 'order.status_changed',
       entityType: 'order',
       entityId: orderId,
-      userId: session.userId,
-      changes: JSON.stringify({ status, note: note ?? null }),
+      metadata: { status, note: note ?? null },
     });
 
     return { success: true, data: updated };
@@ -125,12 +112,11 @@ export async function addOrderNote(
     UUIDSchema.parse(orderId);
     const createdNote = await orderService.addNote(orderId, note, session.userId);
 
-    await db.insert(auditLogs).values({
+    await auditService.logAction({
       action: 'order.note_added',
       entityType: 'order',
       entityId: orderId,
-      userId: session.userId,
-      changes: JSON.stringify({ note }),
+      metadata: { note },
     });
 
     return { success: true, data: createdNote };
@@ -163,12 +149,11 @@ export async function addOrderDocument(
       session.userId,
     );
 
-    await db.insert(auditLogs).values({
+    await auditService.logAction({
       action: 'order.document_added',
       entityType: 'order',
       entityId: orderId,
-      userId: session.userId,
-      changes: JSON.stringify({ documentUrl }),
+      metadata: { documentUrl },
     });
 
     return { success: true, data: createdDoc };
@@ -196,12 +181,11 @@ export async function softDeleteOrder(orderId: string): Promise<ActionResult> {
     UUIDSchema.parse(orderId);
     const deleted = await orderService.softDeleteOrder(orderId, session.userId);
 
-    await db.insert(auditLogs).values({
+    await auditService.logAction({
       action: 'order.soft_deleted',
       entityType: 'order',
       entityId: orderId,
-      userId: session.userId,
-      changes: JSON.stringify({ deleted: true }),
+      metadata: { deleted: true },
     });
 
     return { success: true, data: deleted };
@@ -216,12 +200,11 @@ export async function restoreOrder(orderId: string): Promise<ActionResult> {
     UUIDSchema.parse(orderId);
     const restored = await orderService.restoreOrder(orderId);
 
-    await db.insert(auditLogs).values({
+    await auditService.logAction({
       action: 'order.restored',
       entityType: 'order',
       entityId: orderId,
-      userId: session.userId,
-      changes: JSON.stringify({ restored: true }),
+      metadata: { restored: true },
     });
 
     return { success: true, data: restored };
@@ -333,12 +316,11 @@ export async function assignDealerToOrderAction(
       session.userId,
     );
 
-    await db.insert(auditLogs).values({
+    await auditService.logAction({
       action: 'order.dealer_assigned',
       entityType: 'order',
       entityId: orderId,
-      userId: session.userId,
-      changes: JSON.stringify({ dealerId }),
+      metadata: { dealerId },
     });
 
     return { success: true, data: result };

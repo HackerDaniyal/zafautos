@@ -6,9 +6,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/admin/ui/empty-state';
 import { useToast } from '@/components/admin/ui/use-toast';
 import { addOrderDocument, deleteOrderDocument } from '@/server/actions/orderActions';
-import type { orderDocuments } from '@/server/db/schema';
-
-type OrderDocument = typeof orderDocuments.$inferSelect;
+import type { OrderDocument } from '@/lib/types/order';
 
 interface OrderDocumentsProps {
   orderId: string;

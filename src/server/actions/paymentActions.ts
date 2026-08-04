@@ -5,10 +5,10 @@ import {
   PaymentService,
   CreatePaymentSchema,
   CreateInvoiceSchema,
-  DomainError,
 } from '@/server/services';
-import type { PaymentStatus, InvoiceStatus } from '@/app/(admin)/admin/payments/types';
-import type { TransactionType, PaymentMethodType } from '@/app/(admin)/admin/payments/types';
+import { handleError, type ActionResult } from '@/lib/errors/action-error';
+import { UUIDSchema } from '@/lib/validation/common';
+import type { PaymentStatus, InvoiceStatus, TransactionType, PaymentMethodType } from '@/lib/types/payment';
 import { z } from 'zod';
 
 const CreateTransactionSchema = z.object({
@@ -61,29 +61,6 @@ type UpdateInvoiceDTO = z.infer<typeof UpdateInvoiceSchema>;
 
 const paymentService = new PaymentService();
 
-type ActionResult<T = unknown> =
-  | { success: true; data: T }
-  | { success: false; error: string; code?: string };
-
-function handleError(error: unknown): { success: false; error: string; code?: string } {
-  if (error instanceof z.ZodError) {
-    return {
-      success: false,
-      error: error.errors.map((e) => e.message).join(', '),
-      code: 'VALIDATION_ERROR',
-    };
-  }
-  if (error instanceof DomainError) {
-    return { success: false, error: error.message, code: error.code };
-  }
-  return {
-    success: false,
-    error: error instanceof Error ? error.message : 'An unexpected error occurred',
-    code: 'INTERNAL_ERROR',
-  };
-}
-
-const UUIDSchema = z.string().uuid('Invalid ID');
 const PaymentStatusSchema = z.enum(['pending', 'paid', 'failed', 'refunded']);
 const InvoiceStatusSchema = z.enum(['draft', 'sent', 'paid', 'overdue', 'cancelled']);
 const TransactionTypeSchema = z.enum(['deposit', 'balance_payment', 'refund', 'adjustment']);

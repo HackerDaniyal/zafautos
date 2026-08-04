@@ -43,6 +43,16 @@ export async function getSession(): Promise<AuthContext | null> {
  * Use this in route handlers that require authentication.
  */
 export async function requireAuth(): Promise<AuthContext> {
+  // TEMPORARY BYPASS — REMOVE BEFORE PRODUCTION
+  if (process.env.AUTH_BYPASS === 'true') {
+    return {
+      supabaseUser: { id: 'temp-bypass', email: 'admin@zafautos.com' } as AuthContext['supabaseUser'],
+      userId: 'temp-bypass',
+      email: 'admin@zafautos.com',
+      role: 'super_admin',
+    };
+  }
+
   const session = await getSession();
 
   if (!session) {

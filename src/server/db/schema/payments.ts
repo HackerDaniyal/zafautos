@@ -1,4 +1,5 @@
-﻿import { index, integer, pgEnum, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+﻿import { boolean, index, integer, numeric, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { users } from './auth';
 import { paymentStatusEnum } from './common';
 import { orders } from './orders';
@@ -55,17 +56,29 @@ export const paymentMethods = pgTable('payment_methods', {
   userIdx: index('payment_methods_user_idx').on(table.userId),
 }));
 
+export const currencySymbolPositionEnum = pgEnum('currency_symbol_position', ['before', 'after']);
+
 export const currencies = pgTable('currencies', {
   id: uuid('id').defaultRandom().primaryKey(),
   code: varchar('code', { length: 10 }).notNull().unique(),
   name: varchar('name', { length: 100 }).notNull(),
+  symbol: varchar('symbol', { length: 10 }),
+  decimalPlaces: integer('decimal_places').default(2).notNull(),
+  symbolPosition: currencySymbolPositionEnum('symbol_position').default('before').notNull(),
+  isDefault: boolean('is_default').default(false).notNull(),
+  exchangeRate: numeric('exchange_rate', { precision: 16, scale: 6 }).default('1').notNull(),
+  lastUpdated: timestamp('last_updated', { withTimezone: true }),
+  isActive: boolean('is_active').default(true).notNull(),
+  displayOrder: integer('display_order').default(0).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   createdBy: uuid('created_by'),
   updatedBy: uuid('updated_by'),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   deletedBy: uuid('deleted_by'),
-});
+}, (table) => ({
+  oneDefaultIdx: uniqueIndex('currencies_one_default_idx').on(table.isDefault).where(sql`is_default = true`),
+}));
 
 export const exchangeRates = pgTable('exchange_rates', {
   id: uuid('id').defaultRandom().primaryKey(),

@@ -56,6 +56,17 @@ export class ShippingService {
     return this.shippingRepo.createShipment(validatedData as unknown as Parameters<typeof this.shippingRepo.createShipment>[0]);
   }
 
+  async getShipmentForEdit(shipmentId: string) {
+    if (!shipmentId) {
+      throw new ValidationError('Shipment ID is required');
+    }
+    const shipment = await this.shippingRepo.getShipmentForEdit(shipmentId);
+    if (!shipment) {
+      throw new ShipmentNotFoundError(shipmentId);
+    }
+    return shipment;
+  }
+
   /**
    * Lists shipments with filtering, pagination, and sorting.
    */

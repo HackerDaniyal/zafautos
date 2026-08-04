@@ -17,7 +17,6 @@ import { useToast } from '@/components/admin/ui/use-toast';
 import { formatDate } from '@/lib/cms/dates';
 import {
   listShipments,
-  deleteShipment,
   bulkDeleteShipments,
   bulkUpdateShipmentStatus,
   getShippingStats,
@@ -322,31 +321,31 @@ export function ShippingClient() {
           <StatCard
             title="Total Shipments"
             value={stats.totalShipments}
-            icon={Ship}
+            icon="Ship"
             description={`${stats.pendingShipments} pending`}
           />
           <StatCard
             title="In Transit"
             value={stats.inTransitShipments}
-            icon={Truck}
+            icon="Truck"
             description={`${stats.deliveredShipments} delivered`}
           />
           <StatCard
             title="Delivered"
             value={stats.deliveredShipments}
-            icon={Package}
+            icon="Package"
             description={stats.deliveredShipments > 0 ? `${Math.round((stats.deliveredShipments / stats.totalShipments) * 100)}% rate` : 'No deliveries'}
           />
           <StatCard
             title="Delayed"
             value={stats.delayedShipments}
-            icon={MapPin}
+            icon="MapPin"
             description={stats.delayedShipments > 0 ? `${Math.round((stats.delayedShipments / stats.totalShipments) * 100)}% rate` : 'No delays'}
           />
           <StatCard
             title="Cancelled"
             value={stats.cancelledShipments}
-            icon={Ship}
+            icon="Ship"
             description={stats.cancelledShipments > 0 ? `${Math.round((stats.cancelledShipments / stats.totalShipments) * 100)}% rate` : 'No cancellations'}
           />
         </div>

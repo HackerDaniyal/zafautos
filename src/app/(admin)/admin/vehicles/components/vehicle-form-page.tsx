@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/admin/ui/page-header';
 import { useToast } from '@/components/admin/ui/use-toast';
 import { createVehicle, updateVehicle, getVehicleForEdit } from '@/server/actions/vehicleActions';
-import { CreateVehicleSchema, UpdateVehicleSchema } from '@/server/services/vehicleService';
+import { CreateVehicleSchema, UpdateVehicleSchema } from '@/lib/validation/vehicle';
 import { VehicleFormSteps } from './vehicle-form-steps';
 import type { VehicleFormData } from '../types';
 import { VEHICLE_FORM_STEPS, type VehicleFormStep } from '../constants';

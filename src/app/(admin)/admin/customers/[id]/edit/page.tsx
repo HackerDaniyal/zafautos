@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
 import { requireAuth } from '@/lib/auth';
 import { notFound } from 'next/navigation';
-import { db } from '@/server/db/client';
-import { customers, users, profiles } from '@/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { getCustomerForEditAction } from '@/server/actions/customerActions';
 import { CustomerFormPage } from '../../components/customer-form-page';
 
 export const metadata: Metadata = {
@@ -17,40 +15,32 @@ export default async function EditCustomerPage({
 }) {
   await requireAuth();
   const { id } = await params;
+  const result = await getCustomerForEditAction(id);
 
-  const [customer] = await db
-    .select()
-    .from(customers)
-    .where(eq(customers.id, id))
-    .limit(1);
-
-  if (!customer) {
+  if (!result.success || !result.data) {
     notFound();
   }
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, customer.userId))
-    .limit(1);
-
-  const [profile] = await db
-    .select()
-    .from(profiles)
-    .where(eq(profiles.userId, customer.userId))
-    .limit(1);
+  const customer = result.data as {
+    id: string;
+    email: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
+    status: string | null;
+  };
 
   return (
     <CustomerFormPage
       mode="edit"
       initialData={{
         id: customer.id,
-        email: user?.email ?? '',
-        firstName: profile?.firstName ?? null,
-        lastName: profile?.lastName ?? null,
+        email: customer.email ?? '',
+        firstName: customer.firstName ?? null,
+        lastName: customer.lastName ?? null,
         displayName: null,
-        phone: profile?.phone ?? null,
-        status: user?.status as string ?? 'active',
+        phone: customer.phone ?? null,
+        status: customer.status ?? 'active',
       }}
     />
   );

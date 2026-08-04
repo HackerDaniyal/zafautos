@@ -18,10 +18,9 @@ import { StatCard } from '@/components/admin/ui/stat-card';
 import { SectionHeader } from '@/components/admin/ui/section-header';
 import { Skeleton } from '@/components/admin/ui/skeletons';
 import { useToast } from '@/components/admin/ui/use-toast';
-import { formatPrice } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import {
   listOrdersForAdmin,
-  changeOrderStatus,
   bulkDeleteOrders,
   bulkUpdateOrderStatus,
   getOrderStats,
@@ -191,16 +190,6 @@ export function OrdersClient() {
 
   function handleSelectionChange(newSelected: Set<string>) {
     toggleAll(data.filter((row) => newSelected.has(row.id)));
-  }
-
-  function formatCurrency(amount: number | null | undefined): string {
-    if (amount == null) return '—';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
   }
 
   function formatDate(date: string | Date | null | undefined): string {
@@ -447,31 +436,31 @@ export function OrdersClient() {
           <StatCard
             title="Total Orders"
             value={stats.totalOrders}
-            icon={ShoppingBag}
+            icon="ShoppingBag"
             description={`${stats.pending} pending`}
           />
           <StatCard
             title="Revenue"
             value={formatCurrency(stats.totalRevenue)}
-            icon={DollarSign}
+            icon="DollarSign"
             description={`${formatCurrency(stats.avgOrderValue)} avg`}
           />
           <StatCard
             title="Processing"
             value={stats.processing + stats.confirmed}
-            icon={Clock}
+            icon="Clock"
             description={`${stats.confirmed} confirmed, ${stats.processing} in progress`}
           />
           <StatCard
             title="Shipped"
             value={stats.shipped}
-            icon={Truck}
+            icon="Truck"
             description={`${stats.delivered} delivered`}
           />
           <StatCard
             title="Cancelled"
             value={stats.cancelled}
-            icon={XCircle}
+            icon="XCircle"
             description={stats.cancelled > 0 ? `${Math.round((stats.cancelled / stats.totalOrders) * 100)}% rate` : 'No cancellations'}
           />
         </div>

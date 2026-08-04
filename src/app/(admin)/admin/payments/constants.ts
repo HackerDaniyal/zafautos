@@ -1,4 +1,4 @@
-import type { PaymentStatus, InvoiceStatus } from './types';
+import type { PaymentStatus, InvoiceStatus } from '@/lib/types/payment';
 
 export const PAYMENT_STATUS_CONFIG: Record<PaymentStatus, { label: string; color: string; bgColor: string; dotColor: string }> = {
   pending: { label: 'Pending', color: 'text-auction-amber', bgColor: 'bg-auction-amber/10', dotColor: 'bg-auction-amber' },

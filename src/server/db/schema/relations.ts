@@ -9,7 +9,7 @@ import { featuredVehicles, vehicleCompare, vehicleEnquiries, vehicleViews, vehic
 import { emailLogs, messages, messageThreads, notifications } from './messages';
 import { orderDocuments, orderItems, orderNotes, orders, orderStatus, orderTimeline } from './orders';
 import { currencies, exchangeRates, invoices, paymentHistory, paymentMethods, paymentTransactions, payments } from './payments';
-import { countries, emailTemplates, languages, siteSettings, systemSettings } from './settings';
+import { continents, countries, emailTemplates, languages, siteSettings, systemSettings } from './settings';
 import { containers, ports, shipments, shipmentTracking, shippingDocuments } from './shipping';
 import {
   bodyTypes,
@@ -287,6 +287,7 @@ export const paymentTransactionsRelations = relations(paymentTransactions, ({ on
 export const currenciesRelations = relations(currencies, ({ many }) => ({
   exchangeRates: many(exchangeRates),
   vehicles: many(vehicles),
+  countries: many(countries),
 }));
 
 export const portsRelations = relations(ports, ({ many }) => ({
@@ -365,7 +366,13 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, { fields: [auditLogs.userId], references: [users.id] }),
 }));
 
-export const countriesRelations = relations(countries, ({ many }) => ({
+export const continentsRelations = relations(continents, ({ many }) => ({
+  countries: many(countries),
+}));
+
+export const countriesRelations = relations(countries, ({ one, many }) => ({
+  continent: one(continents, { fields: [countries.continentId], references: [continents.id] }),
+  currency: one(currencies, { fields: [countries.currencyId], references: [currencies.id] }),
   profiles: many(profiles),
   vehicles: many(vehicles),
 }));

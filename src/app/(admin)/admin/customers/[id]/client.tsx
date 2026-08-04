@@ -16,7 +16,7 @@ import type { TimelineActivity } from '@/components/admin/timeline/timeline-entr
 import { SectionHeader } from '@/components/admin/ui/section-header';
 import { EmptyState } from '@/components/admin/ui/empty-state';
 import { useToast } from '@/components/admin/ui/use-toast';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { formatDate } from '@/lib/cms/dates';
 import {
   getCustomer, changeCustomerStatus, deleteCustomer,
@@ -116,14 +116,6 @@ export function CustomerDetailClient({ customerId }: CustomerDetailClientProps) 
       setDeleting(false);
       setDeleteDialogOpen(false);
     }
-  }
-
-  function formatCurrency(amount: number | null | undefined): string {
-    if (amount == null) return '—';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency', currency: 'USD',
-      minimumFractionDigits: 0, maximumFractionDigits: 0,
-    }).format(amount);
   }
 
   if (loading) {

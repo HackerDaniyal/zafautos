@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
 import { requireAuth } from '@/lib/auth';
 import { notFound } from 'next/navigation';
-import { db } from '@/server/db/client';
-import { orders } from '@/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { getOrderForEditAction } from '@/server/actions/orderActions';
 import { OrderFormPage } from '../../components/order-form-page';
 
 export const metadata: Metadata = {
@@ -17,15 +15,21 @@ export default async function EditOrderPage({
 }) {
   await requireAuth();
   const { id } = await params;
-  const [order] = await db
-    .select()
-    .from(orders)
-    .where(eq(orders.id, id))
-    .limit(1);
+  const result = await getOrderForEditAction(id);
 
-  if (!order) {
+  if (!result.success || !result.data) {
     notFound();
   }
+
+  const order = result.data as {
+    id: string;
+    orderNumber: string;
+    customerId: string | null;
+    dealerId: string | null;
+    vehicleId: string | null;
+    status: string;
+    totalAmount: number;
+  };
 
   return (
     <OrderFormPage
@@ -36,7 +40,7 @@ export default async function EditOrderPage({
         customerId: order.customerId,
         dealerId: order.dealerId,
         vehicleId: order.vehicleId,
-        status: order.status as string,
+        status: order.status,
         totalAmount: order.totalAmount,
       }}
     />

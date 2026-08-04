@@ -5,38 +5,15 @@ import {
   VehicleService,
   CreateVehicleSchema,
   UpdateVehicleSchema,
-  DomainError,
 } from '@/server/services';
+import { handleError, type ActionResult } from '@/lib/errors/action-error';
+import { AuditService } from '@/server/services/auditService';
+import { UUIDSchema } from '@/lib/validation/common';
 import { z } from 'zod';
-import { auditLogs } from '@/server/db/schema';
-import { db } from '@/server/db/client';
 import type { VehicleStatus, VehicleListParams } from '@/lib/types/vehicle';
 
 const vehicleService = new VehicleService();
-
-type ActionResult<T = unknown> =
-  | { success: true; data: T }
-  | { success: false; error: string; code?: string };
-
-function handleError(error: unknown): { success: false; error: string; code?: string } {
-  if (error instanceof z.ZodError) {
-    return {
-      success: false,
-      error: error.errors.map((e) => e.message).join(', '),
-      code: 'VALIDATION_ERROR',
-    };
-  }
-  if (error instanceof DomainError) {
-    return { success: false, error: error.message, code: error.code };
-  }
-  return {
-    success: false,
-    error: error instanceof Error ? error.message : 'An unexpected error occurred',
-    code: 'INTERNAL_ERROR',
-  };
-}
-
-const UUIDSchema = z.string().uuid('Invalid ID');
+const auditService = new AuditService();
 
 function toSlug(str: string): string {
   return str.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -128,12 +105,11 @@ export async function softDeleteVehicle(id: string): Promise<ActionResult> {
     const session = await requireAuth();
     UUIDSchema.parse(id);
     const vehicle = await vehicleService.softDeleteVehicle(id, session.userId);
-    await db.insert(auditLogs).values({
+    await auditService.logAction({
       action: 'vehicle.deleted',
       entityType: 'vehicle',
       entityId: id,
-      userId: session.userId,
-      changes: JSON.stringify({ deletedAt: new Date().toISOString() }),
+      metadata: { deletedAt: new Date().toISOString() },
     });
     return { success: true, data: vehicle };
   } catch (error) {
@@ -146,12 +122,11 @@ export async function restoreVehicle(id: string): Promise<ActionResult> {
     const session = await requireAuth();
     UUIDSchema.parse(id);
     const vehicle = await vehicleService.restoreVehicle(id);
-    await db.insert(auditLogs).values({
+    await auditService.logAction({
       action: 'vehicle.restored',
       entityType: 'vehicle',
       entityId: id,
-      userId: session.userId,
-      changes: JSON.stringify({ deletedAt: null }),
+      metadata: { deletedAt: null },
     });
     return { success: true, data: vehicle };
   } catch (error) {
@@ -181,12 +156,11 @@ export async function changeVehicleStatus(
     const oldVehicle = await vehicleService.getVehicleById(id);
     const oldStatus = (oldVehicle as Record<string, unknown>).status;
     const vehicle = await vehicleService.changeStatus(id, status, session.userId, note);
-    await db.insert(auditLogs).values({
+    await auditService.logAction({
       action: 'vehicle.status_changed',
       entityType: 'vehicle',
       entityId: id,
-      userId: session.userId,
-      changes: JSON.stringify({ status: { from: oldStatus, to: status } }),
+      metadata: { status: { from: oldStatus, to: status } },
     });
     return { success: true, data: vehicle };
   } catch (error) {
@@ -215,12 +189,11 @@ export async function bulkUpdateVehicleStatus(
       UUIDSchema.parse(id);
     }
     const result = await vehicleService.bulkUpdateStatus(ids, status);
-    await db.insert(auditLogs).values({
+    await auditService.logAction({
       action: 'vehicle.bulk_status_changed',
       entityType: 'vehicle',
       entityId: ids.join(','),
-      userId: session.userId,
-      changes: JSON.stringify({ status, vehicleIds: ids }),
+      metadata: { status, vehicleIds: ids },
     });
     return { success: true, data: result };
   } catch (error) {
@@ -235,12 +208,11 @@ export async function bulkDeleteVehicles(ids: string[]): Promise<ActionResult> {
       UUIDSchema.parse(id);
     }
     const result = await vehicleService.bulkDelete(ids);
-    await db.insert(auditLogs).values({
+    await auditService.logAction({
       action: 'vehicle.bulk_deleted',
       entityType: 'vehicle',
       entityId: ids.join(','),
-      userId: session.userId,
-      changes: JSON.stringify({ vehicleIds: ids }),
+      metadata: { vehicleIds: ids },
     });
     return { success: true, data: result };
   } catch (error) {
@@ -604,12 +576,11 @@ export async function bulkDuplicateVehicles(ids: string[]): Promise<ActionResult
       UUIDSchema.parse(id);
     }
     const result = await vehicleService.bulkDuplicate(ids);
-    await db.insert(auditLogs).values({
+    await auditService.logAction({
       action: 'vehicle.bulk_duplicated',
       entityType: 'vehicle',
       entityId: ids.join(','),
-      userId: session.userId,
-      changes: JSON.stringify({ vehicleIds: ids }),
+      metadata: { vehicleIds: ids },
     });
     return { success: true, data: result };
   } catch (error) {
@@ -624,12 +595,11 @@ export async function bulkRestoreVehicles(ids: string[]): Promise<ActionResult> 
       UUIDSchema.parse(id);
     }
     const result = await vehicleService.bulkRestore(ids);
-    await db.insert(auditLogs).values({
+    await auditService.logAction({
       action: 'vehicle.bulk_restored',
       entityType: 'vehicle',
       entityId: ids.join(','),
-      userId: session.userId,
-      changes: JSON.stringify({ vehicleIds: ids }),
+      metadata: { vehicleIds: ids },
     });
     return { success: true, data: result };
   } catch (error) {

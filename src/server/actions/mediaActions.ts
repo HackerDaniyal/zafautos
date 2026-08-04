@@ -8,15 +8,11 @@ import {
   getPublicUrl,
   type StorageFile,
 } from '@/lib/supabase/storage';
-import { z } from 'zod';
+import { handleError, type ActionResult } from '@/lib/errors/action-error';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-type ActionResult<T = unknown> =
-  | { success: true; data: T }
-  | { success: false; error: string; code?: string };
 
 interface ListMediaParams {
   bucket: string;
@@ -40,21 +36,6 @@ interface MediaFileItem {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function handleError(error: unknown): { success: false; error: string; code?: string } {
-  if (error instanceof z.ZodError) {
-    return {
-      success: false,
-      error: error.errors.map((e) => e.message).join(', '),
-      code: 'VALIDATION_ERROR',
-    };
-  }
-  return {
-    success: false,
-    error: error instanceof Error ? error.message : 'An unexpected error occurred',
-    code: 'INTERNAL_ERROR',
-  };
-}
 
 function getFileMimeType(filename: string): string {
   const ext = filename.split('.').pop()?.toLowerCase() ?? '';

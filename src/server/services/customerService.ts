@@ -51,6 +51,17 @@ export class CustomerService {
     return customer;
   }
 
+  async getCustomerForEdit(customerId: string) {
+    if (!customerId) {
+      throw new ValidationError('Customer ID is required');
+    }
+    const result = await this.customerRepo.getCustomerForEdit(customerId);
+    if (!result) {
+      throw new CustomerNotFoundError(customerId);
+    }
+    return result;
+  }
+
   /**
    * Lists customers with filtering, pagination, and sorting.
    */

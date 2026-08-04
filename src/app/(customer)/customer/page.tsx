@@ -1,23 +1,16 @@
 import { requireAuth } from '@/lib/auth';
-import { AuthRepository } from '@/server/repositories';
-import { eq } from 'drizzle-orm';
-import { profiles } from '@/server/db/schema';
+import { getProfileByUserId } from '@/server/actions/authActions';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Customer Dashboard | ZafAutos Japan',
 };
 
-const authRepo = new AuthRepository();
-
 export default async function CustomerDashboardPage() {
   const auth = await requireAuth();
 
-  const [profile] = await authRepo.profiles.getClient()
-    .select()
-    .from(profiles)
-    .where(eq(profiles.userId, auth.userId))
-    .limit(1);
+  const profileResult = await getProfileByUserId(auth.userId);
+  const profile = profileResult.success ? profileResult.data : null;
 
   return (
     <div className="space-y-6">

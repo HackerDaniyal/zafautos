@@ -39,12 +39,15 @@ import {
   SHIPPING_STATUS_CONFIG,
 } from '../constants';
 import { ORDER_STATUS_TRANSITIONS, type OrderStatus, type OrderDetail } from '../types';
+import type { PaymentStatus } from '@/lib/types/payment';
 import { OrderDeleteDialog } from '../components/order-delete-dialog';
 import { OrderStatusDialog } from '../components/order-status-dialog';
 import { OrderNotes } from '../components/order-notes';
 import { OrderDocuments } from '../components/order-documents';
 import { OrderInvoices } from '../components/order-invoices';
 import { OrderAuditLog } from '../components/order-audit-log';
+import { CopyButton } from '@/components/admin/ui/copy-button';
+import { StatCard } from '@/components/admin/ui/stat-card';
 
 type Tab = 'overview' | 'customer' | 'vehicle' | 'payment' | 'invoices' | 'shipping' | 'documents' | 'timeline' | 'notes' | 'audit';
 
@@ -63,60 +66,6 @@ const TABS: { id: Tab; label: string; icon: React.ComponentType<{ className?: st
 
 interface OrderDetailClientProps {
   orderId: string;
-}
-
-function CopyButton({ text, label }: { text: string; label: string }) {
-  const { toast } = useToast();
-  const [copied, setCopied] = useState(false);
-
-  function handleCopy() {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    toast({ title: 'Copied', description: `${label} copied to clipboard`, variant: 'default' });
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  return (
-    <button
-      onClick={handleCopy}
-      className="ml-2 shrink-0 rounded p-1 text-steel transition-colors hover:bg-iron/30 hover:text-pure-white"
-      aria-label="Copy to clipboard"
-    >
-      {copied ? (
-        <Check className="size-3.5 text-available-green" />
-      ) : (
-        <Copy className="size-3.5" />
-      )}
-    </button>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  color = 'text-pure-white',
-}: {
-  label: string;
-  value: string;
-  icon: React.ComponentType<{ className?: string }>;
-  color?: string;
-}) {
-  return (
-    <div className="rounded-[10px] border border-iron/30 bg-carbon p-4">
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <p className="text-xs text-steel">{label}</p>
-          <p className={cn('text-xl font-bold font-[Oswald] uppercase tracking-wide', color)}>
-            {value}
-          </p>
-        </div>
-        <div className="rounded-[6px] bg-iron/20 p-2">
-          <Icon className="size-4 text-steel" />
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export function OrderDetailClient({ orderId }: OrderDetailClientProps) {
@@ -197,7 +146,7 @@ export function OrderDetailClient({ orderId }: OrderDetailClientProps) {
 
   const statusConfig = ORDER_STATUS_CONFIG[order.status as OrderStatus];
   const paymentConfig = order.payments?.[0]?.status
-    ? PAYMENT_STATUS_CONFIG[order.payments[0].status as string]
+    ? PAYMENT_STATUS_CONFIG[order.payments[0].status as PaymentStatus]
     : null;
   const shipmentConfig = order.shipments?.[0]?.status
     ? SHIPPING_STATUS_CONFIG[order.shipments[0].status as string]
@@ -300,27 +249,31 @@ export function OrderDetailClient({ orderId }: OrderDetailClientProps) {
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <StatCard
+              variant="compact"
               label="Total Amount"
               value={formatPrice(order.totalAmount)}
-              icon={DollarSign}
+              icon="DollarSign"
               color="text-pure-white"
             />
             <StatCard
+              variant="compact"
               label="Items"
               value={String(order.items?.length || 0)}
-              icon={Package}
+              icon="Package"
               color="text-pure-white"
             />
             <StatCard
+              variant="compact"
               label="Status"
               value={statusConfig?.label || order.status}
-              icon={Hash}
+              icon="Hash"
               color={statusConfig?.color || 'text-pure-white'}
             />
             <StatCard
+              variant="compact"
               label="Payment"
               value={paymentConfig?.label || 'N/A'}
-              icon={AlertCircle}
+              icon="AlertCircle"
               color={paymentConfig?.color || 'text-steel'}
             />
           </div>
@@ -453,21 +406,24 @@ export function OrderDetailClient({ orderId }: OrderDetailClientProps) {
         <div className="space-y-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <StatCard
+              variant="compact"
               label="Total Amount"
               value={formatPrice(order.totalAmount)}
-              icon={DollarSign}
+              icon="DollarSign"
               color="text-pure-white"
             />
             <StatCard
+              variant="compact"
               label="Amount Paid"
               value={formatPrice(totalPaid)}
-              icon={Check}
+              icon="Check"
               color="text-available-green"
             />
             <StatCard
+              variant="compact"
               label="Balance"
               value={formatPrice(balance)}
-              icon={AlertCircle}
+              icon="AlertCircle"
               color={balance > 0 ? 'text-auction-amber' : 'text-available-green'}
             />
           </div>
@@ -514,7 +470,7 @@ export function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                       </div>
                     </div>
                     <StatusChip
-                      label={PAYMENT_STATUS_CONFIG[payment.status as string]?.label || payment.status}
+                      label={PAYMENT_STATUS_CONFIG[payment.status as PaymentStatus]?.label || payment.status}
                       variant={getStatusVariant(payment.status)}
                     />
                   </div>

@@ -58,16 +58,24 @@ export class BaseRepository<Table extends RepositoryTable> {
     return this.getClient().select().from(this.getTableForQuery());
   }
 
-  async findByField(fieldName: string, value: unknown) {
+  async findByField(fieldName: string, value: unknown, options?: { includeDeleted?: boolean }) {
     const table = this.table as unknown as Record<string, PgColumn>;
     const column = table[fieldName];
     if (!column) {
       throw new Error(`Column "${fieldName}" does not exist on table`);
     }
+    
+    const conditions: SQL[] = [eq(column, value as never)];
+    
+    // Filter out soft-deleted records by default
+    if (!options?.includeDeleted && table.deletedAt) {
+      conditions.push(sql`${table.deletedAt} IS NULL`);
+    }
+    
     const result = await this.getClient()
       .select()
       .from(this.getTableForQuery())
-      .where(eq(column, value as never))
+      .where(and(...conditions))
       .limit(1);
 
     return result[0] ?? null;
@@ -85,11 +93,19 @@ export class BaseRepository<Table extends RepositoryTable> {
       .where(eq(column, value as never));
   }
 
-  async findById(id: string) {
+  async findById(id: string, options?: { includeDeleted?: boolean }) {
+    const table = this.table as unknown as Record<string, PgColumn>;
+    const conditions: SQL[] = [eq(this.getIdColumn(), id)];
+    
+    // Filter out soft-deleted records by default
+    if (!options?.includeDeleted && table.deletedAt) {
+      conditions.push(sql`${table.deletedAt} IS NULL`);
+    }
+    
     const result = await this.getClient()
       .select()
       .from(this.getTableForQuery())
-      .where(eq(this.getIdColumn(), id))
+      .where(and(...conditions))
       .limit(1);
 
     return result[0] ?? null;

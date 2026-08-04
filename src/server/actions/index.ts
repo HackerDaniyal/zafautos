@@ -57,3 +57,25 @@ export {
   bulkDeleteCustomers,
   exportCustomersCsv,
 } from './customerActions';
+
+export {
+  updateDealerProfile,
+  listDealers,
+  getDealer,
+  getDealerStats,
+  changeDealerStatus,
+  deleteDealer,
+  restoreDealer,
+  bulkUpdateDealerStatus,
+  bulkDeleteDealers,
+  exportDealersCsv,
+} from './dealerActions';
+
+export {
+  listContinents,
+  getContinent,
+  createContinent,
+  updateContinent,
+  deleteContinent,
+  restoreContinent,
+} from './continentsActions';

@@ -69,6 +69,17 @@ export class OrderService {
     return this.orderRepo.findByDealer(dealerId);
   }
 
+  async getOrderForEdit(orderId: string) {
+    if (!orderId) {
+      throw new ValidationError('Order ID is required');
+    }
+    const order = await this.orderRepo.getOrderForEdit(orderId);
+    if (!order) {
+      throw new OrderNotFoundError(orderId);
+    }
+    return order;
+  }
+
   /**
    * Creates a new order.
    */
@@ -103,15 +114,14 @@ export class OrderService {
       throw new ValidationError('New status is required');
     }
 
-    // Usually we would fetch the order to check valid transitions
     const existingOrder = await this.orderRepo.orders.findById(orderId);
     if (!existingOrder) {
       throw new OrderNotFoundError(orderId);
     }
 
-    // Simplistic transition logic - can be expanded
-    if ((existingOrder as { status: string }).status === 'cancelled' && newStatus !== 'cancelled') {
-      throw new InvalidOrderStatusTransitionError((existingOrder as { status: string }).status, newStatus);
+    const currentStatus = (existingOrder as { status: string }).status as OrderStatus;
+    if (!isValidStatusTransition(currentStatus, newStatus as OrderStatus)) {
+      throw new InvalidOrderStatusTransitionError(currentStatus, newStatus);
     }
 
     const updated = await this.orderRepo.updateOrderStatus(orderId, newStatus as unknown as Parameters<typeof this.orderRepo.updateOrderStatus>[1]);

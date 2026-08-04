@@ -4,41 +4,26 @@ import { requireAuth } from '@/lib/auth';
 import {
   CustomerService,
   CreateAddressSchema,
-  DomainError,
 } from '@/server/services';
+import { handleError, type ActionResult } from '@/lib/errors/action-error';
+import { UUIDSchema, ProfileUpdateSchema } from '@/lib/validation/common';
 import type { CustomerStatus, CustomerListParams } from '@/lib/types/customer';
 import { z } from 'zod';
 
 const customerService = new CustomerService();
 
-const UUIDSchema = z.string().uuid('Invalid ID');
-
-type ActionResult<T = unknown> =
-  | { success: true; data: T }
-  | { success: false; error: string; code?: string };
-
-function handleError(error: unknown): { success: false; error: string; code?: string } {
-  if (error instanceof z.ZodError) {
-    return {
-      success: false,
-      error: error.errors.map((e) => e.message).join(', '),
-      code: 'VALIDATION_ERROR',
-    };
-  }
-  if (error instanceof DomainError) {
-    return { success: false, error: error.message, code: error.code };
-  }
-  return {
-    success: false,
-    error: error instanceof Error ? error.message : 'An unexpected error occurred',
-    code: 'INTERNAL_ERROR',
-  };
-}
-
-const ProfileUpdateSchema = z.object({
-  displayName: z.string().min(1).max(255).optional(),
-});
 type ProfileUpdateDTO = z.infer<typeof ProfileUpdateSchema>;
+
+export async function getCustomerForEditAction(customerId: string): Promise<ActionResult> {
+  try {
+    await requireAuth();
+    UUIDSchema.parse(customerId);
+    const customer = await customerService.getCustomerForEdit(customerId);
+    return { success: true, data: customer };
+  } catch (error) {
+    return handleError(error);
+  }
+}
 
 export async function updateCustomerProfile(
   customerId: string,

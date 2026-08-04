@@ -22,6 +22,21 @@ export class ShippingRepository {
     return this.shipments.create(data);
   }
 
+  async getShipmentForEdit(shipmentId: string) {
+    const [shipment] = await this.shipments.getClient()
+      .select({
+        id: shipments.id,
+        orderId: shipments.orderId,
+        carrier: shipments.carrier,
+        status: shipments.status,
+      })
+      .from(shipments)
+      .where(eq(shipments.id, shipmentId))
+      .limit(1);
+
+    return shipment ?? null;
+  }
+
 
 
   async listShipments(options: {
@@ -157,28 +172,19 @@ export class ShippingRepository {
       return null;
     }
 
-    // Get tracking events
-    const tracking = await db
-      .select()
-      .from(shipmentTracking)
-      .where(eq(shipmentTracking.shipmentId, shipmentId))
-      .orderBy(desc(shipmentTracking.createdAt));
-
-    // Get containers
-    const containerList = await db
-      .select()
-      .from(containers)
-      .where(eq(containers.shipmentId, shipmentId));
-
-    // Get documents
-    const documentList = await db
-      .select()
-      .from(shippingDocuments)
-      .where(eq(shippingDocuments.shipmentId, shipmentId));
-
-    // Get order with relations
-    const orderResult = await db
-      .select({
+    // Get tracking, containers, documents, and order in parallel
+    const [tracking, containerList, documentList, orderResult] = await Promise.all([
+      db.select()
+        .from(shipmentTracking)
+        .where(eq(shipmentTracking.shipmentId, shipmentId))
+        .orderBy(desc(shipmentTracking.createdAt)),
+      db.select()
+        .from(containers)
+        .where(eq(containers.shipmentId, shipmentId)),
+      db.select()
+        .from(shippingDocuments)
+        .where(eq(shippingDocuments.shipmentId, shipmentId)),
+      db.select({
         id: orders.id,
         orderNumber: orders.orderNumber,
         customerId: orders.customerId,
@@ -187,86 +193,62 @@ export class ShippingRepository {
         status: orders.status,
         totalAmount: orders.totalAmount,
       })
-      .from(orders)
-      .where(eq(orders.id, shipment.orderId))
-      .limit(1);
+        .from(orders)
+        .where(eq(orders.id, shipment.orderId))
+        .limit(1),
+    ]);
 
     const order = orderResult[0] ?? null;
 
-    // Get customer info
-    let customer = null;
-    if (order?.customerId) {
-      const customerResult = await db
-        .select({
-          id: customers.id,
-          userId: customers.userId,
-        })
-        .from(customers)
-        .where(eq(customers.id, order.customerId))
-        .limit(1);
-
-      if (customerResult[0]) {
-        const profileResult = await db
-          .select({
-            displayName: customerProfiles.displayName,
+    // Get customer, dealer, and vehicle in parallel
+    const [customerResult, dealerResult, vehicleResult] = await Promise.all([
+      order?.customerId
+        ? db.select({ id: customers.id, userId: customers.userId })
+            .from(customers)
+            .where(eq(customers.id, order.customerId))
+            .limit(1)
+            .then(async (rows) => {
+              if (!rows[0]) return null;
+              const profileResult = await db.select({ displayName: customerProfiles.displayName })
+                .from(customerProfiles)
+                .where(eq(customerProfiles.customerId, rows[0].id))
+                .limit(1);
+              return { id: rows[0].id, displayName: profileResult[0]?.displayName };
+            })
+        : Promise.resolve(null),
+      order?.dealerId
+        ? db.select({ id: dealers.id, userId: dealers.userId })
+            .from(dealers)
+            .where(eq(dealers.id, order.dealerId))
+            .limit(1)
+            .then(async (rows) => {
+              if (!rows[0]) return null;
+              const profileResult = await db.select({ displayName: dealerProfiles.displayName })
+                .from(dealerProfiles)
+                .where(eq(dealerProfiles.dealerId, rows[0].id))
+                .limit(1);
+              return { id: rows[0].id, displayName: profileResult[0]?.displayName };
+            })
+        : Promise.resolve(null),
+      order?.vehicleId
+        ? db.select({
+            id: vehicles.id,
+            year: vehicles.year,
+            vin: vehicles.vin,
+            stockNumber: vehicles.stockNumber,
+            manufacturerId: vehicles.manufacturerId,
+            modelId: vehicles.modelId,
           })
-          .from(customerProfiles)
-          .where(eq(customerProfiles.customerId, customerResult[0].id))
-          .limit(1);
+            .from(vehicles)
+            .where(eq(vehicles.id, order.vehicleId))
+            .limit(1)
+            .then((rows) => rows[0] ?? null)
+        : Promise.resolve(null),
+    ]);
 
-        customer = {
-          id: customerResult[0].id,
-          displayName: profileResult[0]?.displayName,
-        };
-      }
-    }
-
-    // Get dealer info
-    let dealer = null;
-    if (order?.dealerId) {
-      const dealerResult = await db
-        .select({
-          id: dealers.id,
-          userId: dealers.userId,
-        })
-        .from(dealers)
-        .where(eq(dealers.id, order.dealerId))
-        .limit(1);
-
-      if (dealerResult[0]) {
-        const profileResult = await db
-          .select({
-            displayName: dealerProfiles.displayName,
-          })
-          .from(dealerProfiles)
-          .where(eq(dealerProfiles.dealerId, dealerResult[0].id))
-          .limit(1);
-
-        dealer = {
-          id: dealerResult[0].id,
-          displayName: profileResult[0]?.displayName,
-        };
-      }
-    }
-
-    // Get vehicle info
-    let vehicle = null;
-    if (order?.vehicleId) {
-      const vehicleResult = await db
-        .select({
-          id: vehicles.id,
-          year: vehicles.year,
-          vin: vehicles.vin,
-          stockNumber: vehicles.stockNumber,
-          manufacturerId: vehicles.manufacturerId,
-          modelId: vehicles.modelId,
-        })
-        .from(vehicles)
-        .where(eq(vehicles.id, order.vehicleId))
-        .limit(1);
-
-      vehicle = vehicleResult[0] ?? null;
-    }
+    const customer = customerResult;
+    const dealer = dealerResult;
+    const vehicle = vehicleResult;
 
     return {
       ...shipment,
@@ -281,37 +263,36 @@ export class ShippingRepository {
   }
 
   async getShipmentStats() {
-    const statusCounts = await db
-      .select({
-        status: shipments.status,
-        count: sql<number>`count(*)::int`,
-      })
-      .from(shipments)
-      .where(sql`${shipments.deletedAt} IS NULL`)
-      .groupBy(shipments.status);
+    const [statusCounts, upcomingEtas] = await Promise.all([
+      db.select({
+          status: shipments.status,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(shipments)
+        .where(sql`${shipments.deletedAt} IS NULL`)
+        .groupBy(shipments.status),
+      db.select({
+          id: shipments.id,
+          carrier: shipments.carrier,
+          status: shipments.status,
+          createdAt: shipments.createdAt,
+        })
+        .from(shipments)
+        .where(
+          and(
+            sql`${shipments.deletedAt} IS NULL`,
+            sql`${shipments.status} IN ('pending', 'in_transit')`
+          )
+        )
+        .orderBy(asc(shipments.createdAt))
+        .limit(10),
+    ]);
 
     const totalShipments = statusCounts.reduce((sum, row) => sum + row.count, 0);
     const statusMap: Record<string, number> = {};
     for (const row of statusCounts) {
       statusMap[row.status] = row.count;
     }
-
-    const upcomingEtas = await db
-      .select({
-        id: shipments.id,
-        carrier: shipments.carrier,
-        status: shipments.status,
-        createdAt: shipments.createdAt,
-      })
-      .from(shipments)
-      .where(
-        and(
-          sql`${shipments.deletedAt} IS NULL`,
-          sql`${shipments.status} IN ('pending', 'in_transit')`
-        )
-      )
-      .orderBy(asc(shipments.createdAt))
-      .limit(10);
 
     return {
       totalShipments,
@@ -394,9 +375,12 @@ export class ShippingRepository {
   }
 
   async bulkDeleteShipments(ids: string[]) {
-    for (const id of ids) {
-      await this.softDeleteShipment(id);
-    }
+    if (ids.length === 0) return;
+
+    await this.shipments.getClient()
+      .update(shipments)
+      .set({ deletedAt: new Date() })
+      .where(sql`${shipments.id} = ANY(${ids})`);
   }
 
   async updateShipmentStatus(shipmentId: string, status: string) {

@@ -2,31 +2,9 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { UserProvisioningService } from '@/server/services/userProvisioningService';
-import { db } from '@/server/db/client';
-import { users, profiles } from '@/server/db/schema';
-import { eq, desc, count as drizzleCount } from 'drizzle-orm';
-import { z } from 'zod';
+import { handleError, type ActionResult } from '@/lib/errors/action-error';
 
 const userService = new UserProvisioningService();
-
-type ActionResult<T = void> =
-  | { success: true; data: T }
-  | { success: false; error: string; code?: string };
-
-function handleError(error: unknown): { success: false; error: string; code?: string } {
-  if (error instanceof z.ZodError) {
-    return {
-      success: false,
-      error: error.errors.map((e) => e.message).join('. '),
-      code: 'VALIDATION_ERROR',
-    };
-  }
-  return {
-    success: false,
-    error: error instanceof Error ? error.message : 'An unexpected error occurred',
-    code: 'INTERNAL_ERROR',
-  };
-}
 
 // ─── Bootstrap ──────────────────────────────────────────────────────────────
 
@@ -40,11 +18,7 @@ export async function adminBootstrap(data: {
   lastName: string;
 }): Promise<ActionResult> {
   try {
-    const [existing] = await db
-      .select()
-      .from(users)
-      .where(eq(users.role, 'super_admin'))
-      .limit(1);
+    const existing = await userService.hasSuperAdmin();
 
     if (existing) {
       return {
@@ -199,53 +173,19 @@ export async function listUsers(options: {
       return { success: false, error: 'Unauthorized', code: 'UNAUTHORIZED' };
     }
 
-    const page = options.page ?? 1;
-    const limit = options.limit ?? 20;
-    const offset = (page - 1) * limit;
-
-    // Build query
-    let query = db.select({
-      id: users.id,
-      email: users.email,
-      role: users.role,
-      status: users.status,
-      firstName: profiles.firstName,
-      lastName: profiles.lastName,
-      createdAt: users.createdAt,
-    }).from(users)
-      .leftJoin(profiles, eq(users.id, profiles.userId))
-      .$dynamic();
-
-    // Count query
-    let countQuery = db.select({ count: drizzleCount() }).from(users).$dynamic();
-
-    // Apply filters
-    if (options.role) {
-      query = query.where(eq(users.role, options.role as 'customer' | 'dealer' | 'admin' | 'super_admin'));
-      countQuery = countQuery.where(eq(users.role, options.role as 'customer' | 'dealer' | 'admin' | 'super_admin'));
-    }
-
-    if (options.status) {
-      query = query.where(eq(users.status, options.status as 'active' | 'pending' | 'suspended' | 'blocked'));
-      countQuery = countQuery.where(eq(users.status, options.status as 'active' | 'pending' | 'suspended' | 'blocked'));
-    }
-
-    const [data, [{ count: total }]] = await Promise.all([
-      query.orderBy(desc(users.createdAt)).limit(limit).offset(offset),
-      countQuery,
-    ]);
+    const result = await userService.listUsers(options);
 
     return {
       success: true,
       data: {
-        users: data.map((u) => ({
+        users: result.users.map((u) => ({
           ...u,
           role: u.role as string,
           status: u.status as string,
         })),
-        total,
-        page,
-        limit,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
       },
     };
   } catch (error) {

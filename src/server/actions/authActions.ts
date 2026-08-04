@@ -2,7 +2,10 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { UserProvisioningService } from '@/server/services/userProvisioningService';
-import { z } from 'zod';
+import { AuthRepository } from '@/server/repositories';
+import { profiles } from '@/server/db/schema';
+import { eq } from 'drizzle-orm';
+import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import {
   loginSchema,
   registerSchema,
@@ -17,25 +20,6 @@ import {
 } from '@/lib/auth/validation';
 
 const userService = new UserProvisioningService();
-
-type ActionResult<T = void> =
-  | { success: true; data: T }
-  | { success: false; error: string; code?: string };
-
-function handleError(error: unknown): { success: false; error: string; code?: string } {
-  if (error instanceof z.ZodError) {
-    return {
-      success: false,
-      error: error.errors.map((e) => e.message).join('. '),
-      code: 'VALIDATION_ERROR',
-    };
-  }
-  return {
-    success: false,
-    error: error instanceof Error ? error.message : 'An unexpected error occurred',
-    code: 'INTERNAL_ERROR',
-  };
-}
 
 /**
  * Sign in with email and password.
@@ -422,6 +406,30 @@ export async function adminCreateUser(data: {
         // Best-effort cleanup
       }
     }
+    return handleError(error);
+  }
+}
+
+/**
+ * Get a user's profile by their user ID.
+ * Used by dashboard pages to avoid direct DB access in Server Components.
+ */
+export async function getProfileByUserId(userId: string): Promise<ActionResult<{ firstName: string | null; lastName: string | null; avatarUrl: string | null } | null>> {
+  try {
+    const authRepo = new AuthRepository();
+    const [profile] = await authRepo.profiles.getClient()
+      .select()
+      .from(profiles)
+      .where(eq(profiles.userId, userId))
+      .limit(1);
+
+    return {
+      success: true,
+      data: profile
+        ? { firstName: profile.firstName ?? null, lastName: profile.lastName ?? null, avatarUrl: profile.avatarUrl ?? null }
+        : null,
+    };
+  } catch (error) {
     return handleError(error);
   }
 }

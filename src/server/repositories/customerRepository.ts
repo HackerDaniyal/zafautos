@@ -35,6 +35,25 @@ export class CustomerRepository {
     return customer ?? null;
   }
 
+  async getCustomerForEdit(customerId: string) {
+    const [result] = await this.customers.getClient()
+      .select({
+        id: customers.id,
+        email: users.email,
+        firstName: profiles.firstName,
+        lastName: profiles.lastName,
+        phone: profiles.phone,
+        status: users.status,
+      })
+      .from(customers)
+      .leftJoin(users, eq(customers.userId, users.id))
+      .leftJoin(profiles, eq(users.id, profiles.userId))
+      .where(eq(customers.id, customerId))
+      .limit(1);
+
+    return result ?? null;
+  }
+
   async listCustomers(options: {
     page?: number;
     limit?: number;
@@ -153,79 +172,36 @@ export class CustomerRepository {
     const customer = customerResult[0];
     if (!customer) return null;
 
-    const userResult = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, customer.userId))
-      .limit(1);
+    const [
+      userResult,
+      profileResult,
+      customerProfileResult,
+      addressList,
+      settingsResult,
+      ordersList,
+      paymentsList,
+      shipmentsList,
+      wishlistList,
+      documentsList,
+      alertsList,
+    ] = await Promise.all([
+      db.select().from(users).where(eq(users.id, customer.userId)).limit(1),
+      db.select().from(profiles).where(eq(profiles.userId, customer.userId)).limit(1),
+      db.select().from(customerProfiles).where(eq(customerProfiles.customerId, customerId)).limit(1),
+      db.select().from(customerAddresses).where(eq(customerAddresses.customerId, customerId)).orderBy(desc(customerAddresses.createdAt)),
+      db.select().from(customerSettings).where(eq(customerSettings.customerId, customerId)).limit(1),
+      db.select().from(orders).where(eq(orders.customerId, customerId)).orderBy(desc(orders.createdAt)),
+      db.select().from(payments).where(sql`${payments.userId} = ${customer.userId}`).orderBy(desc(payments.createdAt)),
+      db.select().from(shipments).where(sql`${shipments.orderId} IN (SELECT ${orders.id} FROM ${orders} WHERE ${orders.customerId} = ${customerId})`).orderBy(desc(shipments.createdAt)),
+      db.select().from(customerWishlist).where(eq(customerWishlist.customerId, customerId)).orderBy(desc(customerWishlist.createdAt)),
+      db.select().from(documents).where(eq(documents.userId, customer.userId)).orderBy(desc(documents.createdAt)),
+      db.select().from(customerAlerts).where(eq(customerAlerts.customerId, customerId)).orderBy(desc(customerAlerts.createdAt)),
+    ]);
 
     const user = userResult[0];
-
-    const profileResult = await db
-      .select()
-      .from(profiles)
-      .where(eq(profiles.userId, customer.userId))
-      .limit(1);
-
     const profile = profileResult[0] ?? null;
-
-    const customerProfileResult = await db
-      .select()
-      .from(customerProfiles)
-      .where(eq(customerProfiles.customerId, customerId))
-      .limit(1);
-
     const customerProfile = customerProfileResult[0] ?? null;
-
-    const addressList = await db
-      .select()
-      .from(customerAddresses)
-      .where(eq(customerAddresses.customerId, customerId))
-      .orderBy(desc(customerAddresses.createdAt));
-
-    const settingsResult = await db
-      .select()
-      .from(customerSettings)
-      .where(eq(customerSettings.customerId, customerId))
-      .limit(1);
-
     const settings = settingsResult[0] ?? null;
-
-    const ordersList = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.customerId, customerId))
-      .orderBy(desc(orders.createdAt));
-
-    const paymentsList = await db
-      .select()
-      .from(payments)
-      .where(sql`${payments.userId} = ${customer.userId}`)
-      .orderBy(desc(payments.createdAt));
-
-    const shipmentsList = await db
-      .select()
-      .from(shipments)
-      .where(sql`${shipments.orderId} IN (SELECT ${orders.id} FROM ${orders} WHERE ${orders.customerId} = ${customerId})`)
-      .orderBy(desc(shipments.createdAt));
-
-    const wishlistList = await db
-      .select()
-      .from(customerWishlist)
-      .where(eq(customerWishlist.customerId, customerId))
-      .orderBy(desc(customerWishlist.createdAt));
-
-    const documentsList = await db
-      .select()
-      .from(documents)
-      .where(eq(documents.userId, customer.userId))
-      .orderBy(desc(documents.createdAt));
-
-    const alertsList = await db
-      .select()
-      .from(customerAlerts)
-      .where(eq(customerAlerts.customerId, customerId))
-      .orderBy(desc(customerAlerts.createdAt));
 
     return {
       ...customer,
@@ -268,29 +244,34 @@ export class CustomerRepository {
       statusMap[row.status] = row.count;
     }
 
-    const [{ totalOrders }] = await db
-      .select({ totalOrders: sql<number>`count(*)::int` })
-      .from(orders)
-      .where(sql`${orders.deletedAt} IS NULL`);
-
-    const [{ totalRevenue }] = await db
-      .select({ totalRevenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int` })
-      .from(orders)
-      .where(sql`${orders.deletedAt} IS NULL`);
-
-    const avgOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
-
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const [{ newThisMonth }] = await db
-      .select({ newThisMonth: sql<number>`count(*)::int` })
-      .from(customers)
-      .where(sql`${customers.deletedAt} IS NULL AND ${customers.createdAt} >= ${thirtyDaysAgo}`);
 
-    const [{ returningCustomers }] = await db
-      .select({ returningCustomers: sql<number>`count(distinct ${orders.customerId})::int` })
-      .from(orders)
-      .where(sql`${orders.deletedAt} IS NULL AND ${orders.customerId} IS NOT NULL`);
+    const [totalOrdersRow, totalRevenueRow, newThisMonthRow, returningCustomersRow] = await Promise.all([
+      db.select({ totalOrders: sql<number>`count(*)::int` })
+        .from(orders)
+        .where(sql`${orders.deletedAt} IS NULL`)
+        .then((rows) => rows[0]),
+      db.select({ totalRevenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int` })
+        .from(orders)
+        .where(sql`${orders.deletedAt} IS NULL`)
+        .then((rows) => rows[0]),
+      db.select({ newThisMonth: sql<number>`count(*)::int` })
+        .from(customers)
+        .where(sql`${customers.deletedAt} IS NULL AND ${customers.createdAt} >= ${thirtyDaysAgo}`)
+        .then((rows) => rows[0]),
+      db.select({ returningCustomers: sql<number>`count(distinct ${orders.customerId})::int` })
+        .from(orders)
+        .where(sql`${orders.deletedAt} IS NULL AND ${orders.customerId} IS NOT NULL`)
+        .then((rows) => rows[0]),
+    ]);
+
+    const totalOrders = totalOrdersRow.totalOrders;
+    const totalRevenue = totalRevenueRow.totalRevenue;
+    const newThisMonth = newThisMonthRow.newThisMonth;
+    const returningCustomers = returningCustomersRow.returningCustomers;
+
+    const avgOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
 
     return {
       totalCustomers,

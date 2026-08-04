@@ -37,6 +37,19 @@ export class UserProvisioningService {
     return this.authRepo.findRoleBySlug(slug);
   }
 
+  async listUsers(options: {
+    page?: number;
+    limit?: number;
+    role?: string;
+    status?: string;
+  } = {}) {
+    return this.authRepo.listUsers(options);
+  }
+
+  async hasSuperAdmin(): Promise<boolean> {
+    return this.authRepo.hasSuperAdmin();
+  }
+
   // ─── Create ───────────────────────────────────────────────────────────────
 
   /**

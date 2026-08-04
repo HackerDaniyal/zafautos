@@ -59,6 +59,24 @@ export class OrderRepository {
       .where(eq(orders.dealerId, dealerId));
   }
 
+  async getOrderForEdit(orderId: string) {
+    const [order] = await this.orders.getClient()
+      .select({
+        id: orders.id,
+        orderNumber: orders.orderNumber,
+        customerId: orders.customerId,
+        dealerId: orders.dealerId,
+        vehicleId: orders.vehicleId,
+        status: orders.status,
+        totalAmount: orders.totalAmount,
+      })
+      .from(orders)
+      .where(eq(orders.id, orderId))
+      .limit(1);
+
+    return order ?? null;
+  }
+
   async createOrder(data: InferModel<typeof orders, 'insert'>) {
     return this.orders.create(data);
   }
@@ -287,64 +305,64 @@ export class OrderRepository {
         .where(and(eq(shipments.orderId, orderId), sql`${shipments.deletedAt} IS NULL`)),
     ]);
 
-    let customer = null;
-    let customerProfile = null;
-    if (order.customerId) {
-      customer = await this.orders.getClient()
-        .select()
-        .from(customers)
-        .where(and(eq(customers.id, order.customerId), sql`${customers.deletedAt} IS NULL`))
-        .limit(1)
-        .then((rows) => rows[0] ?? null);
+    // Fetch customer, dealer, and vehicle in parallel
+    const [customerResult, dealerResult, vehicleResult] = await Promise.all([
+      order.customerId
+        ? this.orders.getClient()
+            .select()
+            .from(customers)
+            .where(and(eq(customers.id, order.customerId), sql`${customers.deletedAt} IS NULL`))
+            .limit(1)
+            .then((rows) => rows[0] ?? null)
+        : Promise.resolve(null),
+      order.dealerId
+        ? this.orders.getClient()
+            .select()
+            .from(dealers)
+            .where(and(eq(dealers.id, order.dealerId), sql`${dealers.deletedAt} IS NULL`))
+            .limit(1)
+            .then((rows) => rows[0] ?? null)
+        : Promise.resolve(null),
+      order.vehicleId
+        ? this.orders.getClient()
+            .select()
+            .from(vehicles)
+            .where(and(eq(vehicles.id, order.vehicleId), sql`${vehicles.deletedAt} IS NULL`))
+            .limit(1)
+            .then((rows) => rows[0] ?? null)
+        : Promise.resolve(null),
+    ]);
 
-      if (customer) {
-        customerProfile = await this.orders.getClient()
-          .select()
-          .from(customerProfiles)
-          .where(and(eq(customerProfiles.customerId, customer.id), sql`${customerProfiles.deletedAt} IS NULL`))
-          .limit(1)
-          .then((rows) => rows[0] ?? null);
-      }
-    }
+    // Fetch profiles and vehicle images in parallel (each depends on its parent)
+    const [customerProfile, dealerProfile, vehicleImagesList] = await Promise.all([
+      customerResult
+        ? this.orders.getClient()
+            .select()
+            .from(customerProfiles)
+            .where(and(eq(customerProfiles.customerId, customerResult.id), sql`${customerProfiles.deletedAt} IS NULL`))
+            .limit(1)
+            .then((rows) => rows[0] ?? null)
+        : Promise.resolve(null),
+      dealerResult
+        ? this.orders.getClient()
+            .select()
+            .from(dealerProfiles)
+            .where(and(eq(dealerProfiles.dealerId, dealerResult.id), sql`${dealerProfiles.deletedAt} IS NULL`))
+            .limit(1)
+            .then((rows) => rows[0] ?? null)
+        : Promise.resolve(null),
+      vehicleResult
+        ? this.orders.getClient()
+            .select()
+            .from(vehicleImages)
+            .where(and(eq(vehicleImages.vehicleId, vehicleResult.id), sql`${vehicleImages.deletedAt} IS NULL`))
+            .orderBy(asc(vehicleImages.sortOrder))
+        : Promise.resolve([] as typeof vehicleImages.$inferSelect[]),
+    ]);
 
-    let dealer = null;
-    let dealerProfile = null;
-    if (order.dealerId) {
-      dealer = await this.orders.getClient()
-        .select()
-        .from(dealers)
-        .where(and(eq(dealers.id, order.dealerId), sql`${dealers.deletedAt} IS NULL`))
-        .limit(1)
-        .then((rows) => rows[0] ?? null);
-
-      if (dealer) {
-        dealerProfile = await this.orders.getClient()
-          .select()
-          .from(dealerProfiles)
-          .where(and(eq(dealerProfiles.dealerId, dealer.id), sql`${dealerProfiles.deletedAt} IS NULL`))
-          .limit(1)
-          .then((rows) => rows[0] ?? null);
-      }
-    }
-
-    let vehicle = null;
-    let vehicleImagesList: typeof vehicleImages.$inferSelect[] = [];
-    if (order.vehicleId) {
-      vehicle = await this.orders.getClient()
-        .select()
-        .from(vehicles)
-        .where(and(eq(vehicles.id, order.vehicleId), sql`${vehicles.deletedAt} IS NULL`))
-        .limit(1)
-        .then((rows) => rows[0] ?? null);
-
-      if (vehicle) {
-        vehicleImagesList = await this.orders.getClient()
-          .select()
-          .from(vehicleImages)
-          .where(and(eq(vehicleImages.vehicleId, vehicle.id), sql`${vehicleImages.deletedAt} IS NULL`))
-          .orderBy(asc(vehicleImages.sortOrder));
-      }
-    }
+    const customer = customerResult;
+    const dealer = dealerResult;
+    const vehicle = vehicleResult;
 
     return {
       ...order,
@@ -362,19 +380,20 @@ export class OrderRepository {
   }
 
   async getOrderStats() {
-    const statusCounts = await this.orders.getClient()
-      .select({
-        status: orders.status,
-        count: sql<number>`count(*)::int`,
-      })
-      .from(orders)
-      .where(sql`${orders.deletedAt} IS NULL`)
-      .groupBy(orders.status);
-
-    const [{ totalRevenue }] = await this.orders.getClient()
-      .select({ totalRevenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int` })
-      .from(orders)
-      .where(sql`${orders.deletedAt} IS NULL`);
+    const [statusCounts, [{ totalRevenue }]] = await Promise.all([
+      this.orders.getClient()
+        .select({
+          status: orders.status,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(orders)
+        .where(sql`${orders.deletedAt} IS NULL`)
+        .groupBy(orders.status),
+      this.orders.getClient()
+        .select({ totalRevenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int` })
+        .from(orders)
+        .where(sql`${orders.deletedAt} IS NULL`),
+    ]);
 
     const totalOrders = statusCounts.reduce((sum, row) => sum + row.count, 0);
 
@@ -509,29 +528,39 @@ export class OrderRepository {
   async assignDealer(orderId: string, dealerId: string, userId?: string) {
     const client = this.orders.getClient();
 
-    const [updatedOrder] = await client
-      .update(orders)
-      .set({
-        dealerId,
-        ...(userId ? { updatedBy: userId } : {}),
-      })
-      .where(eq(orders.id, orderId))
-      .returning();
+    return client.transaction(async (tx) => {
+      const [updatedOrder] = await tx
+        .update(orders)
+        .set({
+          dealerId,
+          ...(userId ? { updatedBy: userId } : {}),
+        })
+        .where(eq(orders.id, orderId))
+        .returning();
 
-    if (!updatedOrder) return null;
+      if (!updatedOrder) return null;
 
-    const [assignment] = await client
-      .insert(dealerAssignments)
-      .values({
-        dealerId,
-        orderId,
-        createdBy: userId ?? null,
-        updatedBy: userId ?? null,
-      })
-      .returning();
+      const [assignment] = await tx
+        .insert(dealerAssignments)
+        .values({
+          dealerId,
+          orderId,
+          createdBy: userId ?? null,
+          updatedBy: userId ?? null,
+        })
+        .returning();
 
-    await this.addTimelineEvent(orderId, `Dealer assigned: ${dealerId}`, userId);
+      // Timeline event must use the same transaction client
+      await tx
+        .insert(orderTimeline)
+        .values({
+          orderId,
+          event: `Dealer assigned: ${dealerId}`,
+          createdBy: userId ?? null,
+          updatedBy: userId ?? null,
+        });
 
-    return { order: updatedOrder, assignment };
+      return { order: updatedOrder, assignment };
+    });
   }
 }

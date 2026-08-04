@@ -141,7 +141,7 @@ async function seedReferenceData() {
   for (const c of COUNTRIES) {
     const id = uuid();
     countryIds.push(id);
-    await db.insert(schema.countries).values({ id, name: c.name, code: c.code }).onConflictDoNothing();
+    await db.insert(schema.countries).values({ name: c.name, slug: c.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') }).onConflictDoNothing();
   }
 
   // Languages

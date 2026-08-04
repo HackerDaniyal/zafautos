@@ -261,48 +261,60 @@ export class PaymentsRepository {
 
     if (order) {
       const o = order as unknown as typeof orders.$inferSelect;
-      if (o.customerId) {
-        customer = await this.payments.getClient()
-          .select()
-          .from(customers)
-          .where(and(eq(customers.id, o.customerId), sql`${customers.deletedAt} IS NULL`))
-          .limit(1)
-          .then((rows) => rows[0] ?? null);
 
-        if (customer) {
-          customerProfile = await this.payments.getClient()
-            .select()
-            .from(customerProfiles)
-            .where(and(eq(customerProfiles.customerId, (customer as unknown as typeof customers.$inferSelect).id), sql`${customerProfiles.deletedAt} IS NULL`))
-            .limit(1)
-            .then((rows) => rows[0] ?? null);
-        }
-      }
-      if (o.dealerId) {
-        dealer = await this.payments.getClient()
-          .select()
-          .from(dealers)
-          .where(and(eq(dealers.id, o.dealerId), sql`${dealers.deletedAt} IS NULL`))
-          .limit(1)
-          .then((rows) => rows[0] ?? null);
+      // Fetch customer, dealer, and vehicle in parallel
+      const [customerResult, dealerResult, vehicleResult] = await Promise.all([
+        o.customerId
+          ? this.payments.getClient()
+              .select()
+              .from(customers)
+              .where(and(eq(customers.id, o.customerId), sql`${customers.deletedAt} IS NULL`))
+              .limit(1)
+              .then((rows) => rows[0] ?? null)
+          : Promise.resolve(null),
+        o.dealerId
+          ? this.payments.getClient()
+              .select()
+              .from(dealers)
+              .where(and(eq(dealers.id, o.dealerId), sql`${dealers.deletedAt} IS NULL`))
+              .limit(1)
+              .then((rows) => rows[0] ?? null)
+          : Promise.resolve(null),
+        o.vehicleId
+          ? this.payments.getClient()
+              .select()
+              .from(vehicles)
+              .where(and(eq(vehicles.id, o.vehicleId), sql`${vehicles.deletedAt} IS NULL`))
+              .limit(1)
+              .then((rows) => rows[0] ?? null)
+          : Promise.resolve(null),
+      ]);
 
-        if (dealer) {
-          dealerProfile = await this.payments.getClient()
-            .select()
-            .from(dealerProfiles)
-            .where(and(eq(dealerProfiles.dealerId, (dealer as unknown as typeof dealers.$inferSelect).id), sql`${dealerProfiles.deletedAt} IS NULL`))
-            .limit(1)
-            .then((rows) => rows[0] ?? null);
-        }
-      }
-      if (o.vehicleId) {
-        vehicle = await this.payments.getClient()
-          .select()
-          .from(vehicles)
-          .where(and(eq(vehicles.id, o.vehicleId), sql`${vehicles.deletedAt} IS NULL`))
-          .limit(1)
-          .then((rows) => rows[0] ?? null);
-      }
+      // Fetch profiles in parallel (each depends on its parent)
+      const [customerProfileResult, dealerProfileResult] = await Promise.all([
+        customerResult
+          ? this.payments.getClient()
+              .select()
+              .from(customerProfiles)
+              .where(and(eq(customerProfiles.customerId, (customerResult as unknown as typeof customers.$inferSelect).id), sql`${customerProfiles.deletedAt} IS NULL`))
+              .limit(1)
+              .then((rows) => rows[0] ?? null)
+          : Promise.resolve(null),
+        dealerResult
+          ? this.payments.getClient()
+              .select()
+              .from(dealerProfiles)
+              .where(and(eq(dealerProfiles.dealerId, (dealerResult as unknown as typeof dealers.$inferSelect).id), sql`${dealerProfiles.deletedAt} IS NULL`))
+              .limit(1)
+              .then((rows) => rows[0] ?? null)
+          : Promise.resolve(null),
+      ]);
+
+      customer = customerResult;
+      customerProfile = customerProfileResult;
+      dealer = dealerResult;
+      dealerProfile = dealerProfileResult;
+      vehicle = vehicleResult;
     }
 
     return {
@@ -351,26 +363,28 @@ export class PaymentsRepository {
     status: InferModel<typeof payments, 'insert'>['status'],
     userId?: string,
   ) {
-    const [payment] = await this.payments.getClient()
-      .update(payments)
-      .set({
-        status,
-        ...(userId ? { updatedBy: userId } : {}),
-        updatedAt: new Date(),
-      })
-      .where(eq(payments.id, paymentId))
-      .returning();
+    return this.payments.getClient().transaction(async (tx) => {
+      const [payment] = await tx
+        .update(payments)
+        .set({
+          status,
+          ...(userId ? { updatedBy: userId } : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(payments.id, paymentId))
+        .returning();
 
-    if (payment) {
-      await this.history.create({
-        paymentId,
-        status,
-        createdBy: userId,
-        updatedBy: userId,
-      });
-    }
+      if (payment) {
+        await tx.insert(paymentHistory).values({
+          paymentId,
+          status,
+          createdBy: userId,
+          updatedBy: userId,
+        });
+      }
 
-    return payment ?? null;
+      return payment ?? null;
+    });
   }
 
   async addPaymentHistory(
@@ -623,8 +637,19 @@ export class PaymentsRepository {
   }
 
   async createInvoiceWithNumber(data: InferModel<typeof invoices, 'insert'>) {
-    const invoiceNumber = data.invoiceNumber ?? (await this.generateInvoiceNumber());
-    return this.invoices.create({ ...data, invoiceNumber });
+    return this.payments.getClient().transaction(async (tx) => {
+      const invoiceNumber = data.invoiceNumber ?? (() => {
+        const prefix = 'INV';
+        const year = new Date().getFullYear();
+        return tx.select({ maxNumber: sql<number>`coalesce(max(cast(substring(invoice_number from 5) as integer)), 0)` })
+          .from(invoices)
+          .where(sql`invoice_number like '${prefix}-${year}-%'`)
+          .then((rows) => `${prefix}-${year}-${String((rows[0]?.maxNumber ?? 0) + 1).padStart(4, '0')}`);
+      })();
+
+      const num = await invoiceNumber;
+      return tx.insert(invoices).values({ ...data, invoiceNumber: num }).returning().then((rows) => rows[0]);
+    });
   }
 
   async softDeleteInvoice(invoiceId: string, deletedBy?: string) {
@@ -896,48 +921,60 @@ export class PaymentsRepository {
 
     if (order) {
       const o = order as unknown as typeof orders.$inferSelect;
-      if (o.customerId) {
-        customer = await this.payments.getClient()
-          .select()
-          .from(customers)
-          .where(and(eq(customers.id, o.customerId), sql`${customers.deletedAt} IS NULL`))
-          .limit(1)
-          .then((rows) => rows[0] ?? null);
 
-        if (customer) {
-          customerProfile = await this.payments.getClient()
-            .select()
-            .from(customerProfiles)
-            .where(and(eq(customerProfiles.customerId, (customer as unknown as typeof customers.$inferSelect).id), sql`${customerProfiles.deletedAt} IS NULL`))
-            .limit(1)
-            .then((rows) => rows[0] ?? null);
-        }
-      }
-      if (o.dealerId) {
-        dealer = await this.payments.getClient()
-          .select()
-          .from(dealers)
-          .where(and(eq(dealers.id, o.dealerId), sql`${dealers.deletedAt} IS NULL`))
-          .limit(1)
-          .then((rows) => rows[0] ?? null);
+      // Fetch customer, dealer, and vehicle in parallel
+      const [customerResult, dealerResult, vehicleResult] = await Promise.all([
+        o.customerId
+          ? this.payments.getClient()
+              .select()
+              .from(customers)
+              .where(and(eq(customers.id, o.customerId), sql`${customers.deletedAt} IS NULL`))
+              .limit(1)
+              .then((rows) => rows[0] ?? null)
+          : Promise.resolve(null),
+        o.dealerId
+          ? this.payments.getClient()
+              .select()
+              .from(dealers)
+              .where(and(eq(dealers.id, o.dealerId), sql`${dealers.deletedAt} IS NULL`))
+              .limit(1)
+              .then((rows) => rows[0] ?? null)
+          : Promise.resolve(null),
+        o.vehicleId
+          ? this.payments.getClient()
+              .select()
+              .from(vehicles)
+              .where(and(eq(vehicles.id, o.vehicleId), sql`${vehicles.deletedAt} IS NULL`))
+              .limit(1)
+              .then((rows) => rows[0] ?? null)
+          : Promise.resolve(null),
+      ]);
 
-        if (dealer) {
-          dealerProfile = await this.payments.getClient()
-            .select()
-            .from(dealerProfiles)
-            .where(and(eq(dealerProfiles.dealerId, (dealer as unknown as typeof dealers.$inferSelect).id), sql`${dealerProfiles.deletedAt} IS NULL`))
-            .limit(1)
-            .then((rows) => rows[0] ?? null);
-        }
-      }
-      if (o.vehicleId) {
-        vehicle = await this.payments.getClient()
-          .select()
-          .from(vehicles)
-          .where(and(eq(vehicles.id, o.vehicleId), sql`${vehicles.deletedAt} IS NULL`))
-          .limit(1)
-          .then((rows) => rows[0] ?? null);
-      }
+      // Fetch profiles in parallel (each depends on its parent)
+      const [customerProfileResult, dealerProfileResult] = await Promise.all([
+        customerResult
+          ? this.payments.getClient()
+              .select()
+              .from(customerProfiles)
+              .where(and(eq(customerProfiles.customerId, (customerResult as unknown as typeof customers.$inferSelect).id), sql`${customerProfiles.deletedAt} IS NULL`))
+              .limit(1)
+              .then((rows) => rows[0] ?? null)
+          : Promise.resolve(null),
+        dealerResult
+          ? this.payments.getClient()
+              .select()
+              .from(dealerProfiles)
+              .where(and(eq(dealerProfiles.dealerId, (dealerResult as unknown as typeof dealers.$inferSelect).id), sql`${dealerProfiles.deletedAt} IS NULL`))
+              .limit(1)
+              .then((rows) => rows[0] ?? null)
+          : Promise.resolve(null),
+      ]);
+
+      customer = customerResult;
+      customerProfile = customerProfileResult;
+      dealer = dealerResult;
+      dealerProfile = dealerProfileResult;
+      vehicle = vehicleResult;
     }
 
     return {

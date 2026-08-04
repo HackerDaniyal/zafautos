@@ -72,18 +72,19 @@ export class VehicleRepository extends BaseRepository<typeof vehicles> {
   }
 
   async getVehicleWithImages(vehicleId: string) {
-    const [vehicle] = await this.getClient()
-      .select()
-      .from(vehicles)
-      .where(eq(vehicles.id, vehicleId))
-      .limit(1);
+    const [[vehicle], images] = await Promise.all([
+      this.getClient()
+        .select()
+        .from(vehicles)
+        .where(eq(vehicles.id, vehicleId))
+        .limit(1),
+      this.getClient()
+        .select()
+        .from(vehicleImages)
+        .where(eq(vehicleImages.vehicleId, vehicleId)),
+    ]);
 
     if (!vehicle) return null;
-
-    const images = await this.getClient()
-      .select()
-      .from(vehicleImages)
-      .where(eq(vehicleImages.vehicleId, vehicleId));
 
     return { ...vehicle, images };
   }
@@ -249,32 +250,34 @@ export class VehicleRepository extends BaseRepository<typeof vehicles> {
 
     const { id: _, vin: _vin, stockNumber: _stock, slug: _slug, createdAt: _c, updatedAt: _u, deletedAt: _da, deletedBy: _db, ...rest } = vehicle;
 
-    const [newVehicle] = await this.getClient()
-      .insert(vehicles)
-      .values({
-        ...rest,
-        vin: null,
-        stockNumber: null,
-        slug: null,
-        status: 'draft',
-        isFeatured: false,
-      })
-      .returning();
+    return this.getClient().transaction(async (tx) => {
+      const [newVehicle] = await tx
+        .insert(vehicles)
+        .values({
+          ...rest,
+          vin: null,
+          stockNumber: null,
+          slug: null,
+          status: 'draft',
+          isFeatured: false,
+        })
+        .returning();
 
-    if (newVehicle && images.length > 0) {
-      await this.getClient()
-        .insert(vehicleImages)
-        .values(
-          images.map((img) => ({
-            vehicleId: newVehicle.id,
-            imageUrl: img.imageUrl,
-            sortOrder: img.sortOrder,
-            isPrimary: img.isPrimary,
-          }))
-        );
-    }
+      if (newVehicle && images.length > 0) {
+        await tx
+          .insert(vehicleImages)
+          .values(
+            images.map((img) => ({
+              vehicleId: newVehicle.id,
+              imageUrl: img.imageUrl,
+              sortOrder: img.sortOrder,
+              isPrimary: img.isPrimary,
+            }))
+          );
+      }
 
-    return newVehicle;
+      return newVehicle;
+    });
   }
 
   async updateStatus(id: string, status: 'draft' | 'active' | 'sold' | 'archived') {
@@ -319,17 +322,19 @@ export class VehicleRepository extends BaseRepository<typeof vehicles> {
   }
 
   async setPrimaryImage(vehicleId: string, imageId: string) {
-    await this.getClient()
-      .update(vehicleImages)
-      .set({ isPrimary: false })
-      .where(eq(vehicleImages.vehicleId, vehicleId));
+    return this.getClient().transaction(async (tx) => {
+      await tx
+        .update(vehicleImages)
+        .set({ isPrimary: false })
+        .where(eq(vehicleImages.vehicleId, vehicleId));
 
-    const [updated] = await this.getClient()
-      .update(vehicleImages)
-      .set({ isPrimary: true })
-      .where(eq(vehicleImages.id, imageId))
-      .returning();
-    return updated;
+      const [updated] = await tx
+        .update(vehicleImages)
+        .set({ isPrimary: true })
+        .where(eq(vehicleImages.id, imageId))
+        .returning();
+      return updated;
+    });
   }
 
   async deleteImage(imageId: string) {
@@ -341,17 +346,19 @@ export class VehicleRepository extends BaseRepository<typeof vehicles> {
   }
 
   async reorderImages(vehicleId: string, imageIds: string[]) {
-    for (let i = 0; i < imageIds.length; i++) {
-      await this.getClient()
-        .update(vehicleImages)
-        .set({ sortOrder: i })
-        .where(
-          and(
-            eq(vehicleImages.vehicleId, vehicleId),
-            eq(vehicleImages.id, imageIds[i]),
+    await Promise.all(
+      imageIds.map((id, i) =>
+        this.getClient()
+          .update(vehicleImages)
+          .set({ sortOrder: i })
+          .where(
+            and(
+              eq(vehicleImages.vehicleId, vehicleId),
+              eq(vehicleImages.id, id),
+            )
           )
-        );
-    }
+      )
+    );
   }
 
   async listWithRelations(options: VehicleListOptions = {}): Promise<PaginatedResult<typeof vehicles.$inferSelect & { _manufacturerName: string | null; _modelName: string | null; _bodyTypeName: string | null; _fuelTypeName: string | null; _transmissionTypeName: string | null; _countryName: string | null }>> {
@@ -578,16 +585,11 @@ export class VehicleRepository extends BaseRepository<typeof vehicles> {
   }
 
   async listCountries() {
-    return this.getClient().select().from(countries).where(sql`${countries.deletedAt} IS NULL`).orderBy(asc(countries.name));
+    return this.getClient().select().from(countries).where(sql`${countries.deletedAt} IS NULL AND ${countries.isActive} = true`).orderBy(asc(countries.name));
   }
 
   async bulkDuplicate(ids: string[]) {
-    const results: Array<Awaited<ReturnType<typeof this.duplicateVehicle>>> = [];
-    for (const id of ids) {
-      const result = await this.duplicateVehicle(id);
-      results.push(result);
-    }
-    return results;
+    return Promise.all(ids.map((id) => this.duplicateVehicle(id)));
   }
 
   async bulkRestore(ids: string[]) {

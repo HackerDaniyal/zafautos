@@ -21,12 +21,12 @@ import { PageHeader } from '@/components/admin/ui/page-header';
 import { StatCard } from '@/components/admin/ui/stat-card';
 import { StatusChip, getStatusVariant } from '@/components/admin/ui/status-chip';
 import { useToast } from '@/components/admin/ui/use-toast';
+import { formatCurrency } from '@/lib/utils';
 import {
   listPayments,
   getPaymentStats,
   bulkUpdatePaymentStatus,
   bulkDeletePayments,
-  changePaymentStatus,
 } from '@/server/actions/paymentActions';
 import {
   PAYMENT_STATUS_CONFIG,
@@ -115,16 +115,6 @@ export function PaymentsClient() {
 
   function handleSelectionChange(newSelected: Set<string>) {
     toggleAll(data.filter((row) => newSelected.has(row.id)));
-  }
-
-  function formatCurrency(amount: number | null | undefined): string {
-    if (amount == null) return '—';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
   }
 
   function formatDate(date: string | Date | null | undefined): string {
@@ -359,28 +349,28 @@ export function PaymentsClient() {
             title="Total Revenue"
             value={formatCurrency(stats.totalRevenue)}
             description="Total amount from paid payments"
-            icon={DollarSign}
+            icon="DollarSign"
             trend={{ value: 0, label: 'vs last month' }}
           />
           <StatCard
             title="Outstanding Balance"
             value={formatCurrency(stats.outstandingBalance)}
             description="Amount from pending payments"
-            icon={AlertCircle}
+            icon="AlertCircle"
             trend={{ value: 0, label: 'vs last month' }}
           />
           <StatCard
             title="Paid Orders"
             value={stats.paidOrders}
             description="Number of fully paid orders"
-            icon={CreditCard}
+            icon="CreditCard"
             trend={{ value: 0, label: 'vs last month' }}
           />
           <StatCard
             title="Refunds"
             value={stats.refunds}
             description="Total refunds processed"
-            icon={Package}
+            icon="Package"
             trend={{ value: 0, label: 'vs last month' }}
           />
         </div>

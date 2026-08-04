@@ -9,6 +9,7 @@ export const STORAGE_BUCKETS = {
   documents: 'documents',
   media: 'media',
   avatars: 'avatars',
+  flags: 'flags',
 } as const;
 
 export type StorageBucket = keyof typeof STORAGE_BUCKETS;
@@ -76,10 +77,25 @@ export function getPublicUrl(bucket: string, path: string): string {
 // Upload
 // ---------------------------------------------------------------------------
 
+const ALLOWED_MIME_TYPES = new Set([
+  'image/svg+xml',
+  'image/png',
+  'image/webp',
+  'image/jpeg',
+  'image/gif',
+  'application/pdf',
+  'text/csv',
+  'application/json',
+]);
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB default
+
 export interface UploadFileOptions {
   contentType?: string;
   upsert?: boolean;
   cacheControl?: string;
+  allowedMimeTypes?: Set<string>;
+  maxFileSize?: number;
 }
 
 export interface UploadFileResult {
@@ -96,11 +112,33 @@ export async function uploadFile(
   assertBucket(bucket);
   assertPath(path);
 
+  // Validate file size
+  const maxSize = options?.maxFileSize ?? MAX_FILE_SIZE;
+  const fileSize = file instanceof File ? file.size : file.byteLength;
+  if (fileSize > maxSize) {
+    throw new StorageError(
+      `File size (${Math.round(fileSize / 1024 / 1024)}MB) exceeds maximum allowed size (${Math.round(maxSize / 1024 / 1024)}MB)`,
+      'FILE_TOO_LARGE',
+      { bucket, path },
+    );
+  }
+
+  // Validate MIME type if content type is provided
+  const contentType = options?.contentType ?? (file instanceof File ? file.type : undefined);
+  const allowedTypes = options?.allowedMimeTypes ?? ALLOWED_MIME_TYPES;
+  if (contentType && !allowedTypes.has(contentType)) {
+    throw new StorageError(
+      `File type "${contentType}" is not allowed. Allowed types: ${Array.from(allowedTypes).join(', ')}`,
+      'INVALID_FILE_TYPE',
+      { bucket, path },
+    );
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase.storage
     .from(bucket)
     .upload(path, file, {
-      contentType: options?.contentType,
+      contentType,
       upsert: options?.upsert ?? false,
       cacheControl: options?.cacheControl ?? '3600',
     });

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, Plus, Eye, Pencil, UserCheck, UserX, Download, ShoppingCart } from 'lucide-react';
+import { Users, Plus, Eye, Pencil, UserCheck, UserX, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DataTable, type ColumnDef } from '@/components/admin/table/data-table';
@@ -15,9 +15,9 @@ import { StatCard } from '@/components/admin/ui/stat-card';
 import { Skeleton } from '@/components/admin/ui/skeletons';
 import { useToast } from '@/components/admin/ui/use-toast';
 import { formatDate } from '@/lib/cms/dates';
+import { formatCurrency } from '@/lib/utils';
 import {
   listCustomers,
-  deleteCustomer,
   bulkDeleteCustomers,
   bulkUpdateCustomerStatus,
   getCustomerStats,
@@ -113,16 +113,6 @@ export function CustomersClient() {
 
   function handleSelectionChange(newSelected: Set<string>) {
     toggleAll(data.filter((row) => newSelected.has(row.id)));
-  }
-
-  function formatCurrency(amount: number | null | undefined): string {
-    if (amount == null) return '—';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
   }
 
   async function handleExportCsv() {
@@ -321,31 +311,31 @@ export function CustomersClient() {
           <StatCard
             title="Total Customers"
             value={stats.totalCustomers}
-            icon={Users}
+            icon="Users"
             description={`${stats.newThisMonth} new this month`}
           />
           <StatCard
             title="Active"
             value={stats.activeCustomers}
-            icon={UserCheck}
+            icon="UserCheck"
             description={`${stats.pendingCustomers} pending`}
           />
           <StatCard
             title="Orders"
             value={stats.totalOrders}
-            icon={ShoppingCart}
+            icon="ShoppingCart"
             description={`${stats.returningCustomers} returning`}
           />
           <StatCard
             title="Revenue"
             value={formatCurrency(stats.totalRevenue)}
-            icon={Users}
+            icon="Users"
             description={`${formatCurrency(stats.avgOrderValue)} avg`}
           />
           <StatCard
             title="Suspended"
             value={stats.suspendedCustomers + stats.blockedCustomers}
-            icon={UserX}
+            icon="UserX"
             description={stats.suspendedCustomers > 0 ? `${stats.suspendedCustomers} suspended` : 'No suspensions'}
           />
         </div>

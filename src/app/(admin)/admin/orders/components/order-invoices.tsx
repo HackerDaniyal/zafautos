@@ -8,6 +8,7 @@ import { useToast } from '@/components/admin/ui/use-toast';
 import { formatPrice } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { OrderDetail } from '../types';
+import type { PaymentStatus } from '@/lib/types/payment';
 import { PAYMENT_STATUS_CONFIG } from '../constants';
 
 interface OrderInvoicesProps {
@@ -70,7 +71,7 @@ export function OrderInvoices({ orderId, order, onRefresh }: OrderInvoicesProps)
       ) : (
         <div className="space-y-3">
           {invoices.map((invoice) => {
-            const statusConfig = PAYMENT_STATUS_CONFIG[invoice.status];
+            const statusConfig = PAYMENT_STATUS_CONFIG[invoice.status as PaymentStatus];
             return (
               <div
                 key={invoice.id}

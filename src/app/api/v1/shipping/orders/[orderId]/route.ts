@@ -1,11 +1,6 @@
-﻿import { SettingsService } from '@/server/services';
-import { withErrorHandler } from '@/lib/api/errorHandler';
-import { apiSuccess } from '@/lib/api/response';
+﻿import { NextResponse } from 'next/server';
 
-const settingsService = new SettingsService();
-
-export const PATCH = withErrorHandler(async (req: Request) => {
-  const body = await req.json();
-  const setting = await settingsService.updateSiteSetting(body);
-  return apiSuccess(setting, undefined, 'Site setting updated successfully');
-});
+export async function PATCH(_req: Request, _ctx: { params: Promise<{ orderId: string }> }) {
+  // TODO: Implement order-shipment association lookup. Currently a copy-paste placeholder.
+  return NextResponse.json({ error: 'Not implemented' }, { status: 501 });
+}

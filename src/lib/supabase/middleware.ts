@@ -74,6 +74,11 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // TEMPORARY BYPASS — REMOVE BEFORE PRODUCTION
+  if (process.env.AUTH_BYPASS === 'true') {
+    return supabaseResponse;
+  }
+
   const pathname = request.nextUrl.pathname;
 
   // ── Protected routes: redirect unauthenticated users to /login ──────────

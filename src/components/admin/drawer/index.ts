@@ -1,4 +1,3 @@
-export { DetailDrawer, type DetailDrawerProps } from './detail-drawer';
 export {
   DetailGroup,
   DetailGrid,

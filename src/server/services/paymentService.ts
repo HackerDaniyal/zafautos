@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { PaymentNotFoundError, ValidationError, InvoiceNotFoundError, TransactionNotFoundError } from './errors';
 import { auditService } from './auditService';
+import { isValidPaymentTransition, isValidInvoiceTransition, type PaymentStatus, type InvoiceStatus } from '@/lib/types/payment';
 
 // ──────────────────────────────────────────────────────────────
 // Validation Schemas
@@ -164,6 +165,12 @@ export class PaymentService {
     if (!existingPayment) {
       throw new PaymentNotFoundError(paymentId);
     }
+
+    const currentStatus = (existingPayment as { status: string }).status as PaymentStatus;
+    if (!isValidPaymentTransition(currentStatus, status as PaymentStatus)) {
+      throw new ValidationError(`Invalid status transition from ${currentStatus} to ${status}`);
+    }
+
     const updated = await this.paymentsRepo.updatePaymentStatus(
       paymentId,
       status as unknown as Parameters<typeof this.paymentsRepo.updatePaymentStatus>[1]
@@ -216,8 +223,8 @@ export class PaymentService {
     if (!payment) {
       throw new PaymentNotFoundError(paymentId);
     }
-    const currentStatus = payment.status;
-    if (!isValidPaymentTransition(currentStatus, newStatus)) {
+    const currentStatus = payment.status as PaymentStatus;
+    if (!isValidPaymentTransition(currentStatus, newStatus as PaymentStatus)) {
       throw new ValidationError(`Cannot transition from ${currentStatus} to ${newStatus}`);
     }
     await this.paymentsRepo.updatePaymentStatusWithHistory(paymentId, newStatus as CreatePaymentDTO['status'], userId);
@@ -268,10 +275,10 @@ export class PaymentService {
     if (!existing) {
       throw new InvoiceNotFoundError(invoiceId);
     }
-    const oldStatus = (existing as unknown as { status: string }).status;
+    const oldStatus = (existing as unknown as { status: string }).status as InvoiceStatus;
     const newStatus = validated.status;
     if (newStatus && oldStatus && newStatus !== oldStatus) {
-      if (!isValidInvoiceTransition(oldStatus, newStatus)) {
+      if (!isValidInvoiceTransition(oldStatus, newStatus as InvoiceStatus)) {
         throw new ValidationError(`Cannot transition invoice from ${oldStatus} to ${newStatus}`);
       }
     }
@@ -400,8 +407,8 @@ export class PaymentService {
     if (!invoice) {
       throw new InvoiceNotFoundError(invoiceId);
     }
-    const currentStatus = (invoice as unknown as { status: string }).status;
-    if (!isValidInvoiceTransition(currentStatus, newStatus)) {
+    const currentStatus = (invoice as unknown as { status: string }).status as InvoiceStatus;
+    if (!isValidInvoiceTransition(currentStatus, newStatus as InvoiceStatus)) {
       throw new ValidationError(`Cannot transition invoice from ${currentStatus} to ${newStatus}`);
     }
     const updated = await this.paymentsRepo.updateInvoice(invoiceId, { status: newStatus } as unknown as Parameters<typeof this.paymentsRepo.updateInvoice>[1]);
@@ -612,26 +619,6 @@ export class PaymentService {
 // ──────────────────────────────────────────────────────────────
 // Status Transition Helpers
 // ──────────────────────────────────────────────────────────────
-
-const VALID_PAYMENT_TRANSITIONS: Record<string, string[]> = {
-  pending: ['paid', 'failed', 'refunded'],
-  paid: ['refunded'],
-  failed: ['pending', 'refunded'],
-  refunded: [],
-};
-
-const VALID_INVOICE_TRANSITIONS: Record<string, string[]> = {
-  draft: ['sent', 'cancelled'],
-  sent: ['paid', 'overdue', 'cancelled'],
-  paid: [],
-  overdue: ['paid', 'cancelled'],
-  cancelled: [],
-};
-
-function isValidPaymentTransition(from: string, to: string): boolean {
-  return VALID_PAYMENT_TRANSITIONS[from]?.includes(to) ?? false;
-}
-
-function isValidInvoiceTransition(from: string, to: string): boolean {
-  return VALID_INVOICE_TRANSITIONS[from]?.includes(to) ?? false;
-}
+// Note: Payment and invoice transition validation uses canonical
+// validators from @/lib/types/payment
+// ──────────────────────────────────────────────────────────────

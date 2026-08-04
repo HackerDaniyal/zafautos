@@ -1,4 +1,5 @@
 import type { OrderStatus } from './types';
+import { PAYMENT_STATUS_CONFIG, PAYMENT_STATUS_OPTIONS } from '@/app/(admin)/admin/payments/constants';
 
 export const ORDER_STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bgColor: string; dotColor: string }> = {
   pending: { label: 'Pending', color: 'text-auction-amber', bgColor: 'bg-auction-amber/10', dotColor: 'bg-auction-amber' },
@@ -14,17 +15,7 @@ export const ORDER_STATUS_OPTIONS = Object.entries(ORDER_STATUS_CONFIG).map(([va
   label: config.label,
 }));
 
-export const PAYMENT_STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string; dotColor: string }> = {
-  pending: { label: 'Pending', color: 'text-auction-amber', bgColor: 'bg-auction-amber/10', dotColor: 'bg-auction-amber' },
-  paid: { label: 'Paid', color: 'text-available-green', bgColor: 'bg-available-green/10', dotColor: 'bg-available-green' },
-  failed: { label: 'Failed', color: 'text-signal-red', bgColor: 'bg-signal-red/10', dotColor: 'bg-signal-red' },
-  refunded: { label: 'Refunded', color: 'text-ash', bgColor: 'bg-ash/10', dotColor: 'bg-ash' },
-};
-
-export const PAYMENT_STATUS_OPTIONS = Object.entries(PAYMENT_STATUS_CONFIG).map(([value, config]) => ({
-  value,
-  label: config.label,
-}));
+export { PAYMENT_STATUS_CONFIG, PAYMENT_STATUS_OPTIONS };
 
 export const SHIPPING_STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string; dotColor: string }> = {
   pending: { label: 'Pending', color: 'text-steel', bgColor: 'bg-steel/10', dotColor: 'bg-steel' },

@@ -27,6 +27,19 @@ export function formatPrice(
 }
 
 /**
+ * Formats a currency amount, returning '—' for null/undefined values.
+ */
+export function formatCurrency(amount: number | null | undefined): string {
+  if (amount == null) return '—';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+/**
  * Formats mileage in kilometers with comma separators.
  */
 export function formatMileage(km: number): string {
