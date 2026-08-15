@@ -1,4 +1,5 @@
 ﻿import { UnauthorizedError } from '@/server/services/errors';
+import { AuthRepository } from '@/server/repositories';
 import type { AuthContext, UserRole } from './types';
 
 /**
@@ -70,19 +71,32 @@ export function requireMinRole(
   }
 }
 
+const authRepo = new AuthRepository();
+
 /**
- * TODO: Phase 6 â€” Implement granular permission checks against the database.
+ * Throws UnauthorizedError if the user does NOT have the specified permission.
  *
- * Currently a placeholder. In Phase 6, this will:
- * 1. Load the user's role permissions from `role_permissions` + `permissions` tables.
- * 2. Check if the given permission slug is granted to the user's role.
+ * Resolves permissions from the database via the user's assigned role:
+ * 1. Looks up the user's `roleId` from the `users` table.
+ * 2. Queries `role_permissions` + `permissions` to get granted slugs.
+ * 3. If no role or no permissions assigned, the user gets only the base
+ *    customer-level access (no granular permissions).
  */
-export function requirePermission(
-  _context: AuthContext,
-  _permissionSlug: string
-): void {
-  // Pass-through until database permission lookup is implemented.
-  void _context;
-  void _permissionSlug;
-  return;
+export async function requirePermission(
+  context: AuthContext,
+  permissionSlug: string,
+): Promise<void> {
+  const user = await authRepo.findUserById(context.userId);
+  if (!user || !user.roleId) {
+    throw new UnauthorizedError(
+      `Access denied. Required permission: ${permissionSlug}. No role assigned.`
+    );
+  }
+
+  const slugs = await authRepo.getUserPermissionSlugs(context.userId);
+  if (!slugs.includes(permissionSlug)) {
+    throw new UnauthorizedError(
+      `Access denied. Required permission: ${permissionSlug}. Current role: ${context.role}`
+    );
+  }
 }

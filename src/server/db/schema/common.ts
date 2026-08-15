@@ -7,3 +7,4 @@ export const orderStatusEnum = pgEnum('order_status_enum', ['pending', 'confirme
 export const paymentStatusEnum = pgEnum('payment_status_enum', ['pending', 'paid', 'failed', 'refunded']);
 export const shipmentStatusEnum = pgEnum('shipment_status_enum', ['pending', 'in_transit', 'delivered', 'delayed', 'cancelled']);
 export const notificationStatusEnum = pgEnum('notification_status_enum', ['unread', 'read', 'archived']);
+export const taxTypeEnum = pgEnum('tax_type_enum', ['percentage', 'fixed']);

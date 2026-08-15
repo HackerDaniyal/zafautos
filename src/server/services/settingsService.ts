@@ -1,10 +1,11 @@
-﻿import { CountriesRepository, ContinentsRepository, CurrenciesRepository } from '@/server/repositories';
+﻿import { CountriesRepository, ContinentsRepository, CurrenciesRepository, SiteSettingsRepository, TaxRatesRepository, EmailTemplatesRepository, NotificationRulesRepository, SystemSettingsRepository } from '@/server/repositories';
 import { z } from 'zod';
 import { ValidationError } from './errors';
 import { db } from '@/server/db/client';
-import { sql } from 'drizzle-orm';
+import { sql, eq, desc } from 'drizzle-orm';
 import { continents as continentsTable, countries as countriesTable } from '@/server/db/schema/settings';
 import { currencies as currenciesTable } from '@/server/db/schema/payments';
+import { emailLogs } from '@/server/db/schema/messages';
 import continentsData from '@/data/reference/continents.json';
 import currenciesData from '@/data/reference/currencies.json';
 import countriesData from '@/data/reference/countries.json';
@@ -67,10 +68,89 @@ export const UpdateCurrencySchema = z.object({
   displayOrder: z.number().int().optional(),
 });
 
+export const UpdateSeoSchema = z.object({
+  siteTitle: z.string().max(255).optional().nullable(),
+  siteDescription: z.string().max(500).optional().nullable(),
+  defaultKeywords: z.string().max(500).optional().nullable(),
+  canonicalUrl: z.string().url().optional().nullable(),
+  ogTitle: z.string().max(255).optional().nullable(),
+  ogDescription: z.string().max(500).optional().nullable(),
+  ogImage: z.string().url().optional().nullable(),
+  ogType: z.string().max(50).optional().nullable(),
+  twitterCard: z.enum(['summary', 'summary_large_image']).optional().nullable(),
+  twitterSite: z.string().max(100).optional().nullable(),
+  twitterCreator: z.string().max(100).optional().nullable(),
+  robotsIndex: z.boolean().optional(),
+  robotsFollow: z.boolean().optional(),
+  sitemapEnabled: z.boolean().optional(),
+  faviconUrl: z.string().url().optional().nullable(),
+});
+
+export const UpdateCompanySchema = z.object({
+  companyName: z.string().min(1, 'Company name is required').max(255).optional(),
+  companyEmail: z.string().email('Invalid email').optional().nullable(),
+  companyPhone: z.string().max(50).optional().nullable(),
+  website: z.string().url('Invalid URL').optional().nullable(),
+  address: z.object({
+    street: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    postalCode: z.string().optional(),
+    country: z.string().optional(),
+  }).optional().nullable(),
+  taxId: z.string().max(100).optional().nullable(),
+  registrationNumber: z.string().max(100).optional().nullable(),
+  logoUrl: z.string().url('Invalid URL').optional().nullable(),
+  faviconUrl: z.string().url('Invalid URL').optional().nullable(),
+});
+
+export const CreateTaxRateSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100),
+  countryId: z.string().uuid().optional().nullable(),
+  rate: z.number().min(0, 'Rate must be positive').max(100),
+  type: z.enum(['percentage', 'fixed']).optional().default('percentage'),
+  isDefault: z.boolean().optional().default(false),
+  isActive: z.boolean().optional().default(true),
+  displayOrder: z.number().int().optional().default(0),
+});
+
+export const UpdateTaxRateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  countryId: z.string().uuid().optional().nullable(),
+  rate: z.number().min(0).max(100).optional(),
+  type: z.enum(['percentage', 'fixed']).optional(),
+  isDefault: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  displayOrder: z.number().int().optional(),
+});
+
+export const CreateEmailTemplateSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(255),
+  key: z.string().min(1, 'Key is required').max(100).regex(/^[a-z0-9_]+$/, 'Key must be lowercase alphanumeric with underscores'),
+  description: z.string().optional().nullable(),
+  subject: z.string().max(255).optional().nullable(),
+  body: z.string().optional().nullable(),
+  isActive: z.boolean().optional().default(true),
+});
+
+export const UpdateEmailTemplateSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  key: z.string().min(1).max(100).regex(/^[a-z0-9_]+$/).optional(),
+  description: z.string().optional().nullable(),
+  subject: z.string().max(255).optional().nullable(),
+  body: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
+});
+
 export class SettingsService {
   private countriesRepo = new CountriesRepository();
   private continentsRepo = new ContinentsRepository();
   private currenciesRepo = new CurrenciesRepository();
+  private siteSettingsRepo = new SiteSettingsRepository();
+  private taxRatesRepo = new TaxRatesRepository();
+  private emailTemplatesRepo = new EmailTemplatesRepository();
+  private notificationRulesRepo = new NotificationRulesRepository();
+  private systemSettingsRepo = new SystemSettingsRepository();
 
   async listCountries(options: {
     page?: number;
@@ -413,5 +493,319 @@ export class SettingsService {
 
   async restoreCurrency(id: string) {
     return this.currenciesRepo.update(id, { deletedAt: null, deletedBy: null } as any);
+  }
+
+  // ── Tax Rates ──────────────────────────────────────────────────────────────
+
+  async listTaxRates() {
+    return this.taxRatesRepo.listWithCountry();
+  }
+
+  async listActiveTaxRates() {
+    return this.taxRatesRepo.findActive();
+  }
+
+  async getTaxRate(id: string) {
+    const rate = await this.taxRatesRepo.findById(id);
+    if (!rate) throw new ValidationError('Tax rate not found');
+    return rate;
+  }
+
+  async createTaxRate(data: z.infer<typeof CreateTaxRateSchema>) {
+    const validated = CreateTaxRateSchema.parse(data);
+
+    if (validated.isDefault) {
+      await this.taxRatesRepo.setAllNotDefault();
+    }
+
+    return this.taxRatesRepo.create({
+      name: validated.name,
+      countryId: validated.countryId ?? null,
+      rate: String(validated.rate),
+      type: validated.type ?? 'percentage',
+      isDefault: validated.isDefault ?? false,
+      isActive: validated.isActive ?? true,
+      displayOrder: validated.displayOrder ?? 0,
+    } as any);
+  }
+
+  async updateTaxRate(id: string, data: z.infer<typeof UpdateTaxRateSchema>) {
+    const validated = UpdateTaxRateSchema.parse(data);
+
+    if (validated.isActive === false) {
+      const existing = await this.taxRatesRepo.findById(id);
+      if (existing && (existing as { isDefault: boolean }).isDefault) {
+        throw new ValidationError('Cannot deactivate the default tax rate. Set another rate as default first.');
+      }
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (validated.name !== undefined) updateData.name = validated.name;
+    if (validated.countryId !== undefined) updateData.countryId = validated.countryId;
+    if (validated.rate !== undefined) updateData.rate = String(validated.rate);
+    if (validated.type !== undefined) updateData.type = validated.type;
+    if (validated.isDefault !== undefined) {
+      if (validated.isDefault) {
+        await this.taxRatesRepo.setAllNotDefault();
+      }
+      updateData.isDefault = validated.isDefault;
+    }
+    if (validated.isActive !== undefined) updateData.isActive = validated.isActive;
+    if (validated.displayOrder !== undefined) updateData.displayOrder = validated.displayOrder;
+    updateData.updatedAt = new Date();
+    return this.taxRatesRepo.update(id, updateData as any);
+  }
+
+  async deleteTaxRate(id: string) {
+    const rate = await this.taxRatesRepo.findById(id);
+    if (!rate) throw new ValidationError('Tax rate not found');
+    if ((rate as { isDefault: boolean }).isDefault) {
+      throw new ValidationError('Cannot delete the default tax rate. Set another rate as default first.');
+    }
+    return this.taxRatesRepo.softDelete(id);
+  }
+
+  async restoreTaxRate(id: string) {
+    return this.taxRatesRepo.update(id, { deletedAt: null, deletedBy: null } as any);
+  }
+
+  // ── Email Templates ────────────────────────────────────────────────────────
+
+  async listEmailTemplates() {
+    return this.emailTemplatesRepo.findAll();
+  }
+
+  async listActiveEmailTemplates() {
+    return this.emailTemplatesRepo.findActive();
+  }
+
+  async getEmailTemplate(id: string) {
+    const template = await this.emailTemplatesRepo.findById(id);
+    if (!template) throw new ValidationError('Email template not found');
+    return template;
+  }
+
+  async createEmailTemplate(data: z.infer<typeof CreateEmailTemplateSchema>) {
+    const validated = CreateEmailTemplateSchema.parse(data);
+    const existing = await this.emailTemplatesRepo.findByKey(validated.key);
+    if (existing) throw new ValidationError(`Template with key "${validated.key}" already exists`);
+
+    return this.emailTemplatesRepo.create({
+      name: validated.name,
+      key: validated.key,
+      description: validated.description ?? null,
+      subject: validated.subject ?? null,
+      body: validated.body ?? null,
+      isActive: validated.isActive ?? true,
+    } as any);
+  }
+
+  async updateEmailTemplate(id: string, data: z.infer<typeof UpdateEmailTemplateSchema>) {
+    const validated = UpdateEmailTemplateSchema.parse(data);
+
+    if (validated.key) {
+      const existing = await this.emailTemplatesRepo.findByKey(validated.key);
+      if (existing && (existing as { id: string }).id !== id) {
+        throw new ValidationError(`Template with key "${validated.key}" already exists`);
+      }
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (validated.name !== undefined) updateData.name = validated.name;
+    if (validated.key !== undefined) updateData.key = validated.key;
+    if (validated.description !== undefined) updateData.description = validated.description;
+    if (validated.subject !== undefined) updateData.subject = validated.subject;
+    if (validated.body !== undefined) updateData.body = validated.body;
+    if (validated.isActive !== undefined) updateData.isActive = validated.isActive;
+    updateData.updatedAt = new Date();
+    return this.emailTemplatesRepo.update(id, updateData as any);
+  }
+
+  async deleteEmailTemplate(id: string) {
+    return this.emailTemplatesRepo.softDelete(id);
+  }
+
+  async restoreEmailTemplate(id: string) {
+    return this.emailTemplatesRepo.update(id, { deletedAt: null, deletedBy: null } as any);
+  }
+
+  async listEmailLogs() {
+    return db.select({
+      id: emailLogs.id,
+      recipient: emailLogs.recipient,
+      templateId: emailLogs.templateId,
+      subject: emailLogs.subject,
+      content: emailLogs.content,
+      status: emailLogs.status,
+      errorMessage: emailLogs.errorMessage,
+      sentAt: emailLogs.sentAt,
+      createdAt: emailLogs.createdAt,
+    })
+      .from(emailLogs)
+      .where(sql`${emailLogs.deletedAt} IS NULL`)
+      .orderBy(desc(emailLogs.createdAt))
+      .limit(200);
+  }
+
+  // ── Notification Rules ─────────────────────────────────────────────────────
+
+  async listNotificationRules() {
+    return this.notificationRulesRepo.findAll();
+  }
+
+  async getNotificationRule(id: string) {
+    const rule = await this.notificationRulesRepo.findById(id);
+    if (!rule) throw new ValidationError('Notification rule not found');
+    return rule;
+  }
+
+  async seedDefaultNotificationRules() {
+    const defaults = [
+      { eventType: 'order.created', label: 'New Order Placed', description: 'When a customer places a new order', sendInApp: true, sendEmail: true },
+      { eventType: 'order.confirmed', label: 'Order Confirmed', description: 'When an order is confirmed by admin', sendInApp: true, sendEmail: true },
+      { eventType: 'order.shipped', label: 'Order Shipped', description: 'When an order is marked as shipped', sendInApp: true, sendEmail: true },
+      { eventType: 'order.delivered', label: 'Order Delivered', description: 'When an order is delivered', sendInApp: true, sendEmail: true },
+      { eventType: 'order.cancelled', label: 'Order Cancelled', description: 'When an order is cancelled', sendInApp: true, sendEmail: true },
+      { eventType: 'payment.received', label: 'Payment Received', description: 'When a payment is received', sendInApp: true, sendEmail: true },
+      { eventType: 'payment.failed', label: 'Payment Failed', description: 'When a payment fails', sendInApp: true, sendEmail: false },
+      { eventType: 'payment.refunded', label: 'Payment Refunded', description: 'When a payment is refunded', sendInApp: true, sendEmail: true },
+      { eventType: 'shipping.updated', label: 'Shipping Updated', description: 'When shipment status changes', sendInApp: true, sendEmail: false },
+      { eventType: 'enquiry.received', label: 'New Enquiry', description: 'When a customer enquiry is received', sendInApp: true, sendEmail: true },
+      { eventType: 'user.registered', label: 'New User Registration', description: 'When a new user registers', sendInApp: false, sendEmail: true },
+      { eventType: 'user.invited', label: 'User Invited', description: 'When a user is invited', sendInApp: false, sendEmail: true },
+    ];
+
+    let created = 0;
+    for (const d of defaults) {
+      const existing = await this.notificationRulesRepo.findByEventType(d.eventType);
+      if (!existing) {
+        await this.notificationRulesRepo.create({
+          eventType: d.eventType,
+          label: d.label,
+          description: d.description,
+          isEnabled: true,
+          sendInApp: d.sendInApp,
+          sendEmail: d.sendEmail,
+        } as any);
+        created++;
+      }
+    }
+    return { created };
+  }
+
+  async updateNotificationRule(id: string, data: { isEnabled?: boolean; sendInApp?: boolean; sendEmail?: boolean }) {
+    const updateData: Record<string, unknown> = {};
+    if (data.isEnabled !== undefined) updateData.isEnabled = data.isEnabled;
+    if (data.sendInApp !== undefined) updateData.sendInApp = data.sendInApp;
+    if (data.sendEmail !== undefined) updateData.sendEmail = data.sendEmail;
+    updateData.updatedAt = new Date();
+    return this.notificationRulesRepo.update(id, updateData as any);
+  }
+
+  async bulkUpdateNotificationRules(updates: Array<{ id: string; isEnabled?: boolean; sendInApp?: boolean; sendEmail?: boolean }>) {
+    for (const u of updates) {
+      await this.updateNotificationRule(u.id, u);
+    }
+  }
+
+  // ── SEO Settings ───────────────────────────────────────────────────────────
+
+  async getSeoSettings() {
+    const record = await this.siteSettingsRepo.getByKey('seo');
+    if (!record || !record.value) {
+      return {
+        siteTitle: null,
+        siteDescription: null,
+        defaultKeywords: null,
+        canonicalUrl: null,
+        ogTitle: null,
+        ogDescription: null,
+        ogImage: null,
+        ogType: 'website',
+        twitterCard: 'summary',
+        twitterSite: null,
+        twitterCreator: null,
+        robotsIndex: true,
+        robotsFollow: true,
+        sitemapEnabled: true,
+        faviconUrl: null,
+      };
+    }
+    try {
+      return JSON.parse(record.value);
+    } catch {
+      return null;
+    }
+  }
+
+  async updateSeoSettings(data: z.infer<typeof UpdateSeoSchema>, userId?: string) {
+    const validated = UpdateSeoSchema.parse(data);
+    const current = await this.getSeoSettings() ?? {};
+    const merged = { ...current, ...validated };
+    const value = JSON.stringify(merged);
+    return this.siteSettingsRepo.upsertByKey('seo', value, userId);
+  }
+
+  // ── Company Settings ───────────────────────────────────────────────────────
+
+  async getCompanySettings() {
+    const record = await this.siteSettingsRepo.getByKey('company');
+    if (!record || !record.value) {
+      return null;
+    }
+    try {
+      return JSON.parse(record.value);
+    } catch {
+      return null;
+    }
+  }
+
+  async updateCompanySettings(data: z.infer<typeof UpdateCompanySchema>, userId?: string) {
+    const validated = UpdateCompanySchema.parse(data);
+    const current = await this.getCompanySettings() ?? {};
+    const merged = { ...current, ...validated };
+    const value = JSON.stringify(merged);
+    return this.siteSettingsRepo.upsertByKey('company', value, userId);
+  }
+
+  // ── Storage Settings ───────────────────────────────────────────────────────
+
+  async getStorageOverview() {
+    return [
+      { name: 'vehicles', description: 'Vehicle images and media', publicAccess: true, allowedTypes: ['image/jpeg', 'image/png', 'image/webp'], maxSizeMB: 10 },
+      { name: 'documents', description: 'Vehicle and order documents', publicAccess: false, allowedTypes: ['application/pdf', 'image/jpeg', 'image/png'], maxSizeMB: 20 },
+      { name: 'media', description: 'General media content', publicAccess: true, allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4'], maxSizeMB: 10 },
+      { name: 'avatars', description: 'User profile avatars', publicAccess: true, allowedTypes: ['image/jpeg', 'image/png', 'image/webp'], maxSizeMB: 5 },
+      { name: 'flags', description: 'Country flag images', publicAccess: true, allowedTypes: ['image/svg+xml', 'image/png', 'image/webp'], maxSizeMB: 2 },
+    ];
+  }
+
+  async getStorageConfig() {
+    const record = await this.systemSettingsRepo.getByKey('storage');
+    if (!record || !record.value) {
+      return {
+        maxFileSizeMB: 10,
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'],
+        cdnUrl: null,
+        enableImageOptimization: true,
+      };
+    }
+    try {
+      return JSON.parse(record.value);
+    } catch {
+      return null;
+    }
+  }
+
+  async updateStorageConfig(data: {
+    maxFileSizeMB?: number;
+    allowedMimeTypes?: string[];
+    cdnUrl?: string;
+    enableImageOptimization?: boolean;
+  }, userId?: string) {
+    const current = await this.getStorageConfig() ?? {};
+    const merged = { ...current, ...data };
+    const value = JSON.stringify(merged);
+    return this.systemSettingsRepo.upsertByKey('storage', value, userId);
   }
 }

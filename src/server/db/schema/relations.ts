@@ -9,7 +9,7 @@ import { featuredVehicles, vehicleCompare, vehicleEnquiries, vehicleViews, vehic
 import { emailLogs, messages, messageThreads, notifications } from './messages';
 import { orderDocuments, orderItems, orderNotes, orders, orderStatus, orderTimeline } from './orders';
 import { currencies, exchangeRates, invoices, paymentHistory, paymentMethods, paymentTransactions, payments } from './payments';
-import { continents, countries, emailTemplates, languages, siteSettings, systemSettings } from './settings';
+import { continents, countries, emailTemplates, languages, notificationRules, siteSettings, systemSettings, taxRates } from './settings';
 import { containers, ports, shipments, shipmentTracking, shippingDocuments } from './shipping';
 import {
   bodyTypes,
@@ -332,9 +332,7 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, { fields: [notifications.userId], references: [users.id] }),
 }));
 
-export const emailLogsRelations = relations(emailLogs, ({ one }) => ({
-  user: one(users, { fields: [emailLogs.recipient], references: [users.email] }),
-}));
+export const emailLogsRelations = relations(emailLogs, ({}) => ({}));
 
 export const documentsRelations = relations(documents, ({ one, many }) => ({
   vehicle: one(vehicles, { fields: [documents.vehicleId], references: [vehicles.id] }),
@@ -384,3 +382,9 @@ export const languagesRelations = relations(languages, ({ many }) => ({
 export const siteSettingsRelations = relations(siteSettings, ({}) => ({}));
 export const systemSettingsRelations = relations(systemSettings, ({}) => ({}));
 export const emailTemplatesRelations = relations(emailTemplates, ({}) => ({}));
+
+export const taxRatesRelations = relations(taxRates, ({ one }) => ({
+  country: one(countries, { fields: [taxRates.countryId], references: [countries.id] }),
+}));
+
+export const notificationRulesRelations = relations(notificationRules, ({}) => ({}));

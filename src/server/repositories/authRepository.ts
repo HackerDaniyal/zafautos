@@ -1,6 +1,7 @@
 ﻿import { permissions, profiles, rolePermissions, roles, users } from '@/server/db/schema';
-import { type InferModel, eq, desc, count as drizzleCount, type SQL } from 'drizzle-orm';
+import { type InferModel, eq, desc, asc, count as drizzleCount, sql, type SQL, and, inArray } from 'drizzle-orm';
 import { BaseRepository } from './baseRepository';
+import { db } from '@/server/db/client';
 
 type UserRow = InferModel<typeof users>;
 type RoleRow = InferModel<typeof roles>;
@@ -46,8 +47,18 @@ export class AuthRepository {
     return role ?? null;
   }
 
-  async getPermissions() {
-    return this.permissions.findAll();
+  async findRoleById(id: string): Promise<RoleRow | null> {
+    const [role] = await this.roles.getClient()
+      .select()
+      .from(roles)
+      .where(eq(roles.id, id))
+      .limit(1);
+
+    return role ?? null;
+  }
+
+  async getPermissions(): Promise<{ id: string; name: string; slug: string; description: string | null }[]> {
+    return this.permissions.findAll() as Promise<{ id: string; name: string; slug: string; description: string | null }[]>;
   }
 
   async hasSuperAdmin(): Promise<boolean> {
@@ -58,6 +69,82 @@ export class AuthRepository {
       .limit(1);
 
     return !!existing;
+  }
+
+  async countUsersByRoleId(roleId: string): Promise<number> {
+    const [{ count }] = await this.users.getClient()
+      .select({ count: drizzleCount() })
+      .from(users)
+      .where(eq(users.roleId, roleId));
+
+    return count;
+  }
+
+  async listRoles() {
+    const allRoles = await this.roles.getClient()
+      .select()
+      .from(roles)
+      .where(sql`${roles.deletedAt} IS NULL`)
+      .orderBy(asc(roles.name));
+
+    const rolesWithCounts = await Promise.all(
+      allRoles.map(async (role) => {
+        const [userCount] = await this.users.getClient()
+          .select({ count: drizzleCount() })
+          .from(users)
+          .where(eq(users.roleId, role.id));
+
+        const [permCount] = await this.rolePermissions.getClient()
+          .select({ count: drizzleCount() })
+          .from(rolePermissions)
+          .where(eq(rolePermissions.roleId, role.id));
+
+        return {
+          ...role,
+          userCount: userCount.count,
+          permissionCount: permCount.count,
+        };
+      })
+    );
+
+    return rolesWithCounts;
+  }
+
+  async getRolePermissions(roleId: string) {
+    const assigned = await this.rolePermissions.getClient()
+      .select({ permissionId: rolePermissions.permissionId })
+      .from(rolePermissions)
+      .where(eq(rolePermissions.roleId, roleId));
+
+    return assigned.map((r) => r.permissionId);
+  }
+
+  async getUserPermissionSlugs(userId: string): Promise<string[]> {
+    const user = await this.findUserById(userId);
+    if (!user || !user.roleId) return [];
+
+    const assigned = await this.rolePermissions.getClient()
+      .select({ slug: permissions.slug })
+      .from(rolePermissions)
+      .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+      .where(eq(rolePermissions.roleId, user.roleId));
+
+    return assigned.map((r) => r.slug);
+  }
+
+  async assignPermissions(roleId: string, permissionIds: string[]) {
+    await db.transaction(async (tx) => {
+      await tx.delete(rolePermissions).where(eq(rolePermissions.roleId, roleId));
+
+      if (permissionIds.length > 0) {
+        await tx.insert(rolePermissions).values(
+          permissionIds.map((pid) => ({
+            roleId,
+            permissionId: pid,
+          }))
+        );
+      }
+    });
   }
 
   async listUsers(options: {

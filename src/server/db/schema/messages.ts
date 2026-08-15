@@ -1,6 +1,7 @@
 ﻿import { boolean, index, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 import { users } from './auth';
 import { notificationStatusEnum } from './common';
+import { emailTemplates } from './settings';
 
 export const messages = pgTable('messages', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -55,8 +56,12 @@ export const notifications = pgTable('notifications', {
 export const emailLogs = pgTable('email_logs', {
   id: uuid('id').defaultRandom().primaryKey(),
   recipient: varchar('recipient', { length: 255 }).notNull(),
+  templateId: uuid('template_id').references(() => emailTemplates.id, { onDelete: 'set null' }),
   subject: varchar('subject', { length: 255 }),
   content: text('content'),
+  status: varchar('status', { length: 20 }).default('sent').notNull(),
+  errorMessage: text('error_message'),
+  sentAt: timestamp('sent_at', { withTimezone: true }).defaultNow().notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   createdBy: uuid('created_by'),
@@ -65,4 +70,6 @@ export const emailLogs = pgTable('email_logs', {
   deletedBy: uuid('deleted_by'),
 }, (table) => ({
   recipientIdx: index('email_logs_recipient_idx').on(table.recipient),
+  templateIdx: index('email_logs_template_idx').on(table.templateId),
+  statusIdx: index('email_logs_status_idx').on(table.status),
 }));

@@ -1,5 +1,5 @@
 import { BaseRepository } from './baseRepository';
-import { continents, countries, currencies } from '@/server/db/schema';
+import { continents, countries, currencies, siteSettings, systemSettings, taxRates, emailTemplates, notificationRules } from '@/server/db/schema';
 import { sql, asc, eq, and, like, or, desc } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 
@@ -143,5 +143,157 @@ export class CurrenciesRepository extends BaseRepository<typeof currencies> {
     await this.db.update(currencies)
       .set({ isDefault: false })
       .where(sql`${currencies.isDefault} = true`);
+  }
+}
+
+// ── Tax Rates ─────────────────────────────────────────────────────────────
+
+export class TaxRatesRepository extends BaseRepository<typeof taxRates> {
+  constructor() {
+    super(taxRates);
+  }
+
+  async findActive() {
+    return this.db.select().from(taxRates)
+      .where(sql`${taxRates.deletedAt} IS NULL AND ${taxRates.isActive} = true`)
+      .orderBy(asc(taxRates.displayOrder), asc(taxRates.name));
+  }
+
+  async findByCountry(countryId: string) {
+    return this.db.select().from(taxRates)
+      .where(sql`${taxRates.countryId} = ${countryId} AND ${taxRates.deletedAt} IS NULL AND ${taxRates.isActive} = true`)
+      .orderBy(asc(taxRates.displayOrder));
+  }
+
+  async setAllNotDefault() {
+    await this.db.update(taxRates)
+      .set({ isDefault: false })
+      .where(sql`${taxRates.isDefault} = true`);
+  }
+
+  async listWithCountry() {
+    return db
+      .select({
+        id: taxRates.id,
+        name: taxRates.name,
+        countryId: taxRates.countryId,
+        rate: taxRates.rate,
+        type: taxRates.type,
+        isDefault: taxRates.isDefault,
+        isActive: taxRates.isActive,
+        displayOrder: taxRates.displayOrder,
+        createdAt: taxRates.createdAt,
+        updatedAt: taxRates.updatedAt,
+        deletedAt: taxRates.deletedAt,
+        countryName: countries.name,
+      })
+      .from(taxRates)
+      .leftJoin(countries, eq(taxRates.countryId, countries.id))
+      .where(sql`${taxRates.deletedAt} IS NULL`)
+      .orderBy(asc(taxRates.displayOrder), asc(taxRates.name));
+  }
+}
+
+// ── Site Settings (key-value store) ────────────────────────────────────────
+
+export class SiteSettingsRepository extends BaseRepository<typeof siteSettings> {
+  constructor() {
+    super(siteSettings);
+  }
+
+  async getByKey(key: string) {
+    const result = await this.db.select().from(siteSettings)
+      .where(eq(siteSettings.key, key))
+      .limit(1);
+    return result[0] ?? null;
+  }
+
+  async upsertByKey(key: string, value: string, userId?: string) {
+    const [result] = await this.db.insert(siteSettings)
+      .values({
+        key,
+        value,
+        ...(userId ? { createdBy: userId, updatedBy: userId } : {}),
+      })
+      .onConflictDoUpdate({
+        target: siteSettings.key,
+        set: {
+          value,
+          updatedAt: new Date(),
+          ...(userId ? { updatedBy: userId } : {}),
+        },
+      })
+      .returning();
+    return result;
+  }
+}
+
+// ── System Settings (key-value store) ──────────────────────────────────────
+
+export class SystemSettingsRepository extends BaseRepository<typeof systemSettings> {
+  constructor() {
+    super(systemSettings);
+  }
+
+  async getByKey(key: string) {
+    const result = await this.db.select().from(systemSettings)
+      .where(eq(systemSettings.key, key))
+      .limit(1);
+    return result[0] ?? null;
+  }
+
+  async upsertByKey(key: string, value: string, userId?: string) {
+    const [result] = await this.db.insert(systemSettings)
+      .values({
+        key,
+        value,
+        ...(userId ? { createdBy: userId, updatedBy: userId } : {}),
+      })
+      .onConflictDoUpdate({
+        target: systemSettings.key,
+        set: {
+          value,
+          updatedAt: new Date(),
+          ...(userId ? { updatedBy: userId } : {}),
+        },
+      })
+      .returning();
+    return result;
+  }
+}
+
+// ── Email Templates ───────────────────────────────────────────────────────
+
+export class EmailTemplatesRepository extends BaseRepository<typeof emailTemplates> {
+  constructor() {
+    super(emailTemplates);
+  }
+
+  async findActive() {
+    return this.db.select().from(emailTemplates)
+      .where(sql`${emailTemplates.deletedAt} IS NULL AND ${emailTemplates.isActive} = true`)
+      .orderBy(asc(emailTemplates.name));
+  }
+
+  async findByKey(key: string) {
+    return this.findByField('key', key);
+  }
+}
+
+// ── Notification Rules ────────────────────────────────────────────────────
+
+export class NotificationRulesRepository extends BaseRepository<typeof notificationRules> {
+  constructor() {
+    super(notificationRules);
+  }
+
+  async findByEventType(eventType: string) {
+    return this.findByField('eventType', eventType);
+  }
+
+  async findAllActive() {
+    return this.db.select().from(notificationRules)
+      .where(sql`${notificationRules.isEnabled} = true`)
+      .orderBy(asc(notificationRules.eventType));
   }
 }

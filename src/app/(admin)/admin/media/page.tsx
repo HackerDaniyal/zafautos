@@ -1,5 +1,6 @@
 import { requireAuth } from '@/lib/auth';
 import { PageHeader } from '@/components/admin/ui/page-header';
+import { MediaLibraryClient } from './client';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -11,10 +12,11 @@ export default async function MediaPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Media Library" description="Manage images and files" />
-      <div className="rounded-[10px] border border-iron/30 bg-carbon p-8 text-center">
-        <p className="text-ash">Media library coming soon.</p>
-      </div>
+      <PageHeader
+        title="Media Library"
+        description="Manage images, documents, and files across storage buckets"
+      />
+      <MediaLibraryClient />
     </div>
   );
 }
