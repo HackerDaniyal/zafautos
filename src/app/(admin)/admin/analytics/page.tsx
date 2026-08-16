@@ -1,5 +1,7 @@
 import { requireAuth } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 import { PageHeader } from '@/components/admin/ui/page-header';
+import { AnalyticsClient } from './client';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -7,17 +9,18 @@ export const metadata: Metadata = {
 };
 
 export default async function AnalyticsPage() {
-  await requireAuth();
+  const auth = await requireAuth();
+  if (auth.role !== 'admin' && auth.role !== 'super_admin') {
+    redirect('/admin');
+  }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Analytics"
-        description="Platform analytics and insights"
+        description="Platform analytics, engagement metrics, and financial insights"
       />
-      <div className="rounded-[10px] border border-iron/30 bg-carbon p-8 text-center">
-        <p className="text-ash">Analytics dashboard coming soon.</p>
-      </div>
+      <AnalyticsClient />
     </div>
   );
 }

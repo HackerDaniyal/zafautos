@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { UserProvisioningService } from '@/server/services/userProvisioningService';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
+import { requireRole } from '@/lib/auth/rbac';
 
 const userService = new UserProvisioningService();
 

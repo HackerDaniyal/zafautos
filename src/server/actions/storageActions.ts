@@ -1,6 +1,7 @@
 'use server';
 
 import { requireAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/auth/rbac';
 import { SettingsService } from '@/server/services';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { AuditService } from '@/server/services/auditService';
@@ -10,7 +11,8 @@ const auditService = new AuditService();
 
 export async function getStorageOverview(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.getStorageOverview();
     return { success: true, data };
   } catch (error) {
@@ -20,7 +22,8 @@ export async function getStorageOverview(): Promise<ActionResult> {
 
 export async function getStorageConfig(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.getStorageConfig();
     return { success: true, data };
   } catch (error) {
@@ -36,6 +39,7 @@ export async function updateStorageConfig(data: {
 }): Promise<ActionResult> {
   try {
     const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     const updated = await settingsService.updateStorageConfig(data, auth.userId);
     await auditService.logAction({
       action: 'storage.updated',

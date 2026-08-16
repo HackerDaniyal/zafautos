@@ -43,14 +43,25 @@ export async function getSession(): Promise<AuthContext | null> {
  * Use this in route handlers that require authentication.
  */
 export async function requireAuth(): Promise<AuthContext> {
-  // TEMPORARY BYPASS — REMOVE BEFORE PRODUCTION
+  // DEVELOPMENT BYPASS — Only works when AUTH_BYPASS=true
+  // Resolves to the real admin user from the database so that
+  // requirePermission() and RBAC work correctly with a valid user ID.
   if (process.env.AUTH_BYPASS === 'true') {
-    return {
-      supabaseUser: { id: 'temp-bypass', email: 'admin@zafautos.com' } as AuthContext['supabaseUser'],
-      userId: 'temp-bypass',
-      email: 'admin@zafautos.com',
-      role: 'super_admin',
-    };
+    // Look up the real admin user from the database
+    const adminUser = await authRepo.findUserByEmail('admin@zafautos.com');
+    if (adminUser) {
+      const role: UserRole = (adminUser.role as string as UserRole) ?? 'customer';
+      return {
+        supabaseUser: { id: adminUser.id, email: adminUser.email } as AuthContext['supabaseUser'],
+        userId: adminUser.id,
+        email: adminUser.email,
+        role,
+      };
+    }
+    // Fallback: if no admin user exists (e.g., fresh DB), throw instead of using fake ID
+    throw new UnauthorizedError(
+      'AUTH_BYPASS enabled but no admin user found. Run seed or bootstrap-admin first.'
+    );
   }
 
   const session = await getSession();

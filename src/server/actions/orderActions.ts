@@ -1,6 +1,7 @@
 'use server';
 
 import { requireAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/auth/rbac';
 import {
   OrderService,
   CreateOrderSchema,
@@ -31,7 +32,8 @@ export async function createOrder(
   data: z.infer<typeof CreateOrderSchema>,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'orders.create');
     const validated = CreateOrderSchema.parse(data);
     const order = await orderService.createOrder(validated);
     return { success: true, data: order };
@@ -44,7 +46,8 @@ export async function listOrdersForAdmin(
   params: OrderListParams,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'orders.read');
     const result = await orderService.listOrders(params);
     return { success: true, data: result };
   } catch (error) {
@@ -54,7 +57,8 @@ export async function listOrdersForAdmin(
 
 export async function getOrderDetail(orderId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'orders.read');
     UUIDSchema.parse(orderId);
     const order = await orderService.getOrderDetail(orderId);
     return { success: true, data: order };
@@ -65,7 +69,8 @@ export async function getOrderDetail(orderId: string): Promise<ActionResult> {
 
 export async function getOrderForEditAction(orderId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'orders.read');
     UUIDSchema.parse(orderId);
     const order = await orderService.getOrderForEdit(orderId);
     return { success: true, data: order };
@@ -81,6 +86,7 @@ export async function changeOrderStatus(
 ): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'orders.update');
     UUIDSchema.parse(orderId);
     const validatedStatus = OrderStatusSchema.parse(status);
     const updated = await orderService.changeOrderStatus(
@@ -109,6 +115,7 @@ export async function addOrderNote(
 ): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'orders.update');
     UUIDSchema.parse(orderId);
     const createdNote = await orderService.addNote(orderId, note, session.userId);
 
@@ -127,7 +134,8 @@ export async function addOrderNote(
 
 export async function deleteOrderNote(noteId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'orders.update');
     UUIDSchema.parse(noteId);
     const deleted = await orderService.deleteNote(noteId);
     return { success: true, data: deleted };
@@ -142,6 +150,7 @@ export async function addOrderDocument(
 ): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'orders.update');
     UUIDSchema.parse(orderId);
     const createdDoc = await orderService.addDocument(
       orderId,
@@ -166,7 +175,8 @@ export async function deleteOrderDocument(
   documentId: string,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'orders.update');
     UUIDSchema.parse(documentId);
     const deleted = await orderService.deleteDocument(documentId);
     return { success: true, data: deleted };
@@ -178,6 +188,7 @@ export async function deleteOrderDocument(
 export async function softDeleteOrder(orderId: string): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'orders.delete');
     UUIDSchema.parse(orderId);
     const deleted = await orderService.softDeleteOrder(orderId, session.userId);
 
@@ -197,6 +208,7 @@ export async function softDeleteOrder(orderId: string): Promise<ActionResult> {
 export async function restoreOrder(orderId: string): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'orders.update');
     UUIDSchema.parse(orderId);
     const restored = await orderService.restoreOrder(orderId);
 
@@ -219,6 +231,7 @@ export async function bulkUpdateOrderStatus(
 ): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'orders.update');
     ids.forEach((id) => UUIDSchema.parse(id));
     const validatedStatus = OrderStatusSchema.parse(status);
     const results = await orderService.bulkUpdateStatus(
@@ -237,6 +250,7 @@ export async function bulkDeleteOrders(
 ): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'orders.delete');
     ids.forEach((id) => UUIDSchema.parse(id));
     const results = await orderService.bulkDelete(ids, session.userId);
     return { success: true, data: results };
@@ -247,7 +261,8 @@ export async function bulkDeleteOrders(
 
 export async function getOrderStats(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'orders.read');
     const stats = await orderService.getOrderStats();
     return { success: true, data: stats };
   } catch (error) {
@@ -258,6 +273,7 @@ export async function getOrderStats(): Promise<ActionResult> {
 export async function bulkRestoreOrders(ids: string[]): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'orders.update');
     ids.forEach((id) => UUIDSchema.parse(id));
     const results = await Promise.all(ids.map((id) => orderService.restoreOrder(id)));
     return { success: true, data: results };
@@ -270,7 +286,8 @@ export async function exportOrdersCsv(
   params: OrderListParams,
 ): Promise<ActionResult<string>> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'orders.read');
     const result = await orderService.listOrders({ ...params, limit: 10000, page: 1 });
     const rows = result.data.map((row: Record<string, unknown>) => ({
       orderNumber: (row as { orderNumber?: string }).orderNumber,
@@ -308,6 +325,7 @@ export async function assignDealerToOrderAction(
 ): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'orders.update');
     UUIDSchema.parse(orderId);
     UUIDSchema.parse(dealerId);
     const result = await orderService.assignDealer(

@@ -1,6 +1,7 @@
 'use server';
 
 import { requireAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/auth/rbac';
 import { SettingsService } from '@/server/services';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { AuditService } from '@/server/services/auditService';
@@ -10,7 +11,8 @@ const auditService = new AuditService();
 
 export async function listTaxRates(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.listTaxRates();
     return { success: true, data };
   } catch (error) {
@@ -20,7 +22,8 @@ export async function listTaxRates(): Promise<ActionResult> {
 
 export async function listActiveTaxRates(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.listActiveTaxRates();
     return { success: true, data };
   } catch (error) {
@@ -30,7 +33,8 @@ export async function listActiveTaxRates(): Promise<ActionResult> {
 
 export async function getTaxRate(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.getTaxRate(id);
     return { success: true, data };
   } catch (error) {
@@ -48,7 +52,8 @@ export async function createTaxRate(data: {
   displayOrder?: number;
 }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     const created = await settingsService.createTaxRate({
       name: data.name,
       countryId: data.countryId,
@@ -81,7 +86,8 @@ export async function updateTaxRate(id: string, data: {
   displayOrder?: number;
 }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     const updated = await settingsService.updateTaxRate(id, data);
     await auditService.logAction({
       action: 'tax_rate.updated',
@@ -100,7 +106,8 @@ export async function updateTaxRate(id: string, data: {
 
 export async function deleteTaxRate(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     await settingsService.deleteTaxRate(id);
     await auditService.logAction({
       action: 'tax_rate.deleted',
@@ -116,7 +123,8 @@ export async function deleteTaxRate(id: string): Promise<ActionResult> {
 
 export async function restoreTaxRate(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     await settingsService.restoreTaxRate(id);
     await auditService.logAction({
       action: 'tax_rate.restored',

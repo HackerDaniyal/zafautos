@@ -11,12 +11,14 @@ const auditRepo = new AuditRepository();
 // ── Existing actions (preserved) ───────────────────────────────────────────
 
 export async function getEntityAuditTrailAction(entityType: string, entityId: string) {
-  await requireAuth();
+  const auth = await requireAuth();
+  requireRole(auth, 'admin', 'super_admin');
   return auditService.getEntityAuditTrail(entityType, entityId);
 }
 
 export async function getRecentActivityAction(limit: number = 50) {
-  await requireAuth();
+  const auth = await requireAuth();
+  requireRole(auth, 'admin', 'super_admin');
   return auditService.getRecentActivity(limit);
 }
 

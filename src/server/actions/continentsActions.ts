@@ -1,6 +1,7 @@
 'use server';
 
 import { requireAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/auth/rbac';
 import { SettingsService } from '@/server/services';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { AuditService } from '@/server/services/auditService';
@@ -10,7 +11,8 @@ const auditService = new AuditService();
 
 export async function listContinents(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.listContinents();
     return { success: true, data };
   } catch (error) {
@@ -20,7 +22,8 @@ export async function listContinents(): Promise<ActionResult> {
 
 export async function listContinentsWithCount(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.listContinentsWithCount();
     return { success: true, data };
   } catch (error) {
@@ -30,7 +33,8 @@ export async function listContinentsWithCount(): Promise<ActionResult> {
 
 export async function getContinent(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.getContinent(id);
     return { success: true, data };
   } catch (error) {
@@ -40,7 +44,8 @@ export async function getContinent(id: string): Promise<ActionResult> {
 
 export async function createContinent(data: { name: string; slug?: string; isActive?: boolean; displayOrder?: number }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     const created = await settingsService.createContinent({
       name: data.name,
       slug: data.slug,
@@ -62,7 +67,8 @@ export async function createContinent(data: { name: string; slug?: string; isAct
 
 export async function updateContinent(id: string, data: { name?: string; slug?: string; isActive?: boolean; displayOrder?: number }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     const updated = await settingsService.updateContinent(id, data);
     await auditService.logAction({
       action: 'continent.updated',
@@ -78,7 +84,8 @@ export async function updateContinent(id: string, data: { name?: string; slug?: 
 
 export async function deleteContinent(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     await settingsService.deleteContinent(id);
     await auditService.logAction({
       action: 'continent.deleted',
@@ -94,7 +101,8 @@ export async function deleteContinent(id: string): Promise<ActionResult> {
 
 export async function restoreContinent(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     await settingsService.restoreContinent(id);
     await auditService.logAction({
       action: 'continent.restored',

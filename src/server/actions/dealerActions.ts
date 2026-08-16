@@ -1,6 +1,7 @@
 'use server';
 
 import { requireAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/auth/rbac';
 import { DealerService } from '@/server/services';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { UUIDSchema, ProfileUpdateSchema } from '@/lib/validation/common';
@@ -13,7 +14,8 @@ type ProfileUpdateDTO = z.infer<typeof ProfileUpdateSchema>;
 
 export async function getDealerForEditAction(dealerId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'dealers.read');
     UUIDSchema.parse(dealerId);
     const dealer = await dealerService.getDealerForEdit(dealerId);
     return { success: true, data: dealer };
@@ -27,7 +29,8 @@ export async function updateDealerProfile(
   data: ProfileUpdateDTO,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'dealers.update');
     UUIDSchema.parse(dealerId);
     const validated = ProfileUpdateSchema.parse(data);
     const profile = await dealerService.upsertProfile(dealerId, {
@@ -41,7 +44,8 @@ export async function updateDealerProfile(
 
 export async function listDealers(params?: DealerListParams): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'dealers.read');
     const result = await dealerService.listDealers(params);
     return { success: true, data: result };
   } catch (error) {
@@ -51,7 +55,8 @@ export async function listDealers(params?: DealerListParams): Promise<ActionResu
 
 export async function getDealer(dealerId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'dealers.read');
     UUIDSchema.parse(dealerId);
     const dealer = await dealerService.getDealerDetail(dealerId);
     return { success: true, data: dealer };
@@ -62,7 +67,8 @@ export async function getDealer(dealerId: string): Promise<ActionResult> {
 
 export async function getDealerStats(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'dealers.read');
     const stats = await dealerService.getDealerStats();
     return { success: true, data: stats };
   } catch (error) {
@@ -77,6 +83,7 @@ export async function changeDealerStatus(
 ): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'dealers.update');
     UUIDSchema.parse(dealerId);
     const result = await dealerService.changeDealerStatus(
       dealerId,
@@ -93,6 +100,7 @@ export async function changeDealerStatus(
 export async function deleteDealer(dealerId: string): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'dealers.update');
     UUIDSchema.parse(dealerId);
     await dealerService.softDeleteDealer(dealerId, session.userId);
     return { success: true, data: { dealerId } };
@@ -104,6 +112,7 @@ export async function deleteDealer(dealerId: string): Promise<ActionResult> {
 export async function restoreDealer(dealerId: string): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'dealers.update');
     UUIDSchema.parse(dealerId);
     await dealerService.restoreDealer(dealerId);
     return { success: true, data: { dealerId } };
@@ -118,6 +127,7 @@ export async function bulkUpdateDealerStatus(
 ): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'dealers.update');
     ids.forEach((id) => UUIDSchema.parse(id));
     const results = await dealerService.bulkUpdateStatus(ids, status as DealerStatus, session.userId);
     return { success: true, data: results };
@@ -129,6 +139,7 @@ export async function bulkUpdateDealerStatus(
 export async function bulkDeleteDealers(ids: string[]): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'dealers.update');
     ids.forEach((id) => UUIDSchema.parse(id));
     const results = await dealerService.bulkDelete(ids, session.userId);
     return { success: true, data: results };
@@ -141,7 +152,8 @@ export async function exportDealersCsv(
   params: DealerListParams,
 ): Promise<ActionResult<string>> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'dealers.read');
     const result = await dealerService.listDealers({ ...params, limit: 10000, page: 1 });
     const rows = result.data.map((row: Record<string, unknown>) => ({
       email: (row as { email?: string }).email ?? '',

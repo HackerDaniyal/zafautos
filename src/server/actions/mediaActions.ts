@@ -1,6 +1,7 @@
 'use server';
 
 import { requireAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/auth/rbac';
 import {
   listFiles,
   deleteFile,
@@ -152,7 +153,8 @@ function mapStorageFileToMediaItem(
 
 export async function listMedia(params: ListMediaParams): Promise<ActionResult<MediaFileItem[]>> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
 
     const { bucket, prefix, search, limit = 50, offset = 0 } = params;
 
@@ -182,7 +184,8 @@ export async function listMedia(params: ListMediaParams): Promise<ActionResult<M
 
 export async function getBucketConfigs(): Promise<ActionResult<BucketConfig[]>> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
     return { success: true, data: Object.values(BUCKET_CONFIGS) };
   } catch (error) {
     return handleError(error);
@@ -195,6 +198,7 @@ export async function uploadMedia(
 ): Promise<ActionResult<MediaFileItem[]>> {
   try {
     const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
 
     const { bucket, prefix } = params;
     if (!bucket) {
@@ -280,6 +284,7 @@ export async function deleteMedia(
 ): Promise<ActionResult<void>> {
   try {
     const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.delete');
 
     if (!bucket || !path) {
       return {
@@ -310,7 +315,8 @@ export async function getMediaUrl(
   path: string,
 ): Promise<ActionResult<string>> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
 
     if (!bucket || !path) {
       return {

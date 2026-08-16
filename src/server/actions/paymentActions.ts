@@ -1,6 +1,7 @@
 'use server';
 
 import { requireAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/auth/rbac';
 import {
   PaymentService,
   CreatePaymentSchema,
@@ -74,7 +75,8 @@ export async function createPayment(
   data: z.infer<typeof CreatePaymentSchema>,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     const validated = CreatePaymentSchema.parse(data);
     const payment = await paymentService.createPayment(validated);
     return { success: true, data: payment };
@@ -88,7 +90,8 @@ export async function updatePaymentStatus(
   status: z.infer<typeof PaymentStatusSchema>,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     UUIDSchema.parse(paymentId);
     const validatedStatus = PaymentStatusSchema.parse(status);
     const payment = await paymentService.updatePaymentStatus(paymentId, validatedStatus);
@@ -102,7 +105,8 @@ export async function createInvoice(
   data: z.infer<typeof CreateInvoiceSchema>,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     const validated = CreateInvoiceSchema.parse(data);
     const invoice = await paymentService.createInvoice(validated);
     return { success: true, data: invoice };
@@ -124,7 +128,8 @@ export async function listPayments(params?: {
   sortDirection?: 'asc' | 'desc';
 }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.read');
     const result = await paymentService.listPayments({
       ...params,
       status: params?.status as PaymentStatus | undefined,
@@ -137,7 +142,8 @@ export async function listPayments(params?: {
 
 export async function getPayment(paymentId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.read');
     const payment = await paymentService.getPaymentDetail(paymentId);
     return { success: true, data: payment };
   } catch (error) {
@@ -151,7 +157,8 @@ export async function changePaymentStatus(
   note?: string,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     await paymentService.changePaymentStatus(
       paymentId,
       status as PaymentStatus,
@@ -169,7 +176,8 @@ export async function addPaymentNote(
   note: string,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     await paymentService.addNote(paymentId, note);
     return { success: true, data: { paymentId, note } };
   } catch (error) {
@@ -179,7 +187,8 @@ export async function addPaymentNote(
 
 export async function deletePaymentNote(noteId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     await paymentService.deleteNote(noteId);
     return { success: true, data: { noteId } };
   } catch (error) {
@@ -189,7 +198,8 @@ export async function deletePaymentNote(noteId: string): Promise<ActionResult> {
 
 export async function getPaymentStats(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.read');
     const stats = await paymentService.getPaymentStats();
     return { success: true, data: stats };
   } catch (error) {
@@ -199,7 +209,8 @@ export async function getPaymentStats(): Promise<ActionResult> {
 
 export async function deletePayment(paymentId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     await paymentService.softDeletePayment(paymentId);
     return { success: true, data: { paymentId } };
   } catch (error) {
@@ -209,7 +220,8 @@ export async function deletePayment(paymentId: string): Promise<ActionResult> {
 
 export async function restorePayment(paymentId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     await paymentService.restorePayment(paymentId);
     return { success: true, data: { paymentId } };
   } catch (error) {
@@ -222,7 +234,8 @@ export async function bulkUpdatePaymentStatus(
   status: string,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     const results = await paymentService.bulkUpdateStatus(ids, status as PaymentStatus);
     return { success: true, data: results };
   } catch (error) {
@@ -232,7 +245,8 @@ export async function bulkUpdatePaymentStatus(
 
 export async function bulkDeletePayments(ids: string[]): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     const results = await paymentService.bulkDelete(ids);
     return { success: true, data: results };
   } catch (error) {
@@ -242,7 +256,8 @@ export async function bulkDeletePayments(ids: string[]): Promise<ActionResult> {
 
 export async function getInvoicesByOrder(orderId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.read');
     const invoices = await paymentService.getInvoicesByOrderId(orderId);
     return { success: true, data: invoices };
   } catch (error) {
@@ -252,7 +267,8 @@ export async function getInvoicesByOrder(orderId: string): Promise<ActionResult>
 
 export async function getInvoice(invoiceId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.read');
     const invoice = await paymentService.getInvoiceDetail(invoiceId);
     return { success: true, data: invoice };
   } catch (error) {
@@ -265,7 +281,8 @@ export async function updateInvoice(
   data: Record<string, unknown>,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     const invoice = await paymentService.updateInvoice(invoiceId, data);
     return { success: true, data: invoice };
   } catch (error) {
@@ -275,7 +292,8 @@ export async function updateInvoice(
 
 export async function getCustomerFinance(customerId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.read');
     const finance = await paymentService.getCustomerFinance(customerId);
     return { success: true, data: finance };
   } catch (error) {
@@ -285,7 +303,8 @@ export async function getCustomerFinance(customerId: string): Promise<ActionResu
 
 export async function getOrderFinance(orderId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.read');
     const finance = await paymentService.getOrderFinance(orderId);
     return { success: true, data: finance };
   } catch (error) {
@@ -309,7 +328,8 @@ export async function listInvoices(params?: {
   sortDirection?: 'asc' | 'desc';
 }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.read');
     const result = await paymentService.listInvoices({
       ...params,
       status: params?.status as InvoiceStatus | undefined,
@@ -322,7 +342,8 @@ export async function listInvoices(params?: {
 
 export async function getInvoiceDetail(invoiceId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.read');
     UUIDSchema.parse(invoiceId);
     const invoice = await paymentService.getInvoiceDetail(invoiceId);
     return { success: true, data: invoice };
@@ -336,7 +357,8 @@ export async function changeInvoiceStatus(
   status: string,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     UUIDSchema.parse(invoiceId);
     const validatedStatus = InvoiceStatusSchema.parse(status);
     const invoice = await paymentService.changeInvoiceStatus(invoiceId, validatedStatus);
@@ -348,7 +370,8 @@ export async function changeInvoiceStatus(
 
 export async function generateInvoice(invoiceId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     UUIDSchema.parse(invoiceId);
     const invoice = await paymentService.getInvoiceDetail(invoiceId);
     if (invoice.status !== 'draft') {
@@ -363,7 +386,8 @@ export async function generateInvoice(invoiceId: string): Promise<ActionResult> 
 
 export async function deleteInvoice(invoiceId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     UUIDSchema.parse(invoiceId);
     const invoice = await paymentService.getInvoiceDetail(invoiceId);
     if (invoice.status !== 'draft') {
@@ -378,7 +402,8 @@ export async function deleteInvoice(invoiceId: string): Promise<ActionResult> {
 
 export async function restoreInvoice(invoiceId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     UUIDSchema.parse(invoiceId);
     await paymentService.restoreInvoice(invoiceId);
     return { success: true, data: { invoiceId } };
@@ -389,7 +414,8 @@ export async function restoreInvoice(invoiceId: string): Promise<ActionResult> {
 
 export async function bulkDeleteInvoices(ids: string[]): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     ids.forEach((id) => UUIDSchema.parse(id));
     const results = await paymentService.bulkDeleteInvoices(ids);
     return { success: true, data: results };
@@ -400,7 +426,8 @@ export async function bulkDeleteInvoices(ids: string[]): Promise<ActionResult> {
 
 export async function duplicateInvoice(invoiceId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     UUIDSchema.parse(invoiceId);
     const invoice = await paymentService.duplicateInvoice(invoiceId);
     return { success: true, data: invoice };
@@ -425,7 +452,8 @@ export async function listTransactions(params?: {
   dateTo?: string;
 }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.read');
     const paymentId = params?.paymentId;
     const orderId = params?.orderId;
 
@@ -445,7 +473,8 @@ export async function listTransactions(params?: {
 
 export async function getTransaction(transactionId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.read');
     UUIDSchema.parse(transactionId);
     const transaction = await paymentService.getTransactionById(transactionId);
     return { success: true, data: transaction };
@@ -458,7 +487,8 @@ export async function recordTransaction(
   data: z.infer<typeof CreateTransactionSchema>,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     const validated = CreateTransactionSchema.parse(data);
     const transaction = await paymentService.createTransaction(validated);
     return { success: true, data: transaction };
@@ -471,7 +501,8 @@ export async function recordDeposit(
   data: z.infer<typeof CreateTransactionSchema>,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     const validated = CreateTransactionSchema.parse({ ...data, type: 'deposit' });
     const transaction = await paymentService.recordDeposit(validated);
     return { success: true, data: transaction };
@@ -484,7 +515,8 @@ export async function recordBalancePayment(
   data: z.infer<typeof CreateTransactionSchema>,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     const validated = CreateTransactionSchema.parse({ ...data, type: 'balance_payment' });
     const transaction = await paymentService.recordBalancePayment(validated);
     return { success: true, data: transaction };
@@ -497,7 +529,8 @@ export async function recordRefund(
   data: z.infer<typeof CreateTransactionSchema>,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     const validated = CreateTransactionSchema.parse({ ...data, type: 'refund' });
     const transaction = await paymentService.recordRefund(validated);
     return { success: true, data: transaction };
@@ -510,7 +543,8 @@ export async function recordAdjustment(
   data: z.infer<typeof CreateTransactionSchema>,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     const validated = CreateTransactionSchema.parse({ ...data, type: 'adjustment' });
     const transaction = await paymentService.recordAdjustment(validated);
     return { success: true, data: transaction };
@@ -524,7 +558,8 @@ export async function updateTransaction(
   data: Record<string, unknown>,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     UUIDSchema.parse(transactionId);
     const validated = UpdateTransactionSchema.parse(data);
     const transaction = await paymentService.updateTransaction(transactionId, validated);
@@ -536,7 +571,8 @@ export async function updateTransaction(
 
 export async function deleteTransaction(transactionId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     UUIDSchema.parse(transactionId);
     await paymentService.softDeleteTransaction(transactionId);
     return { success: true, data: { transactionId } };
@@ -547,7 +583,8 @@ export async function deleteTransaction(transactionId: string): Promise<ActionRe
 
 export async function restoreTransaction(transactionId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     UUIDSchema.parse(transactionId);
     await paymentService.restoreTransaction(transactionId);
     return { success: true, data: { transactionId } };
@@ -562,7 +599,8 @@ export async function restoreTransaction(transactionId: string): Promise<ActionR
 
 export async function listPaymentMethods(userId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.read');
     const methods = await paymentService.getPaymentMethods(userId);
     return { success: true, data: methods };
   } catch (error) {
@@ -572,7 +610,8 @@ export async function listPaymentMethods(userId: string): Promise<ActionResult> 
 
 export async function getDefaultPaymentMethod(userId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.read');
     const method = await paymentService.getDefaultPaymentMethod(userId);
     return { success: true, data: method };
   } catch (error) {
@@ -584,7 +623,8 @@ export async function createPaymentMethod(
   data: z.infer<typeof CreatePaymentMethodSchema>,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'payments.create');
     const validated = CreatePaymentMethodSchema.parse(data);
     const method = await paymentService.createPaymentMethod(validated);
     return { success: true, data: method };

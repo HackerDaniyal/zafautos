@@ -1,6 +1,7 @@
 'use server';
 
 import { requireAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/auth/rbac';
 import {
   VehicleService,
   CreateVehicleSchema,
@@ -23,7 +24,8 @@ export async function createVehicle(
   data: z.infer<typeof CreateVehicleSchema>,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.create');
     const validated = CreateVehicleSchema.parse(data);
     const vehicle = await vehicleService.createVehicle(validated);
     return { success: true, data: vehicle };
@@ -37,7 +39,8 @@ export async function updateVehicle(
   data: z.infer<typeof UpdateVehicleSchema>,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(id);
     const validated = UpdateVehicleSchema.parse(data);
     const vehicle = await vehicleService.updateVehicle(id, validated);
@@ -49,7 +52,8 @@ export async function updateVehicle(
 
 export async function deleteVehicle(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(id);
     await vehicleService.deleteVehicle(id);
     return { success: true, data: undefined };
@@ -60,7 +64,8 @@ export async function deleteVehicle(id: string): Promise<ActionResult> {
 
 export async function publishVehicle(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(id);
     const vehicle = await vehicleService.updateVehicle(id, { status: 'active' });
     return { success: true, data: vehicle };
@@ -71,7 +76,8 @@ export async function publishVehicle(id: string): Promise<ActionResult> {
 
 export async function archiveVehicle(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(id);
     const vehicle = await vehicleService.updateVehicle(id, { status: 'archived' });
     return { success: true, data: vehicle };
@@ -85,7 +91,8 @@ export async function uploadVehicleImages(
   formData: FormData,
 ): Promise<ActionResult<{ paths: string[] }>> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(vehicleId);
 
     const files = formData.getAll('images').filter((f): f is File => f instanceof File);
@@ -103,6 +110,7 @@ export async function uploadVehicleImages(
 export async function softDeleteVehicle(id: string): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'vehicles.delete');
     UUIDSchema.parse(id);
     const vehicle = await vehicleService.softDeleteVehicle(id, session.userId);
     await auditService.logAction({
@@ -120,6 +128,7 @@ export async function softDeleteVehicle(id: string): Promise<ActionResult> {
 export async function restoreVehicle(id: string): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'vehicles.update');
     UUIDSchema.parse(id);
     const vehicle = await vehicleService.restoreVehicle(id);
     await auditService.logAction({
@@ -136,7 +145,8 @@ export async function restoreVehicle(id: string): Promise<ActionResult> {
 
 export async function duplicateVehicle(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.create');
     UUIDSchema.parse(id);
     const vehicle = await vehicleService.duplicateVehicle(id);
     return { success: true, data: vehicle };
@@ -152,6 +162,7 @@ export async function changeVehicleStatus(
 ): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'vehicles.update');
     UUIDSchema.parse(id);
     const oldVehicle = await vehicleService.getVehicleById(id);
     const oldStatus = (oldVehicle as Record<string, unknown>).status;
@@ -170,7 +181,8 @@ export async function changeVehicleStatus(
 
 export async function toggleVehicleFeatured(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(id);
     const vehicle = await vehicleService.toggleFeatured(id);
     return { success: true, data: vehicle };
@@ -185,6 +197,7 @@ export async function bulkUpdateVehicleStatus(
 ): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'vehicles.update');
     for (const id of ids) {
       UUIDSchema.parse(id);
     }
@@ -204,6 +217,7 @@ export async function bulkUpdateVehicleStatus(
 export async function bulkDeleteVehicles(ids: string[]): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'vehicles.delete');
     for (const id of ids) {
       UUIDSchema.parse(id);
     }
@@ -225,7 +239,8 @@ export async function setVehiclePrimaryImage(
   imageId: string,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(vehicleId);
     UUIDSchema.parse(imageId);
     const image = await vehicleService.setPrimaryImage(vehicleId, imageId);
@@ -237,7 +252,8 @@ export async function setVehiclePrimaryImage(
 
 export async function deleteVehicleImage(imageId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(imageId);
     const image = await vehicleService.deleteImage(imageId);
     return { success: true, data: image };
@@ -251,7 +267,8 @@ export async function reorderVehicleImages(
   imageIds: string[],
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(vehicleId);
     for (const imageId of imageIds) {
       UUIDSchema.parse(imageId);
@@ -265,7 +282,8 @@ export async function reorderVehicleImages(
 
 export async function getVehicleForEdit(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
     UUIDSchema.parse(id);
     const vehicle = await vehicleService.getVehicleWithImages(id);
     return { success: true, data: vehicle };
@@ -278,7 +296,8 @@ export async function listVehiclesForAdmin(
   params: VehicleListParams,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
     const result = await vehicleService.listVehicles({
       filters: {
         status: params.status,
@@ -316,7 +335,8 @@ export async function listVehiclesForAdmin(
 // ── Sub-entity CRUD Actions ──────────────────────
 export async function listManufacturers(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
     const data = await vehicleService.listManufacturers();
     return { success: true, data };
   } catch (error) { return handleError(error); }
@@ -324,7 +344,8 @@ export async function listManufacturers(): Promise<ActionResult> {
 
 export async function createManufacturer(data: { name: string; slug?: string; countryId?: string; logoUrl?: string }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.create');
     if (!data.name?.trim()) return { success: false, error: 'Name is required', code: 'VALIDATION_ERROR' };
     const slug = data.slug || toSlug(data.name);
     const result = await vehicleService.createManufacturer({ ...data, slug });
@@ -334,7 +355,8 @@ export async function createManufacturer(data: { name: string; slug?: string; co
 
 export async function updateManufacturer(id: string, data: { name?: string; slug?: string; countryId?: string | null; logoUrl?: string | null }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(id);
     const result = await vehicleService.updateManufacturer(id, data);
     return { success: true, data: result };
@@ -343,7 +365,8 @@ export async function updateManufacturer(id: string, data: { name?: string; slug
 
 export async function deleteManufacturer(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(id);
     await vehicleService.deleteManufacturer(id);
     return { success: true, data: undefined };
@@ -352,7 +375,8 @@ export async function deleteManufacturer(id: string): Promise<ActionResult> {
 
 export async function listModels(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
     const data = await vehicleService.listModels();
     return { success: true, data };
   } catch (error) { return handleError(error); }
@@ -360,7 +384,8 @@ export async function listModels(): Promise<ActionResult> {
 
 export async function createModel(data: { name: string; slug?: string; manufacturerId?: string }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.create');
     if (!data.name?.trim()) return { success: false, error: 'Name is required', code: 'VALIDATION_ERROR' };
     const slug = data.slug || toSlug(data.name);
     const result = await vehicleService.createModel({ ...data, slug });
@@ -370,7 +395,8 @@ export async function createModel(data: { name: string; slug?: string; manufactu
 
 export async function updateModel(id: string, data: { name?: string; slug?: string; manufacturerId?: string | null }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(id);
     const result = await vehicleService.updateModel(id, data);
     return { success: true, data: result };
@@ -379,7 +405,8 @@ export async function updateModel(id: string, data: { name?: string; slug?: stri
 
 export async function deleteModel(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(id);
     await vehicleService.deleteModel(id);
     return { success: true, data: undefined };
@@ -388,7 +415,8 @@ export async function deleteModel(id: string): Promise<ActionResult> {
 
 export async function listBodyTypes(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
     const data = await vehicleService.listBodyTypes();
     return { success: true, data };
   } catch (error) { return handleError(error); }
@@ -396,7 +424,8 @@ export async function listBodyTypes(): Promise<ActionResult> {
 
 export async function createBodyType(data: { name: string }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.create');
     if (!data.name?.trim()) return { success: false, error: 'Name is required', code: 'VALIDATION_ERROR' };
     const result = await vehicleService.createBodyType(data);
     return { success: true, data: result };
@@ -405,7 +434,8 @@ export async function createBodyType(data: { name: string }): Promise<ActionResu
 
 export async function updateBodyType(id: string, data: { name: string }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(id);
     const result = await vehicleService.updateBodyType(id, data);
     return { success: true, data: result };
@@ -414,7 +444,8 @@ export async function updateBodyType(id: string, data: { name: string }): Promis
 
 export async function deleteBodyType(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(id);
     await vehicleService.deleteBodyType(id);
     return { success: true, data: undefined };
@@ -423,7 +454,8 @@ export async function deleteBodyType(id: string): Promise<ActionResult> {
 
 export async function listFuelTypes(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
     const data = await vehicleService.listFuelTypes();
     return { success: true, data };
   } catch (error) { return handleError(error); }
@@ -431,7 +463,8 @@ export async function listFuelTypes(): Promise<ActionResult> {
 
 export async function createFuelType(data: { name: string }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.create');
     if (!data.name?.trim()) return { success: false, error: 'Name is required', code: 'VALIDATION_ERROR' };
     const result = await vehicleService.createFuelType(data);
     return { success: true, data: result };
@@ -440,7 +473,8 @@ export async function createFuelType(data: { name: string }): Promise<ActionResu
 
 export async function updateFuelType(id: string, data: { name: string }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(id);
     const result = await vehicleService.updateFuelType(id, data);
     return { success: true, data: result };
@@ -449,7 +483,8 @@ export async function updateFuelType(id: string, data: { name: string }): Promis
 
 export async function deleteFuelType(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(id);
     await vehicleService.deleteFuelType(id);
     return { success: true, data: undefined };
@@ -458,7 +493,8 @@ export async function deleteFuelType(id: string): Promise<ActionResult> {
 
 export async function listTransmissions(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
     const data = await vehicleService.listTransmissions();
     return { success: true, data };
   } catch (error) { return handleError(error); }
@@ -466,7 +502,8 @@ export async function listTransmissions(): Promise<ActionResult> {
 
 export async function createTransmission(data: { name: string }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.create');
     if (!data.name?.trim()) return { success: false, error: 'Name is required', code: 'VALIDATION_ERROR' };
     const result = await vehicleService.createTransmission(data);
     return { success: true, data: result };
@@ -475,7 +512,8 @@ export async function createTransmission(data: { name: string }): Promise<Action
 
 export async function updateTransmission(id: string, data: { name: string }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(id);
     const result = await vehicleService.updateTransmission(id, data);
     return { success: true, data: result };
@@ -484,7 +522,8 @@ export async function updateTransmission(id: string, data: { name: string }): Pr
 
 export async function deleteTransmission(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(id);
     await vehicleService.deleteTransmission(id);
     return { success: true, data: undefined };
@@ -493,7 +532,8 @@ export async function deleteTransmission(id: string): Promise<ActionResult> {
 
 export async function listDriveTypes(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
     const data = await vehicleService.listDriveTypes();
     return { success: true, data };
   } catch (error) { return handleError(error); }
@@ -501,7 +541,8 @@ export async function listDriveTypes(): Promise<ActionResult> {
 
 export async function createDriveType(data: { name: string }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.create');
     if (!data.name?.trim()) return { success: false, error: 'Name is required', code: 'VALIDATION_ERROR' };
     const result = await vehicleService.createDriveType(data);
     return { success: true, data: result };
@@ -510,7 +551,8 @@ export async function createDriveType(data: { name: string }): Promise<ActionRes
 
 export async function updateDriveType(id: string, data: { name: string }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(id);
     const result = await vehicleService.updateDriveType(id, data);
     return { success: true, data: result };
@@ -519,7 +561,8 @@ export async function updateDriveType(id: string, data: { name: string }): Promi
 
 export async function deleteDriveType(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(id);
     await vehicleService.deleteDriveType(id);
     return { success: true, data: undefined };
@@ -528,7 +571,8 @@ export async function deleteDriveType(id: string): Promise<ActionResult> {
 
 export async function listColors(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
     const data = await vehicleService.listColors();
     return { success: true, data };
   } catch (error) { return handleError(error); }
@@ -536,7 +580,8 @@ export async function listColors(): Promise<ActionResult> {
 
 export async function createColor(data: { name: string }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.create');
     if (!data.name?.trim()) return { success: false, error: 'Name is required', code: 'VALIDATION_ERROR' };
     const result = await vehicleService.createColor(data);
     return { success: true, data: result };
@@ -545,7 +590,8 @@ export async function createColor(data: { name: string }): Promise<ActionResult>
 
 export async function updateColor(id: string, data: { name: string }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(id);
     const result = await vehicleService.updateColor(id, data);
     return { success: true, data: result };
@@ -554,7 +600,8 @@ export async function updateColor(id: string, data: { name: string }): Promise<A
 
 export async function deleteColor(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(id);
     await vehicleService.deleteColor(id);
     return { success: true, data: undefined };
@@ -563,7 +610,8 @@ export async function deleteColor(id: string): Promise<ActionResult> {
 
 export async function listCountries(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
     const data = await vehicleService.listCountries();
     return { success: true, data };
   } catch (error) { return handleError(error); }
@@ -571,7 +619,8 @@ export async function listCountries(): Promise<ActionResult> {
 
 export async function bulkDuplicateVehicles(ids: string[]): Promise<ActionResult> {
   try {
-    const session = await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.create');
     for (const id of ids) {
       UUIDSchema.parse(id);
     }
@@ -590,7 +639,8 @@ export async function bulkDuplicateVehicles(ids: string[]): Promise<ActionResult
 
 export async function bulkRestoreVehicles(ids: string[]): Promise<ActionResult> {
   try {
-    const session = await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     for (const id of ids) {
       UUIDSchema.parse(id);
     }
@@ -611,7 +661,8 @@ export async function bulkRestoreVehicles(ids: string[]): Promise<ActionResult> 
 
 export async function getVehicleFeaturesAction(vehicleId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
     UUIDSchema.parse(vehicleId);
     const data = await vehicleService.getVehicleFeatures(vehicleId);
     return { success: true, data };
@@ -620,7 +671,8 @@ export async function getVehicleFeaturesAction(vehicleId: string): Promise<Actio
 
 export async function addVehicleFeatureAction(vehicleId: string, name: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(vehicleId);
     if (!name?.trim()) return { success: false, error: 'Feature name is required', code: 'VALIDATION_ERROR' };
     const result = await vehicleService.addVehicleFeature(vehicleId, name);
@@ -630,7 +682,8 @@ export async function addVehicleFeatureAction(vehicleId: string, name: string): 
 
 export async function deleteVehicleFeatureAction(featureId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(featureId);
     await vehicleService.deleteVehicleFeature(featureId);
     return { success: true, data: undefined };
@@ -639,7 +692,8 @@ export async function deleteVehicleFeatureAction(featureId: string): Promise<Act
 
 export async function getVehicleSpecificationsAction(vehicleId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
     UUIDSchema.parse(vehicleId);
     const data = await vehicleService.getVehicleSpecifications(vehicleId);
     return { success: true, data };
@@ -648,7 +702,8 @@ export async function getVehicleSpecificationsAction(vehicleId: string): Promise
 
 export async function addVehicleSpecificationAction(vehicleId: string, name: string, value: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(vehicleId);
     if (!name?.trim()) return { success: false, error: 'Specification name is required', code: 'VALIDATION_ERROR' };
     const result = await vehicleService.addVehicleSpecification(vehicleId, name, value);
@@ -658,7 +713,8 @@ export async function addVehicleSpecificationAction(vehicleId: string, name: str
 
 export async function updateVehicleSpecificationAction(specId: string, name: string, value: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(specId);
     const result = await vehicleService.updateVehicleSpecification(specId, name, value);
     return { success: true, data: result };
@@ -667,7 +723,8 @@ export async function updateVehicleSpecificationAction(specId: string, name: str
 
 export async function deleteVehicleSpecificationAction(specId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(specId);
     await vehicleService.deleteVehicleSpecification(specId);
     return { success: true, data: undefined };
@@ -676,7 +733,8 @@ export async function deleteVehicleSpecificationAction(specId: string): Promise<
 
 export async function getVehicleDocumentsAction(vehicleId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
     UUIDSchema.parse(vehicleId);
     const data = await vehicleService.getVehicleDocuments(vehicleId);
     return { success: true, data };
@@ -685,7 +743,8 @@ export async function getVehicleDocumentsAction(vehicleId: string): Promise<Acti
 
 export async function addVehicleDocumentAction(vehicleId: string, documentUrl: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(vehicleId);
     if (!documentUrl?.trim()) return { success: false, error: 'Document URL is required', code: 'VALIDATION_ERROR' };
     const result = await vehicleService.addVehicleDocument(vehicleId, documentUrl);
@@ -695,7 +754,8 @@ export async function addVehicleDocumentAction(vehicleId: string, documentUrl: s
 
 export async function deleteVehicleDocumentAction(docId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(docId);
     await vehicleService.deleteVehicleDocument(docId);
     return { success: true, data: undefined };
@@ -707,7 +767,8 @@ export async function uploadVehicleDocumentFileAction(
   formData: FormData,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(vehicleId);
     const file = formData.get('file') as File | null;
     if (!file || file.size === 0) return { success: false, error: 'File is required', code: 'VALIDATION_ERROR' };
@@ -718,7 +779,8 @@ export async function uploadVehicleDocumentFileAction(
 
 export async function getVehicleStatusHistoryAction(vehicleId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
     UUIDSchema.parse(vehicleId);
     const data = await vehicleService.getVehicleStatusHistory(vehicleId);
     return { success: true, data };

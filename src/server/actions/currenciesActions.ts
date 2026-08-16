@@ -1,6 +1,7 @@
 'use server';
 
 import { requireAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/auth/rbac';
 import { SettingsService } from '@/server/services';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { AuditService } from '@/server/services/auditService';
@@ -10,7 +11,8 @@ const auditService = new AuditService();
 
 export async function listCurrencies(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.listCurrencies();
     return { success: true, data };
   } catch (error) {
@@ -20,7 +22,8 @@ export async function listCurrencies(): Promise<ActionResult> {
 
 export async function listActiveCurrencies(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.listActiveCurrencies();
     return { success: true, data };
   } catch (error) {
@@ -30,7 +33,8 @@ export async function listActiveCurrencies(): Promise<ActionResult> {
 
 export async function getCurrency(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.getCurrency(id);
     return { success: true, data };
   } catch (error) {
@@ -50,7 +54,8 @@ export async function createCurrency(data: {
   displayOrder?: number;
 }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     const created = await settingsService.createCurrency({
       name: data.name,
       code: data.code,
@@ -87,7 +92,8 @@ export async function updateCurrency(id: string, data: {
   displayOrder?: number;
 }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     const updated = await settingsService.updateCurrency(id, data);
     await auditService.logAction({
       action: 'currency.updated',
@@ -106,7 +112,8 @@ export async function updateCurrency(id: string, data: {
 
 export async function deleteCurrency(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     await settingsService.deleteCurrency(id);
     await auditService.logAction({
       action: 'currency.deleted',
@@ -122,7 +129,8 @@ export async function deleteCurrency(id: string): Promise<ActionResult> {
 
 export async function restoreCurrency(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     await settingsService.restoreCurrency(id);
     await auditService.logAction({
       action: 'currency.restored',

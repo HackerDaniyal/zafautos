@@ -1,6 +1,7 @@
 'use server';
 
 import { requireAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/auth/rbac';
 import { SettingsService } from '@/server/services';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { AuditService } from '@/server/services/auditService';
@@ -10,7 +11,8 @@ const auditService = new AuditService();
 
 export async function listNotificationRules(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.listNotificationRules();
     return { success: true, data };
   } catch (error) {
@@ -20,7 +22,8 @@ export async function listNotificationRules(): Promise<ActionResult> {
 
 export async function getNotificationRule(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.getNotificationRule(id);
     return { success: true, data };
   } catch (error) {
@@ -30,7 +33,8 @@ export async function getNotificationRule(id: string): Promise<ActionResult> {
 
 export async function seedDefaultNotificationRules(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     const data = await settingsService.seedDefaultNotificationRules();
     await auditService.logAction({
       action: 'notification_rules.seeded',
@@ -50,7 +54,8 @@ export async function updateNotificationRule(id: string, data: {
   sendEmail?: boolean;
 }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     const updated = await settingsService.updateNotificationRule(id, data);
     await auditService.logAction({
       action: 'notification_rule.updated',
@@ -74,7 +79,8 @@ export async function bulkUpdateNotificationRules(updates: Array<{
   sendEmail?: boolean;
 }>): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     await settingsService.bulkUpdateNotificationRules(updates);
     await auditService.logAction({
       action: 'notification_rules.bulk_updated',

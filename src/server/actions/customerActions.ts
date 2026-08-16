@@ -1,6 +1,7 @@
 'use server';
 
 import { requireAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/auth/rbac';
 import {
   CustomerService,
   CreateAddressSchema,
@@ -16,7 +17,8 @@ type ProfileUpdateDTO = z.infer<typeof ProfileUpdateSchema>;
 
 export async function getCustomerForEditAction(customerId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'customers.read');
     UUIDSchema.parse(customerId);
     const customer = await customerService.getCustomerForEdit(customerId);
     return { success: true, data: customer };
@@ -30,7 +32,8 @@ export async function updateCustomerProfile(
   data: ProfileUpdateDTO,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'customers.update');
     UUIDSchema.parse(customerId);
     const validated = ProfileUpdateSchema.parse(data);
     const profile = await customerService.upsertProfile(customerId, {
@@ -46,7 +49,8 @@ export async function addAddress(
   data: z.infer<typeof CreateAddressSchema>,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'customers.update');
     const validated = CreateAddressSchema.parse(data);
     const address = await customerService.createAddress(validated);
     return { success: true, data: address };
@@ -57,7 +61,8 @@ export async function addAddress(
 
 export async function removeAddress(addressId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'customers.update');
     UUIDSchema.parse(addressId);
     await customerService.removeAddress(addressId);
     return { success: true, data: undefined };
@@ -71,7 +76,8 @@ export async function addToWishlist(
   vehicleId: string,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'customers.update');
     UUIDSchema.parse(customerId);
     UUIDSchema.parse(vehicleId);
     const entry = await customerService.addToWishlist(customerId, vehicleId);
@@ -86,7 +92,8 @@ export async function removeFromWishlist(
   vehicleId: string,
 ): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'customers.update');
     UUIDSchema.parse(customerId);
     UUIDSchema.parse(vehicleId);
     await customerService.removeFromWishlist(customerId, vehicleId);
@@ -98,7 +105,8 @@ export async function removeFromWishlist(
 
 export async function listCustomers(params?: CustomerListParams): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'customers.read');
     const result = await customerService.listCustomers(params);
     return { success: true, data: result };
   } catch (error) {
@@ -108,7 +116,8 @@ export async function listCustomers(params?: CustomerListParams): Promise<Action
 
 export async function getCustomer(customerId: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'customers.read');
     UUIDSchema.parse(customerId);
     const customer = await customerService.getCustomerDetail(customerId);
     return { success: true, data: customer };
@@ -119,7 +128,8 @@ export async function getCustomer(customerId: string): Promise<ActionResult> {
 
 export async function getCustomerStats(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'customers.read');
     const stats = await customerService.getCustomerStats();
     return { success: true, data: stats };
   } catch (error) {
@@ -134,6 +144,7 @@ export async function changeCustomerStatus(
 ): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'customers.update');
     UUIDSchema.parse(customerId);
     const result = await customerService.changeCustomerStatus(
       customerId,
@@ -150,6 +161,7 @@ export async function changeCustomerStatus(
 export async function deleteCustomer(customerId: string): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'customers.update');
     UUIDSchema.parse(customerId);
     await customerService.softDeleteCustomer(customerId, session.userId);
     return { success: true, data: { customerId } };
@@ -161,6 +173,7 @@ export async function deleteCustomer(customerId: string): Promise<ActionResult> 
 export async function restoreCustomer(customerId: string): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'customers.update');
     UUIDSchema.parse(customerId);
     await customerService.restoreCustomer(customerId);
     return { success: true, data: { customerId } };
@@ -175,6 +188,7 @@ export async function bulkUpdateCustomerStatus(
 ): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'customers.update');
     ids.forEach((id) => UUIDSchema.parse(id));
     const results = await customerService.bulkUpdateStatus(ids, status as CustomerStatus, session.userId);
     return { success: true, data: results };
@@ -186,6 +200,7 @@ export async function bulkUpdateCustomerStatus(
 export async function bulkDeleteCustomers(ids: string[]): Promise<ActionResult> {
   try {
     const session = await requireAuth();
+    await requirePermission(session, 'customers.update');
     ids.forEach((id) => UUIDSchema.parse(id));
     const results = await customerService.bulkDelete(ids, session.userId);
     return { success: true, data: results };
@@ -198,7 +213,8 @@ export async function exportCustomersCsv(
   params: CustomerListParams,
 ): Promise<ActionResult<string>> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'customers.read');
     const result = await customerService.listCustomers({ ...params, limit: 10000, page: 1 });
     const rows = result.data.map((row: Record<string, unknown>) => ({
       email: (row as { email?: string }).email ?? '',

@@ -1,6 +1,7 @@
 'use server';
 
 import { requireAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/auth/rbac';
 import { SettingsService } from '@/server/services';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { AuditService } from '@/server/services/auditService';
@@ -17,7 +18,8 @@ export async function listCountries(options: {
   sort?: { column?: string; direction?: 'asc' | 'desc' };
 } = {}): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.listCountries(options);
     return { success: true, data };
   } catch (error) {
@@ -36,7 +38,8 @@ export async function listActiveCountries(): Promise<ActionResult> {
 
 export async function getCountry(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.getCountry(id);
     return { success: true, data };
   } catch (error) {
@@ -54,7 +57,8 @@ export async function createCountry(data: {
   displayOrder?: number;
 }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     const created = await settingsService.createCountry({
       name: data.name,
       slug: data.slug,
@@ -87,7 +91,8 @@ export async function updateCountry(id: string, data: {
   displayOrder?: number;
 }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     const updated = await settingsService.updateCountry(id, data);
     await auditService.logAction({
       action: 'country.updated',
@@ -106,7 +111,8 @@ export async function updateCountry(id: string, data: {
 
 export async function deleteCountry(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     await settingsService.deleteCountry(id);
     await auditService.logAction({
       action: 'country.deleted',
@@ -122,7 +128,8 @@ export async function deleteCountry(id: string): Promise<ActionResult> {
 
 export async function restoreCountry(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     await settingsService.restoreCountry(id);
     await auditService.logAction({
       action: 'country.restored',
@@ -138,7 +145,8 @@ export async function restoreCountry(id: string): Promise<ActionResult> {
 
 export async function initializeReferenceData(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     const result = await settingsService.initializeReferenceData();
     await auditService.logAction({
       action: 'country.initialized',
@@ -162,7 +170,8 @@ export async function initializeReferenceData(): Promise<ActionResult> {
 
 export async function listActiveContinents(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.listActiveContinents();
     return { success: true, data };
   } catch (error) {
@@ -172,7 +181,8 @@ export async function listActiveContinents(): Promise<ActionResult> {
 
 export async function listActiveCurrencies(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.listActiveCurrencies();
     return { success: true, data };
   } catch (error) {

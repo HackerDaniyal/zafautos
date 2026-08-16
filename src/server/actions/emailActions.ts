@@ -1,6 +1,7 @@
 'use server';
 
 import { requireAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/auth/rbac';
 import { SettingsService } from '@/server/services';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { AuditService } from '@/server/services/auditService';
@@ -10,7 +11,8 @@ const auditService = new AuditService();
 
 export async function listEmailTemplates(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.listEmailTemplates();
     return { success: true, data };
   } catch (error) {
@@ -20,7 +22,8 @@ export async function listEmailTemplates(): Promise<ActionResult> {
 
 export async function listActiveEmailTemplates(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.listActiveEmailTemplates();
     return { success: true, data };
   } catch (error) {
@@ -30,7 +33,8 @@ export async function listActiveEmailTemplates(): Promise<ActionResult> {
 
 export async function getEmailTemplate(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.getEmailTemplate(id);
     return { success: true, data };
   } catch (error) {
@@ -47,7 +51,8 @@ export async function createEmailTemplate(data: {
   isActive?: boolean;
 }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     const created = await settingsService.createEmailTemplate({
       name: data.name,
       key: data.key,
@@ -78,7 +83,8 @@ export async function updateEmailTemplate(id: string, data: {
   isActive?: boolean;
 }): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     const updated = await settingsService.updateEmailTemplate(id, data);
     await auditService.logAction({
       action: 'email_template.updated',
@@ -97,7 +103,8 @@ export async function updateEmailTemplate(id: string, data: {
 
 export async function deleteEmailTemplate(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     await settingsService.deleteEmailTemplate(id);
     await auditService.logAction({
       action: 'email_template.deleted',
@@ -113,7 +120,8 @@ export async function deleteEmailTemplate(id: string): Promise<ActionResult> {
 
 export async function restoreEmailTemplate(id: string): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.update');
     await settingsService.restoreEmailTemplate(id);
     await auditService.logAction({
       action: 'email_template.restored',
@@ -129,7 +137,8 @@ export async function restoreEmailTemplate(id: string): Promise<ActionResult> {
 
 export async function listEmailLogs(): Promise<ActionResult> {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
+    await requirePermission(auth, 'settings.read');
     const data = await settingsService.listEmailLogs();
     return { success: true, data };
   } catch (error) {
