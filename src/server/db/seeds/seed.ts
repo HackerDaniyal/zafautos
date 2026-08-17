@@ -259,6 +259,7 @@ async function seedRoles() {
     'payments.read', 'payments.create',
     'settings.read', 'settings.update',
     'analytics.read',
+    'cms.read', 'cms.create', 'cms.update', 'cms.delete', 'cms.publish', 'cms.manage',
   ];
   const permissionIds: string[] = [];
   for (const slug of permissionSlugs) {

@@ -2,6 +2,7 @@
 export * from './auditRepository';
 export * from './authRepository';
 export * from './baseRepository';
+export * from './cmsRepository';
 export * from './customerRepository';
 export * from './dashboardRepository';
 export * from './dealerRepository';

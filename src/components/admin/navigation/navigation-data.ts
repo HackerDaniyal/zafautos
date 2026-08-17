@@ -48,9 +48,11 @@ export const adminNavigation: NavGroup[] = [
   {
     label: 'Content',
     items: [
+      { label: 'Pages', href: '/admin/pages', icon: 'File' },
+      { label: 'Homepage', href: '/admin/homepage', icon: 'LayoutDashboard' },
+      { label: 'Menus', href: '/admin/menus', icon: 'Menu' },
       { label: 'Documents', href: '/admin/documents', icon: 'FileText' },
       { label: 'Blog', href: '/admin/blog', icon: 'PenTool' },
-      { label: 'Pages', href: '/admin/pages', icon: 'File' },
       { label: 'Media Library', href: '/admin/media', icon: 'Image' },
     ],
   },

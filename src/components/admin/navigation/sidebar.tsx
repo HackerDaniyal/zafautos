@@ -25,6 +25,7 @@ import {
   Box,
   Fuel,
   Palette,
+  Menu,
   ChevronDown,
   LogOut,
 } from 'lucide-react';
@@ -55,6 +56,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Box,
   Fuel,
   Palette,
+  Menu,
 };
 
 interface SidebarProps {

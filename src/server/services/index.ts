@@ -2,6 +2,7 @@
 export * from './auditService';
 export * from './dashboardService';
 export * from './authService';
+export * from './cmsService';
 export * from './customerService';
 export * from './dealerService';
 export * from './documentService';

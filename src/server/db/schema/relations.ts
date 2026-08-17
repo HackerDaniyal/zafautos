@@ -1,6 +1,7 @@
 ﻿import { relations } from 'drizzle-orm';
 import { analyticsEvents, pageViews, searchHistory } from './analytics';
 import { auditLogs } from './audit';
+import { cmsPages, cmsPageVersions, homepageSections, menus } from './cms';
 import { permissions, profiles, rolePermissions, roles, users } from './auth';
 import { customerAddresses, customerAlerts, customerProfiles, customers, customerSettings, customerWishlist } from './customers';
 import { dealerActivity, dealerAssignments, dealerProfiles, dealers } from './dealers';
@@ -388,3 +389,25 @@ export const taxRatesRelations = relations(taxRates, ({ one }) => ({
 }));
 
 export const notificationRulesRelations = relations(notificationRules, ({}) => ({}));
+
+export const cmsPagesRelations = relations(cmsPages, ({ one, many }) => ({
+  createdByUser: one(users, { fields: [cmsPages.createdBy], references: [users.id], relationName: 'cms_page_created_by' }),
+  updatedByUser: one(users, { fields: [cmsPages.updatedBy], references: [users.id], relationName: 'cms_page_updated_by' }),
+  versions: many(cmsPageVersions),
+}));
+
+export const cmsPageVersionsRelations = relations(cmsPageVersions, ({ one }) => ({
+  page: one(cmsPages, { fields: [cmsPageVersions.pageId], references: [cmsPages.id] }),
+  createdByUser: one(users, { fields: [cmsPageVersions.createdBy], references: [users.id] }),
+}));
+
+export const homepageSectionsRelations = relations(homepageSections, ({ one }) => ({
+  createdByUser: one(users, { fields: [homepageSections.createdBy], references: [users.id], relationName: 'homepage_section_created_by' }),
+  updatedByUser: one(users, { fields: [homepageSections.updatedBy], references: [users.id], relationName: 'homepage_section_updated_by' }),
+}));
+
+export const menusRelations = relations(menus, ({ one }) => ({
+  parent: one(menus, { fields: [menus.parentId], references: [menus.id], relationName: 'menu_parent' }),
+  createdByUser: one(users, { fields: [menus.createdBy], references: [users.id], relationName: 'menu_created_by' }),
+  updatedByUser: one(users, { fields: [menus.updatedBy], references: [users.id], relationName: 'menu_updated_by' }),
+}));

@@ -221,6 +221,36 @@ export class SettingNotFoundError extends DomainError {
   }
 }
 
+// CMS errors
+
+export class CmsPageNotFoundError extends DomainError {
+  constructor(id: string) {
+    super(`CMS page not found: ${id}`, 'CMS_PAGE_NOT_FOUND');
+    this.name = 'CmsPageNotFoundError';
+  }
+}
+
+export class CmsPageSlugConflictError extends DomainError {
+  constructor(slug: string) {
+    super(`CMS page with slug "${slug}" already exists`, 'CMS_PAGE_SLUG_CONFLICT');
+    this.name = 'CmsPageSlugConflictError';
+  }
+}
+
+export class HomepageSectionNotFoundError extends DomainError {
+  constructor(id: string) {
+    super(`Homepage section not found: ${id}`, 'HOMEPAGE_SECTION_NOT_FOUND');
+    this.name = 'HomepageSectionNotFoundError';
+  }
+}
+
+export class MenuNotFoundError extends DomainError {
+  constructor(id: string) {
+    super(`Menu not found: ${id}`, 'MENU_NOT_FOUND');
+    this.name = 'MenuNotFoundError';
+  }
+}
+
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Generic errors
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
