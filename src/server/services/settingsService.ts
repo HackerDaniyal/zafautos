@@ -1,4 +1,4 @@
-﻿import { CountriesRepository, ContinentsRepository, CurrenciesRepository, SiteSettingsRepository, TaxRatesRepository, EmailTemplatesRepository, NotificationRulesRepository, SystemSettingsRepository } from '@/server/repositories';
+﻿import { CountriesRepository, ContinentsRepository, CurrenciesRepository, LanguagesRepository, SiteSettingsRepository, TaxRatesRepository, EmailTemplatesRepository, NotificationRulesRepository, SystemSettingsRepository } from '@/server/repositories';
 import { z } from 'zod';
 import { ValidationError } from './errors';
 import { db } from '@/server/db/client';
@@ -151,6 +151,7 @@ export class SettingsService {
   private emailTemplatesRepo = new EmailTemplatesRepository();
   private notificationRulesRepo = new NotificationRulesRepository();
   private systemSettingsRepo = new SystemSettingsRepository();
+  private languagesRepo = new LanguagesRepository();
 
   async listCountries(options: {
     page?: number;
@@ -408,6 +409,71 @@ export class SettingsService {
 
   async restoreContinent(id: string) {
     return this.continentsRepo.update(id, { deletedAt: null, deletedBy: null } as any);
+  }
+
+  // ── Languages ─────────────────────────────────────────────────────────────
+
+  async listLanguages(options: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    sort?: { column?: string; direction?: 'asc' | 'desc' };
+  } = {}) {
+    return this.languagesRepo.listPaginated(options);
+  }
+
+  async listActiveLanguages() {
+    return this.languagesRepo.findActive();
+  }
+
+  async getLanguage(id: string) {
+    const language = await this.languagesRepo.findById(id);
+    if (!language) throw new ValidationError('Language not found');
+    return language;
+  }
+
+  async createLanguage(data: {
+    name: string;
+    code: string;
+    isActive?: boolean;
+  }) {
+    if (!data.name?.trim()) throw new ValidationError('Name is required');
+    if (!data.code?.trim()) throw new ValidationError('Code is required');
+    const existing = await this.languagesRepo.findByCode(data.code.trim());
+    if (existing) throw new ValidationError(`Language with code "${data.code}" already exists`);
+    return this.languagesRepo.create({
+      name: data.name.trim(),
+      code: data.code.trim().toLowerCase(),
+      ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
+    } as any);
+  }
+
+  async updateLanguage(id: string, data: {
+    name?: string;
+    code?: string;
+    isActive?: boolean;
+  }) {
+    const updateData: Record<string, unknown> = {};
+    if (data.name !== undefined) updateData.name = data.name.trim();
+    if (data.code !== undefined) {
+      const code = data.code.trim().toLowerCase();
+      if (code) {
+        const existing = await this.languagesRepo.findByCode(code) as { id: string } | null;
+        if (existing && existing.id !== id) throw new ValidationError(`Language with code "${code}" already exists`);
+        updateData.code = code;
+      }
+    }
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    updateData.updatedAt = new Date();
+    return this.languagesRepo.update(id, updateData as any);
+  }
+
+  async deleteLanguage(id: string) {
+    return this.languagesRepo.softDelete(id);
+  }
+
+  async restoreLanguage(id: string) {
+    return this.languagesRepo.update(id, { deletedAt: null, deletedBy: null } as any);
   }
 
   // ── Currencies ─────────────────────────────────────────────────────────────

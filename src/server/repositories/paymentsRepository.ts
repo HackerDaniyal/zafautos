@@ -14,7 +14,7 @@
     dealerProfiles,
     vehicles,
 } from '@/server/db/schema';
-import { type InferModel, eq, and, or, like, sql, desc, asc, type SQL } from 'drizzle-orm';
+import { type InferModel, eq, and, or, like, sql, desc, asc, inArray, type SQL } from 'drizzle-orm';
 import { BaseRepository } from './baseRepository';
 import type { PaginatedResult, PaginationOptions, SortOptions } from './baseRepository';
 
@@ -158,7 +158,7 @@ export class PaymentsRepository {
               vehicleId: orders.vehicleId,
             })
             .from(orders)
-            .where(sql`${orders.id} = ANY(${orderIds})`)
+            .where(inArray(orders.id, orderIds))
         : Promise.resolve([] as { id: string; orderNumber: string; customerId: string | null; dealerId: string | null; vehicleId: string | null }[]),
       orderIds.length > 0
         ? this.payments.getClient()
@@ -166,7 +166,7 @@ export class PaymentsRepository {
             .from(customerProfiles)
             .innerJoin(customers, eq(customerProfiles.customerId, customers.id))
             .where(and(
-              sql`${customers.id} IN (SELECT customer_id FROM orders WHERE id = ANY(${orderIds}))`,
+              sql`${customers.id} IN (SELECT customer_id FROM orders WHERE ${inArray(orders.id, orderIds)})`,
               sql`${customerProfiles.deletedAt} IS NULL`,
             ))
         : Promise.resolve([] as { customerId: string; displayName: string | null }[]),
@@ -176,7 +176,7 @@ export class PaymentsRepository {
             .from(dealerProfiles)
             .innerJoin(dealers, eq(dealerProfiles.dealerId, dealers.id))
             .where(and(
-              sql`${dealers.id} IN (SELECT dealer_id FROM orders WHERE id = ANY(${orderIds}))`,
+              sql`${dealers.id} IN (SELECT dealer_id FROM orders WHERE ${inArray(orders.id, orderIds)})`,
               sql`${dealerProfiles.deletedAt} IS NULL`,
             ))
         : Promise.resolve([] as { dealerId: string; displayName: string | null }[]),
@@ -190,7 +190,7 @@ export class PaymentsRepository {
               year: vehicles.year,
             })
             .from(vehicles)
-            .where(sql`${vehicles.id} IN (SELECT vehicle_id FROM orders WHERE id = ANY(${orderIds}) AND vehicle_id IS NOT NULL)`)
+            .where(sql`${vehicles.id} IN (SELECT vehicle_id FROM orders WHERE ${inArray(orders.id, orderIds)} AND vehicle_id IS NOT NULL)`)
         : Promise.resolve([] as { id: string; vin: string | null; manufacturerId: string | null; modelId: string | null; year: number | null }[]),
     ]);
 
@@ -513,7 +513,7 @@ export class PaymentsRepository {
     const results = await this.payments.getClient()
       .update(payments)
       .set({ deletedAt: new Date() })
-      .where(sql`${payments.id} = ANY(${ids})`)
+      .where(inArray(payments.id, ids))
       .returning();
 
     return results;
@@ -540,7 +540,7 @@ export class PaymentsRepository {
         .select()
         .from(invoices)
         .where(and(
-          sql`${invoices.orderId} = ANY(${orderIds})`,
+          inArray(invoices.orderId, orderIds),
           sql`${invoices.deletedAt} IS NULL`,
         ))
         .orderBy(desc(invoices.createdAt)),
@@ -548,7 +548,7 @@ export class PaymentsRepository {
         .select()
         .from(payments)
         .where(and(
-          sql`${payments.orderId} = ANY(${orderIds})`,
+          inArray(payments.orderId, orderIds),
           sql`${payments.deletedAt} IS NULL`,
         ))
         .orderBy(desc(payments.createdAt)),
@@ -556,7 +556,7 @@ export class PaymentsRepository {
         .select()
         .from(payments)
         .where(and(
-          sql`${payments.orderId} = ANY(${orderIds})`,
+          inArray(payments.orderId, orderIds),
           eq(payments.status, 'refunded'),
           sql`${payments.deletedAt} IS NULL`,
         ))
@@ -681,7 +681,7 @@ export class PaymentsRepository {
     return this.payments.getClient()
       .update(invoices)
       .set({ deletedAt: new Date() })
-      .where(sql`${invoices.id} = ANY(${ids})`)
+      .where(inArray(invoices.id, ids))
       .returning();
   }
 
@@ -755,7 +755,7 @@ export class PaymentsRepository {
         ? this.payments.getClient()
             .select({ id: orders.id, orderNumber: orders.orderNumber, customerId: orders.customerId })
             .from(orders)
-            .where(sql`${orders.id} = ANY(${orderIds})`)
+            .where(inArray(orders.id, orderIds))
         : Promise.resolve([] as { id: string; orderNumber: string; customerId: string | null }[]),
       orderIds.length > 0
         ? this.payments.getClient()
@@ -763,7 +763,7 @@ export class PaymentsRepository {
             .from(customerProfiles)
             .innerJoin(customers, eq(customerProfiles.customerId, customers.id))
             .where(and(
-              sql`${customers.id} IN (SELECT customer_id FROM orders WHERE id = ANY(${orderIds}))`,
+              sql`${customers.id} IN (SELECT customer_id FROM orders WHERE ${inArray(orders.id, orderIds)})`,
               sql`${customerProfiles.deletedAt} IS NULL`,
             ))
         : Promise.resolve([] as { customerId: string; displayName: string | null }[]),

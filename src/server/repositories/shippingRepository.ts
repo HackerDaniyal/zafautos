@@ -1,5 +1,5 @@
 ﻿import { containers, ports, shipments, shipmentTracking, shippingDocuments, orders, customers, customerProfiles, dealers, dealerProfiles, vehicles } from '@/server/db/schema';
-import { type InferModel, eq, and, or, like, sql, desc, asc, type SQL, type SQLWrapper } from 'drizzle-orm';
+import { type InferModel, eq, and, or, like, sql, desc, asc, inArray, type SQL, type SQLWrapper } from 'drizzle-orm';
 import { BaseRepository } from './baseRepository';
 import { db } from '@/server/db/client';
 import type { PaginatedResult, PaginationOptions, SortOptions } from './baseRepository';
@@ -380,7 +380,7 @@ export class ShippingRepository {
     await this.shipments.getClient()
       .update(shipments)
       .set({ deletedAt: new Date() })
-      .where(sql`${shipments.id} = ANY(${ids})`);
+      .where(inArray(shipments.id, ids));
   }
 
   async updateShipmentStatus(shipmentId: string, status: string) {

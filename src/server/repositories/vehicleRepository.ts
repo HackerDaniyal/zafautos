@@ -14,7 +14,7 @@
   vehicleStatus,
   countries,
 } from '@/server/db/schema';
-import { eq, and, or, like, sql, desc, asc, type SQL } from 'drizzle-orm';
+import { eq, and, or, like, sql, desc, asc, inArray, type SQL } from 'drizzle-orm';
 import { BaseRepository, type PaginatedResult, type PaginationOptions, type SortOptions } from './baseRepository';
 
 export interface VehicleFilterOptions {
@@ -68,7 +68,7 @@ export class VehicleRepository extends BaseRepository<typeof vehicles> {
     return this.getClient()
       .select()
       .from(vehicles)
-      .where(sql`${vehicles.id} = ANY(${ids})`);
+      .where(inArray(vehicles.id, ids));
   }
 
   async getVehicleWithImages(vehicleId: string) {
@@ -302,7 +302,7 @@ export class VehicleRepository extends BaseRepository<typeof vehicles> {
     return this.getClient()
       .update(vehicles)
       .set({ status: status as 'draft' | 'active' | 'sold' | 'archived' })
-      .where(sql`${vehicles.id} = ANY(${ids})`)
+      .where(inArray(vehicles.id, ids))
       .returning();
   }
 
@@ -310,7 +310,7 @@ export class VehicleRepository extends BaseRepository<typeof vehicles> {
     return this.getClient()
       .update(vehicles)
       .set({ deletedAt: new Date(), deletedBy: null })
-      .where(sql`${vehicles.id} = ANY(${ids})`)
+      .where(inArray(vehicles.id, ids))
       .returning();
   }
 
@@ -373,22 +373,22 @@ export class VehicleRepository extends BaseRepository<typeof vehicles> {
 
     const [manufacturersData, modelsData, bodyTypesData, fuelTypesData, transmissionsData, countriesData] = await Promise.all([
       manufacturerIds.length > 0
-        ? this.getClient().select().from(manufacturers).where(sql`${manufacturers.id} = ANY(${manufacturerIds})`)
+        ? this.getClient().select().from(manufacturers).where(inArray(manufacturers.id, manufacturerIds))
         : Promise.resolve([]),
       modelIds.length > 0
-        ? this.getClient().select().from(models).where(sql`${models.id} = ANY(${modelIds})`)
+        ? this.getClient().select().from(models).where(inArray(models.id, modelIds))
         : Promise.resolve([]),
       bodyTypeIds.length > 0
-        ? this.getClient().select().from(bodyTypes).where(sql`${bodyTypes.id} = ANY(${bodyTypeIds})`)
+        ? this.getClient().select().from(bodyTypes).where(inArray(bodyTypes.id, bodyTypeIds))
         : Promise.resolve([]),
       fuelTypeIds.length > 0
-        ? this.getClient().select().from(fuelTypes).where(sql`${fuelTypes.id} = ANY(${fuelTypeIds})`)
+        ? this.getClient().select().from(fuelTypes).where(inArray(fuelTypes.id, fuelTypeIds))
         : Promise.resolve([]),
       transmissionIds.length > 0
-        ? this.getClient().select().from(transmissions).where(sql`${transmissions.id} = ANY(${transmissionIds})`)
+        ? this.getClient().select().from(transmissions).where(inArray(transmissions.id, transmissionIds))
         : Promise.resolve([]),
       countryIds.length > 0
-        ? this.getClient().select().from(countries).where(sql`${countries.id} = ANY(${countryIds})`)
+        ? this.getClient().select().from(countries).where(inArray(countries.id, countryIds))
         : Promise.resolve([]),
     ]);
 
@@ -596,7 +596,7 @@ export class VehicleRepository extends BaseRepository<typeof vehicles> {
     return this.getClient()
       .update(vehicles)
       .set({ deletedAt: null, deletedBy: null })
-      .where(sql`${vehicles.id} = ANY(${ids})`)
+      .where(inArray(vehicles.id, ids))
       .returning();
   }
 

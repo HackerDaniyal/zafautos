@@ -8,14 +8,11 @@ import { DocumentNotFoundError, ValidationError } from './errors';
 
 export const CreateDocumentSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  categoryId: z.string().uuid('Invalid category ID').optional().nullable(),
+  documentUrl: z.string().url('Invalid file URL'),
   vehicleId: z.string().uuid('Invalid vehicle ID').optional().nullable(),
-  fileUrl: z.string().url('Invalid file URL'),
-  fileType: z.string().min(1, 'File type is required'),
-  fileSize: z.number().int().nonnegative().default(0),
-  status: z.enum(['active', 'archived', 'draft']).default('active'),
-  isPublic: z.boolean().default(false),
-  requiresSignature: z.boolean().default(false),
+  userId: z.string().uuid('Invalid user ID').optional().nullable(),
+  createdBy: z.string().uuid().optional().nullable(),
+  updatedBy: z.string().uuid().optional().nullable(),
 });
 export type CreateDocumentDTO = z.infer<typeof CreateDocumentSchema>;
 
@@ -67,5 +64,64 @@ export class DocumentService {
     }
 
     return this.documentsRepo.createVersion(validatedData as unknown as Parameters<typeof this.documentsRepo.createVersion>[0]);
+  }
+
+  /**
+   * Lists all documents with filtering and pagination.
+   */
+  async listDocuments(options: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  } = {}) {
+    return this.documentsRepo.listDocuments(options);
+  }
+
+  /**
+   * Gets a single document by ID.
+   */
+  async getDocument(id: string) {
+    const document = await this.documentsRepo.documents.findById(id);
+    if (!document) {
+      throw new DocumentNotFoundError(id);
+    }
+    return document;
+  }
+
+  /**
+   * Updates an existing document record.
+   */
+  async updateDocument(id: string, data: Partial<CreateDocumentDTO>) {
+    const validatedData = CreateDocumentSchema.partial().parse(data);
+    return this.documentsRepo.documents.update(id, validatedData);
+  }
+
+  /**
+   * Soft-deletes a document.
+   */
+  async deleteDocument(id: string) {
+    return this.documentsRepo.documents.softDelete(id);
+  }
+
+  /**
+   * Restores a soft-deleted document.
+   */
+  async restoreDocument(id: string) {
+    return this.documentsRepo.documents.update(id, { deletedAt: null, deletedBy: null });
+  }
+
+  /**
+   * Lists all document categories.
+   */
+  async listDocumentCategories() {
+    return this.documentsRepo.categories.findAll();
+  }
+
+  /**
+   * Creates a new document category.
+   */
+  async createDocumentCategory(data: { name: string }) {
+    if (!data.name?.trim()) throw new ValidationError('Category name is required');
+    return this.documentsRepo.categories.create({ name: data.name.trim() } as unknown as Parameters<typeof this.documentsRepo.categories.create>[0]);
   }
 }

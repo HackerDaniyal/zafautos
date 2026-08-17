@@ -15,7 +15,7 @@
   payments,
   shipments,
 } from '@/server/db/schema';
-import { type InferModel, eq, and, or, like, sql, desc, asc, type SQL } from 'drizzle-orm';
+import { type InferModel, eq, and, or, like, sql, desc, asc, inArray, type SQL } from 'drizzle-orm';
 import { BaseRepository } from './baseRepository';
 import type { PaginatedResult, PaginationOptions, SortOptions } from './baseRepository';
 
@@ -187,7 +187,7 @@ export class OrderRepository {
             .select({ customerId: customerProfiles.customerId, displayName: customerProfiles.displayName })
             .from(customerProfiles)
             .where(and(
-              sql`${customerProfiles.customerId} = ANY(${customerIds})`,
+              inArray(customerProfiles.customerId, customerIds),
               sql`${customerProfiles.deletedAt} IS NULL`,
             ))
         : Promise.resolve([] as { customerId: string; displayName: string | null }[]),
@@ -196,7 +196,7 @@ export class OrderRepository {
             .select({ dealerId: dealerProfiles.dealerId, displayName: dealerProfiles.displayName })
             .from(dealerProfiles)
             .where(and(
-              sql`${dealerProfiles.dealerId} = ANY(${dealerIds})`,
+              inArray(dealerProfiles.dealerId, dealerIds),
               sql`${dealerProfiles.deletedAt} IS NULL`,
             ))
         : Promise.resolve([] as { dealerId: string; displayName: string | null }[]),
@@ -212,7 +212,7 @@ export class OrderRepository {
             })
             .from(vehicles)
             .where(and(
-              sql`${vehicles.id} = ANY(${vehicleIds})`,
+              inArray(vehicles.id, vehicleIds),
               sql`${vehicles.deletedAt} IS NULL`,
             ))
         : Promise.resolve([] as { id: string; vin: string | null; stockNumber: string | null; manufacturerId: string | null; modelId: string | null; year: number | null }[]),
@@ -221,7 +221,7 @@ export class OrderRepository {
             .select({ vehicleId: vehicleImages.vehicleId, imageUrl: vehicleImages.imageUrl })
             .from(vehicleImages)
             .where(and(
-              sql`${vehicleImages.vehicleId} = ANY(${vehicleIds})`,
+              inArray(vehicleImages.vehicleId, vehicleIds),
               sql`${vehicleImages.isPrimary} = true`,
               sql`${vehicleImages.deletedAt} IS NULL`,
             ))
@@ -519,7 +519,7 @@ export class OrderRepository {
     const results = await this.orders.getClient()
       .update(orders)
       .set({ deletedAt: new Date() })
-      .where(sql`${orders.id} = ANY(${ids})`)
+      .where(inArray(orders.id, ids))
       .returning();
 
     return results;

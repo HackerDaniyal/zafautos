@@ -1,429 +1,220 @@
 'use client';
 
-import * as React from 'react';
-import { useRouter } from 'next/navigation';
-import {
-  Plus,
-  DollarSign,
-  CreditCard,
-  AlertCircle,
-  Package,
-  Search,
-} from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { CreditCard, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { DataTable, type ColumnDef } from '@/components/admin/table/data-table';
-import { FilterBar, type FilterConfig } from '@/components/admin/filters/filter-bar';
-import { useFilters } from '@/components/admin/filters/use-filters';
-import { useBulkSelection } from '@/components/admin/bulk/use-bulk-selection';
-import { BulkActionBar, type BulkAction } from '@/components/admin/bulk/bulk-action-bar';
+import { Input } from '@/components/ui/input';
+import { EmptyState } from '@/components/admin/ui/empty-state';
 import { PageHeader } from '@/components/admin/ui/page-header';
-import { StatCard } from '@/components/admin/ui/stat-card';
-import { StatusChip, getStatusVariant } from '@/components/admin/ui/status-chip';
-import { useToast } from '@/components/admin/ui/use-toast';
-import { formatCurrency } from '@/lib/utils';
 import {
   listPayments,
   getPaymentStats,
-  bulkUpdatePaymentStatus,
-  bulkDeletePayments,
+  changePaymentStatus,
 } from '@/server/actions/paymentActions';
-import {
-  PAYMENT_STATUS_CONFIG,
-  PAYMENT_STATUS_OPTIONS,
-  PAYMENT_METHOD_OPTIONS,
-  CURRENCY_OPTIONS,
-  PAYMENT_TABS,
-} from './constants';
-import type { Payment, PaymentStats, PaymentListParams } from './types';
 
-interface PaymentRow extends Payment {
-  orderNumber?: string;
-  customerName?: string;
-  customerEmail?: string;
-  dealerName?: string;
-  vehicleTitle?: string;
-  vehicleVin?: string;
-  vehicleStockNumber?: string;
-  paymentMethodLabel?: string;
-  transactionCount?: number;
-  totalInvoices?: number;
+interface Payment {
+  id: string;
+  orderId: string | null;
+  userId: string | null;
+  amount: number;
+  currency: string;
+  status: string;
+  method: string | null;
+  referenceNumber: string | null;
+  createdAt: string;
 }
 
-export function PaymentsClient() {
-  const router = useRouter();
-  const { toast } = useToast();
-  const [data, setData] = React.useState<PaymentRow[]>([]);
-  const [total, setTotal] = React.useState(0);
-  const [page, setPage] = React.useState(1);
-  const [pageSize, setPageSize] = React.useState(20);
-  const [totalPages, setTotalPages] = React.useState(0);
-  const [loading, setLoading] = React.useState(true);
-  const [stats, setStats] = React.useState<PaymentStats | null>(null);
-  const [sortColumn, setSortColumn] = React.useState('createdAt');
-  const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('desc');
-  const [searchValue, setSearchValue] = React.useState('');
-  const { filters, setFilter, clearAll } = useFilters();
-  const { selected, toggleAll, clearSelection, selectedCount, selectedIds } =
-    useBulkSelection<PaymentRow>(data);
+function PaymentsClient() {
+  const [items, setItems] = useState<Payment[]>([]);
+  const [stats, setStats] = useState<{
+    totalRevenue: number;
+    outstandingBalance: number;
+    paidOrders: number;
+    unpaidOrders: number;
+    partialPayments: number;
+    refunds: number;
+    monthlyRevenue: number;
+    upcomingDuePayments: number;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const fetchData = React.useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const dateRange = filters.dateRange as { from?: string; to?: string } | undefined;
-
-      const params: PaymentListParams = {
-        page,
-        limit: pageSize,
-        sortColumn,
-        sortDirection,
-        search: searchValue || undefined,
-        status: (filters.status as PaymentListParams['status']) || undefined,
-        orderId: filters.orderId as string || undefined,
-        currency: filters.currency as string || undefined,
-        dateFrom: dateRange?.from,
-        dateTo: dateRange?.to,
-      };
-
-      const [paymentsResult, statsResult] = await Promise.all([
-        listPayments(params),
+      const [result, statsResult] = await Promise.all([
+        listPayments({ limit: 50, search, status: statusFilter || undefined }),
         getPaymentStats(),
       ]);
 
-      if (paymentsResult.success && paymentsResult.data) {
-        const res = paymentsResult.data as { data: typeof data; meta: { total: number; totalPages: number } };
-        setData(res.data);
-        setTotal(res.meta.total);
-        setTotalPages(res.meta.totalPages);
-      } else if (!paymentsResult.success) {
-        toast({ title: 'Error', description: paymentsResult.error, variant: 'error' });
+      if (result.success) {
+        const data = ((result.data as { data: Payment[] }).data ?? result.data as Payment[]);
+        setItems(data);
+      } else {
+        setFeedback({ type: 'error', message: result.error ?? 'Failed to load payments' });
       }
 
-      if (statsResult.success && statsResult.data) {
-        setStats(statsResult.data as PaymentStats);
+      if (statsResult.success) {
+        setStats(statsResult.data as {
+          totalRevenue: number;
+          outstandingBalance: number;
+          paidOrders: number;
+          unpaidOrders: number;
+          partialPayments: number;
+          refunds: number;
+          monthlyRevenue: number;
+          upcomingDuePayments: number;
+        });
       }
     } catch {
-      toast({ title: 'Error', description: 'Failed to load payments', variant: 'error' });
+      setFeedback({ type: 'error', message: 'Failed to load' });
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, sortColumn, sortDirection, searchValue, filters, toast]);
+  }, [search, statusFilter]);
 
-  React.useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  function handleSelectionChange(newSelected: Set<string>) {
-    toggleAll(data.filter((row) => newSelected.has(row.id)));
+  useEffect(() => {
+    if (feedback) {
+      const t = setTimeout(() => setFeedback(null), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [feedback]);
+
+  async function handleStatusChange(payment: Payment, newStatus: string) {
+    try {
+      const result = await changePaymentStatus(payment.id, newStatus);
+      if (result.success) {
+        setFeedback({ type: 'success', message: `Payment marked as ${newStatus}` });
+        await fetchData();
+      } else {
+        setFeedback({ type: 'error', message: result.error ?? 'Failed to update' });
+      }
+    } catch {
+      setFeedback({ type: 'error', message: 'Failed to update' });
+    }
   }
-
-  function formatDate(date: string | Date | null | undefined): string {
-    if (!date) return '—';
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  }
-
-  const columns: ColumnDef<PaymentRow>[] = React.useMemo(
-    () => [
-      {
-        id: 'paymentId',
-        header: 'ID',
-        accessorKey: 'id',
-        sortable: true,
-        cell: (row) => (
-          <span className="font-mono text-xs text-pure-white">
-            {row.id.slice(0, 8)}...
-          </span>
-        ),
-      },
-      {
-        id: 'orderNumber',
-        header: 'Order #',
-        accessorKey: 'orderNumber',
-        sortable: true,
-        searchable: true,
-        cell: (row) => (
-          <span className="font-mono text-xs text-pure-white">
-            {row.orderNumber ?? '—'}
-          </span>
-        ),
-      },
-      {
-        id: 'amount',
-        header: 'Amount',
-        accessorKey: 'amount',
-        sortable: true,
-        cell: (row) => (
-          <span className="text-sm font-medium text-pure-white">
-            {formatCurrency(row.amount)}
-          </span>
-        ),
-      },
-      {
-        id: 'currency',
-        header: 'Currency',
-        accessorKey: 'currency',
-        sortable: true,
-        cell: (row) => (
-          <Badge variant="outline" className="text-xs">
-            {row.currency}
-          </Badge>
-        ),
-      },
-      {
-        id: 'status',
-        header: 'Status',
-        accessorKey: 'status',
-        sortable: true,
-        cell: (row) => {
-          const config = PAYMENT_STATUS_CONFIG[row.status as keyof typeof PAYMENT_STATUS_CONFIG];
-          return config ? (
-            <StatusChip
-              label={config.label}
-              variant={getStatusVariant(row.status)}
-            />
-          ) : (
-            <span className="text-steel">—</span>
-          );
-        },
-      },
-      {
-        id: 'paymentMethod',
-        header: 'Method',
-        accessorKey: 'paymentMethod',
-        sortable: true,
-        cell: (row) => {
-          const method = PAYMENT_METHOD_OPTIONS.find((m) => m.value === row.paymentMethod);
-          return method ? (
-            <span className="text-sm text-steel">{method.label}</span>
-          ) : '—';
-        },
-      },
-      {
-        id: 'customer',
-        header: 'Customer',
-        cell: (row) => {
-          return (
-            <div className="min-w-[150px]">
-              <p className="text-sm font-medium text-pure-white">
-                {row.customerName ?? '—'}
-              </p>
-              {row.customerEmail && (
-                <p className="text-xs text-steel">{row.customerEmail}</p>
-              )}
-            </div>
-          );
-        },
-      },
-      {
-        id: 'dealer',
-        header: 'Dealer',
-        cell: (row) => (
-          <span className="text-sm text-pure-white">
-            {row.dealerName ?? '—'}
-          </span>
-        ),
-      },
-      {
-        id: 'vehicle',
-        header: 'Vehicle',
-        cell: (row) => {
-          return (
-            <div className="min-w-[180px]">
-              <p className="text-sm font-medium text-pure-white">
-                {row.vehicleTitle ?? '—'}
-              </p>
-              {row.vehicleVin && (
-                <p className="text-xs text-steel font-mono">{row.vehicleVin}</p>
-              )}
-            </div>
-          );
-        },
-      },
-      {
-        id: 'createdAt',
-        header: 'Created',
-        accessorKey: 'createdAt',
-        sortable: true,
-        cell: (row) => (
-          <span className="text-sm text-steel">{formatDate(row.createdAt)}</span>
-        ),
-      },
-      {
-        id: 'actions',
-        header: '',
-        cell: (row) => (
-          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => router.push(`/admin/payments/${row.id}`)}
-            >
-              <AlertCircle className="size-3.5" />
-            </Button>
-          </div>
-        ),
-      },
-    ],
-    [router]
-  );
-
-  const filterConfigs: FilterConfig[] = React.useMemo(
-    () => [
-      { id: 'status', label: 'Status', type: 'select', options: PAYMENT_STATUS_OPTIONS },
-      { id: 'paymentMethod', label: 'Method', type: 'select', options: PAYMENT_METHOD_OPTIONS },
-      { id: 'currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS },
-      { id: 'orderId', label: 'Order ID', type: 'text' },
-      { id: 'dateRange', label: 'Date Range', type: 'date-range' },
-    ],
-    [],
-  );
-
-  const bulkActions: BulkAction[] = React.useMemo(
-    () => [
-      {
-        label: 'Mark Paid',
-        action: async (ids) => {
-          const result = await bulkUpdatePaymentStatus(ids, 'paid');
-          if (result.success) {
-            fetchData();
-          } else {
-            throw new Error(result.error);
-          }
-        },
-      },
-      {
-        label: 'Mark Failed',
-        action: async (ids) => {
-          const result = await bulkUpdatePaymentStatus(ids, 'failed');
-          if (result.success) {
-            fetchData();
-          } else {
-            throw new Error(result.error);
-          }
-        },
-      },
-      {
-        label: 'Refund',
-        action: async (ids) => {
-          const result = await bulkUpdatePaymentStatus(ids, 'refunded');
-          if (result.success) {
-            fetchData();
-          } else {
-            throw new Error(result.error);
-          }
-        },
-      },
-      {
-        label: 'Delete',
-        variant: 'destructive',
-        confirmMessage:
-          'Are you sure you want to delete selected payments? This action cannot be undone.',
-        action: async (ids) => {
-          const result = await bulkDeletePayments(ids);
-          if (result.success) {
-            fetchData();
-          } else {
-            throw new Error(result.error);
-          }
-        },
-      },
-    ],
-    [fetchData]
-  );
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Payments"
-        description="Manage payments and invoices for orders"
-        action={{ label: 'New Payment', href: '/admin/payments/new', icon: Plus }}
-      />
+      <PageHeader title="Payments" description="Manage payments and invoices" />
 
-      {stats && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Total Revenue"
-            value={formatCurrency(stats.totalRevenue)}
-            description="Total amount from paid payments"
-            icon="DollarSign"
-            trend={{ value: 0, label: 'vs last month' }}
-          />
-          <StatCard
-            title="Outstanding Balance"
-            value={formatCurrency(stats.outstandingBalance)}
-            description="Amount from pending payments"
-            icon="AlertCircle"
-            trend={{ value: 0, label: 'vs last month' }}
-          />
-          <StatCard
-            title="Paid Orders"
-            value={stats.paidOrders}
-            description="Number of fully paid orders"
-            icon="CreditCard"
-            trend={{ value: 0, label: 'vs last month' }}
-          />
-          <StatCard
-            title="Refunds"
-            value={stats.refunds}
-            description="Total refunds processed"
-            icon="Package"
-            trend={{ value: 0, label: 'vs last month' }}
-          />
+      {feedback && (
+        <div className={`rounded-[6px] px-4 py-3 text-sm ${feedback.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/30' : 'bg-signal-red/10 text-signal-red border border-signal-red/30'}`}>
+          {feedback.message}
         </div>
       )}
 
-      <FilterBar
-        filters={filterConfigs}
-        values={filters}
-        onChange={(id, value) => setFilter(id, value)}
-        onClear={clearAll}
-      />
-
-      <DataTable
-        columns={columns as unknown as ColumnDef<Record<string, unknown>>[]}
-        data={data as unknown as Record<string, unknown>[]}
-        total={total}
-        page={page}
-        pageSize={pageSize}
-        totalPages={totalPages}
-        loading={loading}
-        searchPlaceholder="Search by order # or amount..."
-        searchValue={searchValue}
-        onSearchChange={setSearchValue}
-        onPageChange={setPage}
-        onPageSizeChange={(size) => {
-          setPageSize(size);
-          setPage(1);
-        }}
-        onSortChange={(col, dir) => {
-          setSortColumn(col);
-          setSortDirection(dir);
-        }}
-        sortColumn={sortColumn}
-        sortDirection={sortDirection}
-        selectedRows={selected}
-        onSelectionChange={handleSelectionChange}
-        emptyTitle="No payments"
-        emptyDescription="No payments match your search or filters."
-        emptyIcon={Package}
-        getRowId={(row) => (row as unknown as PaymentRow).id}
-        onRowClick={(row) =>
-          router.push(`/admin/payments/${(row as unknown as PaymentRow).id}`)
-        }
-      />
-
-      {selectedCount > 0 && (
-        <BulkActionBar
-          selectedCount={selectedCount}
-          selectedIds={selectedIds}
-          actions={bulkActions}
-          onClearSelection={clearSelection}
-        />
+      {stats && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <StatCard label="Total Revenue" value={`$${(stats.totalRevenue / 100).toFixed(2)}`} />
+          <StatCard label="Outstanding" value={`$${(stats.outstandingBalance / 100).toFixed(2)}`} />
+          <StatCard label="Paid Orders" value={stats.paidOrders.toString()} />
+          <StatCard label="Refunded" value={stats.refunds.toString()} />
+        </div>
       )}
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Input
+          placeholder="Search payments..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="bg-deep-carbon border-iron/30 text-pure-white max-w-sm"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="h-9 rounded-[6px] border border-iron bg-deep-carbon px-3 text-sm text-pure-white focus-visible:border-signal-red outline-none"
+        >
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="paid">Paid</option>
+          <option value="failed">Failed</option>
+          <option value="refunded">Refunded</option>
+        </select>
+      </div>
+
+      <div className="rounded-[10px] border border-iron/30 bg-carbon">
+        {loading ? (
+          <div className="p-8 text-center">
+            <div className="inline-block size-6 animate-spin rounded-full border-2 border-iron border-t-signal-red" />
+            <p className="mt-2 text-sm text-steel">Loading payments...</p>
+          </div>
+        ) : items.length === 0 ? (
+          <EmptyState
+            title="No payments"
+            description={search || statusFilter ? 'No payments match your filters.' : 'No payments found.'}
+            icon={CreditCard}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-iron/30 text-left text-xs font-medium uppercase tracking-wider text-steel">
+                  <th className="px-4 py-3">Order</th>
+                  <th className="px-4 py-3">Amount</th>
+                  <th className="px-4 py-3">Method</th>
+                  <th className="px-4 py-3">Reference</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Created</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-iron/30">
+                {items.map((item) => (
+                  <tr key={item.id} className="hover:bg-deep-carbon/50 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className="text-xs font-mono text-steel">{item.orderId ? item.orderId.slice(0, 8) : '—'}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm font-medium text-pure-white">
+                        {item.currency} {(item.amount / 100).toFixed(2)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs text-ash">{item.method ?? '—'}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs text-steel">{item.referenceNumber ?? '—'}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${item.status === 'paid' ? 'bg-green-500/10 text-green-400' : item.status === 'pending' ? 'bg-auction-amber/10 text-auction-amber' : item.status === 'refunded' ? 'bg-iron/30 text-steel' : 'bg-destructive/10 text-destructive'}`}>
+                        {item.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-steel">
+                      {new Date(item.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {item.status !== 'paid' && item.status !== 'refunded' && (
+                          <Button variant="ghost" size="icon-xs" onClick={() => handleStatusChange(item, 'paid')} title="Mark Paid">
+                            <RotateCcw className="size-3.5 text-green-400" />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[10px] border border-iron/30 bg-carbon p-4">
+      <p className="text-xs text-steel">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-pure-white">{value}</p>
+    </div>
+  );
+}
+
+export { PaymentsClient };

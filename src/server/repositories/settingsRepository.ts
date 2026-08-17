@@ -1,5 +1,5 @@
 import { BaseRepository } from './baseRepository';
-import { continents, countries, currencies, siteSettings, systemSettings, taxRates, emailTemplates, notificationRules } from '@/server/db/schema';
+import { continents, countries, currencies, languages, siteSettings, systemSettings, taxRates, emailTemplates, notificationRules } from '@/server/db/schema';
 import { sql, asc, eq, and, like, or, desc } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 
@@ -295,5 +295,73 @@ export class NotificationRulesRepository extends BaseRepository<typeof notificat
     return this.db.select().from(notificationRules)
       .where(sql`${notificationRules.isEnabled} = true`)
       .orderBy(asc(notificationRules.eventType));
+  }
+}
+
+// ── Languages ───────────────────────────────────────────────────────────────
+
+export class LanguagesRepository extends BaseRepository<typeof languages> {
+  constructor() {
+    super(languages);
+  }
+
+  async findActive() {
+    return this.db.select().from(languages)
+      .where(sql`${languages.deletedAt} IS NULL AND ${languages.code} IS NOT NULL`)
+      .orderBy(asc(languages.name));
+  }
+
+  async findByCode(code: string) {
+    return this.findByField('code', code);
+  }
+
+  async listPaginated(options: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    sort?: { column?: string; direction?: 'asc' | 'desc' };
+  } = {}) {
+    const { page = 1, limit = 20, search, sort } = options;
+
+    const conditions: any[] = [sql`${languages.deletedAt} IS NULL`];
+
+    if (search) {
+      conditions.push(or(
+        like(languages.name, `%${search}%`),
+        like(languages.code, `%${search}%`),
+      ));
+    }
+
+    const whereClause = and(...conditions);
+
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(languages)
+      .where(whereClause);
+
+    const sortCol = sort?.column === 'name' ? languages.name :
+                    sort?.column === 'code' ? languages.code :
+                    languages.name;
+    const sortFn = sort?.direction === 'asc' ? asc : desc;
+
+    const data = await db
+      .select({
+        id: languages.id,
+        name: languages.name,
+        code: languages.code,
+        createdAt: languages.createdAt,
+        updatedAt: languages.updatedAt,
+        deletedAt: languages.deletedAt,
+      })
+      .from(languages)
+      .where(whereClause)
+      .orderBy(sortFn(sortCol))
+      .limit(limit)
+      .offset((page - 1) * limit);
+
+    return {
+      data,
+      meta: { total: count, page, limit, totalPages: Math.ceil(count / limit) },
+    };
   }
 }
