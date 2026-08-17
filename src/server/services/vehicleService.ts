@@ -319,6 +319,10 @@ export class VehicleService {
     return this.vehicleRepo.reorderImages(vehicleId, imageIds);
   }
 
+  async getVehicleStats() {
+    return this.vehicleRepo.getVehicleStats();
+  }
+
   async listVehicles(options: import('@/server/repositories/vehicleRepository').VehicleListOptions = {}) {
     return this.vehicleRepo.listWithRelations(options);
   }
@@ -360,6 +364,22 @@ export class VehicleService {
   async deleteColor(id: string) { return this.vehicleRepo.deleteColor(id); }
 
   async listCountries() { return this.vehicleRepo.listCountries(); }
+
+  async countVehiclesByEntity(entity: import('@/server/repositories/vehicleRepository').LookupEntity) {
+    return this.vehicleRepo.countVehiclesByEntity(entity);
+  }
+
+  async getVehicleForDetail(id: string) {
+    if (!id) {
+      throw new ValidationError('Vehicle ID is required');
+    }
+    const vehicle = await this.vehicleRepo.getVehicleWithImages(id);
+    if (!vehicle) {
+      throw new VehicleNotFoundError(id);
+    }
+    const relations = await this.vehicleRepo.getVehicleRelations(id);
+    return { ...vehicle, relations: relations ?? {} };
+  }
 
   async bulkDuplicate(ids: string[]) { return this.vehicleRepo.bulkDuplicate(ids); }
   async bulkRestore(ids: string[]) { return this.vehicleRepo.bulkRestore(ids); }

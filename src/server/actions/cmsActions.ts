@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { requireAuth } from '@/lib/auth';
 import { requirePermission } from '@/lib/auth/rbac';
 import { CmsService } from '@/server/services';
@@ -8,6 +9,18 @@ import { AuditService } from '@/server/services/auditService';
 
 const cmsService = new CmsService();
 const auditService = new AuditService();
+
+function revalidateCmsPage(slug?: string) {
+  revalidatePath('/');
+  if (slug) revalidatePath(`/${slug}`);
+  revalidatePath('/about');
+  revalidatePath('/privacy-policy');
+  revalidatePath('/terms');
+  revalidatePath('/shipping');
+  revalidatePath('/inspection');
+  revalidatePath('/payment');
+  revalidatePath('/faq');
+}
 
 // ── Pages ─────────────────────────────────────────────────────────────────────
 
@@ -78,6 +91,7 @@ export async function createCmsPage(data: {
       entityLabel: data.title,
       metadata: { slug: data.slug },
     });
+    revalidateCmsPage(data.slug);
     return { success: true, data: created };
   } catch (error) {
     return handleError(error);
@@ -98,6 +112,7 @@ export async function updateCmsPage(id: string, data: Record<string, unknown>): 
         Object.entries(data).filter(([k]) => k !== 'content').map(([k, v]) => [k, { old: null, new: v }]),
       ),
     });
+    revalidateCmsPage(data.slug as string | undefined);
     return { success: true, data: updated };
   } catch (error) {
     return handleError(error);
@@ -116,6 +131,7 @@ export async function publishCmsPage(id: string): Promise<ActionResult> {
       entityId: id,
       entityLabel: page.title,
     });
+    revalidateCmsPage(page.slug);
     return { success: true, data: updated };
   } catch (error) {
     return handleError(error);
@@ -134,6 +150,7 @@ export async function unpublishCmsPage(id: string): Promise<ActionResult> {
       entityId: id,
       entityLabel: page.title,
     });
+    revalidateCmsPage(page.slug);
     return { success: true, data: updated };
   } catch (error) {
     return handleError(error);
@@ -152,6 +169,7 @@ export async function archiveCmsPage(id: string): Promise<ActionResult> {
       entityId: id,
       entityLabel: page.title,
     });
+    revalidateCmsPage(page.slug);
     return { success: true, data: updated };
   } catch (error) {
     return handleError(error);
@@ -170,6 +188,7 @@ export async function deleteCmsPage(id: string): Promise<ActionResult> {
       entityId: id,
       entityLabel: page.title,
     });
+    revalidateCmsPage(page.slug);
     return { success: true, data: undefined };
   } catch (error) {
     return handleError(error);
@@ -275,6 +294,7 @@ export async function createHomepageSection(data: Record<string, unknown>): Prom
       entityId: (created as { id: string }).id,
       entityLabel: (data.type as string) ?? 'Section',
     });
+    revalidatePath('/');
     return { success: true, data: created };
   } catch (error) {
     return handleError(error);
@@ -295,6 +315,7 @@ export async function updateHomepageSection(id: string, data: Record<string, unk
         Object.entries(data).map(([k, v]) => [k, { old: null, new: v }]),
       ),
     });
+    revalidatePath('/');
     return { success: true, data: updated };
   } catch (error) {
     return handleError(error);
@@ -312,6 +333,7 @@ export async function deleteHomepageSection(id: string): Promise<ActionResult> {
       entityId: id,
       entityLabel: 'Section',
     });
+    revalidatePath('/');
     return { success: true, data: undefined };
   } catch (error) {
     return handleError(error);
@@ -330,6 +352,7 @@ export async function reorderHomepageSections(orderedIds: string[]): Promise<Act
       entityLabel: `${orderedIds.length} sections`,
       metadata: { order: orderedIds },
     });
+    revalidatePath('/');
     return { success: true, data: undefined };
   } catch (error) {
     return handleError(error);
@@ -371,6 +394,7 @@ export async function createMenu(data: Record<string, unknown>): Promise<ActionR
       entityId: (created as { id: string }).id,
       entityLabel: (data.label as string) ?? 'Menu item',
     });
+    revalidatePath('/');
     return { success: true, data: created };
   } catch (error) {
     return handleError(error);
@@ -391,6 +415,7 @@ export async function updateMenu(id: string, data: Record<string, unknown>): Pro
         Object.entries(data).map(([k, v]) => [k, { old: null, new: v }]),
       ),
     });
+    revalidatePath('/');
     return { success: true, data: updated };
   } catch (error) {
     return handleError(error);
@@ -408,6 +433,7 @@ export async function deleteMenu(id: string): Promise<ActionResult> {
       entityId: id,
       entityLabel: 'Menu item',
     });
+    revalidatePath('/');
     return { success: true, data: undefined };
   } catch (error) {
     return handleError(error);
@@ -426,6 +452,7 @@ export async function reorderMenus(location: string, orderedIds: string[]): Prom
       entityLabel: `${orderedIds.length} items in ${location}`,
       metadata: { location, order: orderedIds },
     });
+    revalidatePath('/');
     return { success: true, data: undefined };
   } catch (error) {
     return handleError(error);

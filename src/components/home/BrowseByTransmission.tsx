@@ -1,12 +1,16 @@
 ﻿import { VehicleListingSection } from '@/components/home/VehicleListingSection';
-import { placeholderVehicles } from '@/data/placeholderVehicles';
+import type { VehicleCardData } from '@/components/marketplace/VehicleCard';
 
-export function BrowseByTransmission() {
+interface BrowseByTransmissionProps {
+  vehicles: VehicleCardData[];
+}
+
+export function BrowseByTransmission({ vehicles }: BrowseByTransmissionProps) {
   return (
     <VehicleListingSection
       title="Browse by Transmission"
-      description="Automatic or manual — choose your driving preference."
-      vehicles={placeholderVehicles.slice(0, 14)}
+      description="Automatic, manual, or CVT — choose your preference."
+      vehicles={vehicles}
     />
   );
 }

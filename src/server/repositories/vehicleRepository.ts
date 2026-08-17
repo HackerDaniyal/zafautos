@@ -13,7 +13,18 @@
   vehicleDocuments,
   vehicleStatus,
   countries,
+  currencies,
+  ports,
 } from '@/server/db/schema';
+
+export type LookupEntity =
+  | 'manufacturer'
+  | 'model'
+  | 'bodyType'
+  | 'fuelType'
+  | 'transmission'
+  | 'driveType'
+  | 'color';
 import { eq, and, or, like, sql, desc, asc, inArray, type SQL } from 'drizzle-orm';
 import { BaseRepository, type PaginatedResult, type PaginationOptions, type SortOptions } from './baseRepository';
 
@@ -139,17 +150,38 @@ export class VehicleRepository extends BaseRepository<typeof vehicles> {
     if (filters.priceMax) conditions.push(sql`${vehicles.price} <= ${filters.priceMax}`);
     if (filters.mileageMax) conditions.push(sql`${vehicles.mileage} <= ${filters.mileageMax}`);
 
-    // Search across multiple text fields
+    // Search across multiple text fields including make/model names
     if (filters.search) {
       const searchTerm = `%${filters.search}%`;
-      conditions.push(
+      const baseConditions: SQL[] = [
         or(
           like(vehicles.vin, searchTerm),
           like(vehicles.stockNumber, searchTerm),
           like(vehicles.auctionGrade, searchTerm),
           like(vehicles.condition, searchTerm),
+        )!,
+      ];
+
+      // Also search by manufacturer name
+      const matchingManufacturerIds = this.getClient()
+        .select({ id: manufacturers.id })
+        .from(manufacturers)
+        .where(and(like(manufacturers.name, searchTerm), sql`${manufacturers.deletedAt} IS NULL`));
+
+      // Also search by model name
+      const matchingModelIds = this.getClient()
+        .select({ id: models.id })
+        .from(models)
+        .where(and(like(models.name, searchTerm), sql`${models.deletedAt} IS NULL`));
+
+      baseConditions.push(
+        or(
+          inArray(vehicles.manufacturerId, matchingManufacturerIds),
+          inArray(vehicles.modelId, matchingModelIds),
         )!
       );
+
+      conditions.push(or(...baseConditions)!);
     }
 
     const whereClause = and(...conditions);
@@ -346,19 +378,19 @@ export class VehicleRepository extends BaseRepository<typeof vehicles> {
   }
 
   async reorderImages(vehicleId: string, imageIds: string[]) {
-    await Promise.all(
-      imageIds.map((id, i) =>
-        this.getClient()
+    return this.getClient().transaction(async (tx) => {
+      for (let i = 0; i < imageIds.length; i++) {
+        await tx
           .update(vehicleImages)
           .set({ sortOrder: i })
           .where(
             and(
               eq(vehicleImages.vehicleId, vehicleId),
-              eq(vehicleImages.id, id),
+              eq(vehicleImages.id, imageIds[i]),
             )
-          )
-      )
-    );
+          );
+      }
+    });
   }
 
   async listWithRelations(options: VehicleListOptions = {}): Promise<PaginatedResult<typeof vehicles.$inferSelect & { _manufacturerName: string | null; _modelName: string | null; _bodyTypeName: string | null; _fuelTypeName: string | null; _transmissionTypeName: string | null; _countryName: string | null }>> {
@@ -410,6 +442,76 @@ export class VehicleRepository extends BaseRepository<typeof vehicles> {
     }));
 
     return { ...result, data: enriched };
+  }
+
+  // ── Lookup vehicle counts ───────────────────────
+  private static readonly LOOKUP_COUNT_COLUMN_NAMES: Record<LookupEntity, string> = {
+    manufacturer: 'manufacturer_id',
+    model: 'model_id',
+    bodyType: 'body_type_id',
+    fuelType: 'fuel_type_id',
+    transmission: 'transmission_id',
+    driveType: 'drive_type_id',
+    color: 'color_id',
+  };
+
+  async countVehiclesByEntity(entity: LookupEntity): Promise<{ id: string; count: number }[]> {
+    const columnName = VehicleRepository.LOOKUP_COUNT_COLUMN_NAMES[entity];
+    const col = sql`${sql.identifier(columnName)}`;
+    const rows = await this.getClient()
+      .select({ id: sql<string>`${col}`, count: sql<number>`count(*)::int` })
+      .from(vehicles)
+      .where(and(sql`${col} IS NOT NULL`, sql`${vehicles.deletedAt} IS NULL`))
+      .groupBy(col);
+    return rows as { id: string; count: number }[];
+  }
+
+  async getVehicleRelations(id: string): Promise<Record<string, string | null> | null> {
+    const [vehicle] = await this.getClient()
+      .select({
+        manufacturerId: vehicles.manufacturerId,
+        modelId: vehicles.modelId,
+        bodyTypeId: vehicles.bodyTypeId,
+        fuelTypeId: vehicles.fuelTypeId,
+        transmissionId: vehicles.transmissionId,
+        driveTypeId: vehicles.driveTypeId,
+        colorId: vehicles.colorId,
+        countryId: vehicles.countryId,
+        currencyId: vehicles.currencyId,
+        portId: vehicles.portId,
+      })
+      .from(vehicles)
+      .where(eq(vehicles.id, id))
+      .limit(1);
+
+    if (!vehicle) return null;
+
+    const [man, mod, body, fuel, trans, drive, color, country, currency, port] = await Promise.all([
+      vehicle.manufacturerId ? this.getClient().select({ name: manufacturers.name }).from(manufacturers).where(eq(manufacturers.id, vehicle.manufacturerId)).limit(1) : Promise.resolve([]),
+      vehicle.modelId ? this.getClient().select({ name: models.name }).from(models).where(eq(models.id, vehicle.modelId)).limit(1) : Promise.resolve([]),
+      vehicle.bodyTypeId ? this.getClient().select({ name: bodyTypes.name }).from(bodyTypes).where(eq(bodyTypes.id, vehicle.bodyTypeId)).limit(1) : Promise.resolve([]),
+      vehicle.fuelTypeId ? this.getClient().select({ name: fuelTypes.name }).from(fuelTypes).where(eq(fuelTypes.id, vehicle.fuelTypeId)).limit(1) : Promise.resolve([]),
+      vehicle.transmissionId ? this.getClient().select({ name: transmissions.name }).from(transmissions).where(eq(transmissions.id, vehicle.transmissionId)).limit(1) : Promise.resolve([]),
+      vehicle.driveTypeId ? this.getClient().select({ name: driveTypes.name }).from(driveTypes).where(eq(driveTypes.id, vehicle.driveTypeId)).limit(1) : Promise.resolve([]),
+      vehicle.colorId ? this.getClient().select({ name: colors.name }).from(colors).where(eq(colors.id, vehicle.colorId)).limit(1) : Promise.resolve([]),
+      vehicle.countryId ? this.getClient().select({ name: countries.name }).from(countries).where(eq(countries.id, vehicle.countryId)).limit(1) : Promise.resolve([]),
+      vehicle.currencyId ? this.getClient().select({ code: currencies.code, name: currencies.name }).from(currencies).where(eq(currencies.id, vehicle.currencyId)).limit(1) : Promise.resolve([]),
+      vehicle.portId ? this.getClient().select({ name: ports.name }).from(ports).where(eq(ports.id, vehicle.portId)).limit(1) : Promise.resolve([]),
+    ]);
+
+    return {
+      manufacturerName: man[0]?.name ?? null,
+      modelName: mod[0]?.name ?? null,
+      bodyTypeName: body[0]?.name ?? null,
+      fuelTypeName: fuel[0]?.name ?? null,
+      transmissionName: trans[0]?.name ?? null,
+      driveTypeName: drive[0]?.name ?? null,
+      colorName: color[0]?.name ?? null,
+      countryName: country[0]?.name ?? null,
+      currencyCode: currency[0]?.code ?? null,
+      currencyName: currency[0]?.name ?? null,
+      portName: port[0]?.name ?? null,
+    };
   }
 
   // ── Sub-entity CRUD ──────────────────────────────
@@ -589,7 +691,43 @@ export class VehicleRepository extends BaseRepository<typeof vehicles> {
   }
 
   async bulkDuplicate(ids: string[]) {
-    return Promise.all(ids.map((id) => this.duplicateVehicle(id)));
+    return this.getClient().transaction(async (tx) => {
+      const results = [];
+      for (const id of ids) {
+        const [vehicle] = await tx.select().from(vehicles).where(eq(vehicles.id, id)).limit(1);
+        if (!vehicle) continue;
+
+        const images = await tx.select().from(vehicleImages).where(eq(vehicleImages.vehicleId, id));
+
+        const { id: _, vin: _vin, stockNumber: _stock, slug: _slug, createdAt: _c, updatedAt: _u, deletedAt: _da, deletedBy: _db, ...rest } = vehicle;
+
+        const [newVehicle] = await tx
+          .insert(vehicles)
+          .values({
+            ...rest,
+            vin: null,
+            stockNumber: null,
+            slug: null,
+            status: 'draft',
+            isFeatured: false,
+          })
+          .returning();
+
+        if (newVehicle && images.length > 0) {
+          await tx.insert(vehicleImages).values(
+            images.map((img) => ({
+              vehicleId: newVehicle.id,
+              imageUrl: img.imageUrl,
+              sortOrder: img.sortOrder,
+              isPrimary: img.isPrimary,
+            }))
+          );
+        }
+
+        results.push(newVehicle);
+      }
+      return results;
+    });
   }
 
   async bulkRestore(ids: string[]) {

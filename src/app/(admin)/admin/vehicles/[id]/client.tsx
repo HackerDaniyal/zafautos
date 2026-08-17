@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   ArrowLeft,
+  AlertTriangle,
   Edit,
   Trash2,
   Copy,
@@ -36,7 +37,7 @@ import { Skeleton } from '@/components/admin/ui/skeletons';
 import { useToast } from '@/components/admin/ui/use-toast';
 import { cn, formatPrice, formatMileage } from '@/lib/utils';
 import {
-  getVehicleForEdit,
+  getVehicleDetail,
   publishVehicle,
   archiveVehicle,
   toggleVehicleFeatured,
@@ -59,6 +60,8 @@ import {
 import { VehicleDeleteDialog } from '../components/vehicle-delete-dialog';
 import { VehicleStatusDialog } from '../components/vehicle-status-dialog';
 import type { VehicleWithImages, VehicleStatus } from '../types';
+
+type VehicleDetail = VehicleWithImages & { relations?: Record<string, string | null> };
 import { VEHICLE_STATUS_CONFIG } from '../constants';
 import { Input } from '@/components/ui/input';
 
@@ -337,7 +340,7 @@ interface VehicleDetailClientProps {
 export function VehicleDetailClient({ vehicleId }: VehicleDetailClientProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const [vehicle, setVehicle] = useState<VehicleWithImages | null>(null);
+  const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -351,9 +354,9 @@ export function VehicleDetailClient({ vehicleId }: VehicleDetailClientProps) {
     try {
       setLoading(true);
       setError(null);
-      const result = await getVehicleForEdit(vehicleId);
+      const result = await getVehicleDetail(vehicleId);
       if (result.success && result.data) {
-        setVehicle(result.data as VehicleWithImages);
+        setVehicle(result.data as VehicleDetail);
       } else if (!result.success) {
         setError(result.error || 'Vehicle not found');
       }
@@ -477,7 +480,9 @@ export function VehicleDetailClient({ vehicleId }: VehicleDetailClientProps) {
     );
   }
 
-  const vehicleName = [vehicle.year, vehicle.manufacturerId, vehicle.modelId]
+  const rel = (key: string): string | null => vehicle.relations?.[key] ?? null;
+
+  const vehicleName = [vehicle.year, rel('manufacturerName'), rel('modelName')]
     .filter(Boolean)
     .join(' ') || 'Untitled Vehicle';
 
@@ -498,19 +503,19 @@ export function VehicleDetailClient({ vehicleId }: VehicleDetailClientProps) {
 
   const pricingFields = [
     { label: 'Price', value: vehicle.price ? formatPrice(vehicle.price) : null },
-    { label: 'Currency', value: vehicle.currencyId },
+    { label: 'Currency', value: rel('currencyName') ?? rel('currencyCode') },
   ];
 
   const specificationFields = [
-    { label: 'Manufacturer', value: vehicle.manufacturerId },
-    { label: 'Model', value: vehicle.modelId },
-    { label: 'Body Type', value: vehicle.bodyTypeId },
-    { label: 'Fuel Type', value: vehicle.fuelTypeId },
-    { label: 'Transmission', value: vehicle.transmissionId },
-    { label: 'Drive Type', value: vehicle.driveTypeId },
-    { label: 'Color', value: vehicle.colorId },
-    { label: 'Country', value: vehicle.countryId },
-    { label: 'Port', value: vehicle.portId },
+    { label: 'Manufacturer', value: rel('manufacturerName') },
+    { label: 'Model', value: rel('modelName') },
+    { label: 'Body Type', value: rel('bodyTypeName') },
+    { label: 'Fuel Type', value: rel('fuelTypeName') },
+    { label: 'Transmission', value: rel('transmissionName') },
+    { label: 'Drive Type', value: rel('driveTypeName') },
+    { label: 'Color', value: rel('colorName') },
+    { label: 'Country', value: rel('countryName') },
+    { label: 'Port', value: rel('portName') },
   ];
 
   const engineFields = [
@@ -549,9 +554,9 @@ export function VehicleDetailClient({ vehicleId }: VehicleDetailClientProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-pure-white font-[Oswald] uppercase tracking-wide">
               {vehicleName}
             </h1>
@@ -559,12 +564,20 @@ export function VehicleDetailClient({ vehicleId }: VehicleDetailClientProps) {
               label={statusConfig?.label || vehicle.status}
               variant={getStatusVariant(vehicle.status)}
             />
+            {vehicle.isFeatured && (
+              <span className="inline-flex items-center gap-1 rounded-[4px] border border-auction-amber/20 bg-auction-amber/10 px-2 py-0.5 text-xs font-medium text-auction-amber">
+                <Star className="size-3 fill-auction-amber" /> Featured
+              </span>
+            )}
           </div>
           <p className="text-sm text-ash">
             {vehicle.vin && `VIN: ${vehicle.vin}`}
             {vehicle.vin && vehicle.stockNumber && ' · '}
             {vehicle.stockNumber && `Stock: ${vehicle.stockNumber}`}
           </p>
+          {vehicle.price != null && (
+            <p className="text-lg font-bold text-pure-white">{formatPrice(vehicle.price)}</p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" asChild>
@@ -667,6 +680,49 @@ export function VehicleDetailClient({ vehicleId }: VehicleDetailClientProps) {
             </div>
           )}
 
+          {!primaryImage && (
+            <div className="rounded-[10px] border border-auction-amber/30 bg-auction-amber/5 p-4 flex items-center gap-3">
+              <AlertTriangle className="size-5 text-auction-amber shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-auction-amber">No images uploaded</p>
+                <p className="text-xs text-steel">Upload images in the Gallery tab to showcase this vehicle.</p>
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-[10px] border border-iron/30 bg-carbon p-4">
+            <h3 className="text-sm font-medium text-pure-white mb-3">Completeness</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {[
+                { label: 'Images', ok: vehicle.images.length > 0, detail: `${vehicle.images.length} uploaded` },
+                { label: 'VIN', ok: !!vehicle.vin },
+                { label: 'Price', ok: vehicle.price != null && vehicle.price > 0 },
+                { label: 'Year', ok: vehicle.year != null },
+                { label: 'Manufacturer', ok: !!vehicle.manufacturerId },
+                { label: 'Model', ok: !!vehicle.modelId },
+                { label: 'Body Type', ok: !!vehicle.bodyTypeId },
+                { label: 'Fuel Type', ok: !!vehicle.fuelTypeId },
+                { label: 'Transmission', ok: !!vehicle.transmissionId },
+                { label: 'Mileage', ok: vehicle.mileage != null },
+                { label: 'Country', ok: !!vehicle.countryId },
+                { label: 'Documents', ok: false, async: true },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className={cn(
+                    'flex items-center gap-2 rounded-[6px] px-3 py-2 text-xs',
+                    item.ok
+                      ? 'bg-available-green/10 text-available-green'
+                      : 'bg-signal-red/10 text-signal-red'
+                  )}
+                >
+                  {item.ok ? <Check className="size-3.5 shrink-0" /> : <X className="size-3.5 shrink-0" />}
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <DetailGroup title="Basic Information">
             <DetailGrid fields={basicFields} columns={4} />
           </DetailGroup>
@@ -731,17 +787,17 @@ export function VehicleDetailClient({ vehicleId }: VehicleDetailClientProps) {
             <DetailGrid fields={[
               { label: 'Engine CC', value: vehicle.engineCc?.toString() },
               { label: 'Horsepower', value: vehicle.horsepower ? `${vehicle.horsepower} HP` : null },
-              { label: 'Fuel Type', value: vehicle.fuelTypeId },
-              { label: 'Transmission', value: vehicle.transmissionId },
-              { label: 'Drive Type', value: vehicle.driveTypeId },
+              { label: 'Fuel Type', value: rel('fuelTypeName') },
+              { label: 'Transmission', value: rel('transmissionName') },
+              { label: 'Drive Type', value: rel('driveTypeName') },
             ]} columns={3} />
           </DetailGroup>
           <DetailGroup title="Dimensions & Body">
             <DetailGrid fields={[
-              { label: 'Body Type', value: vehicle.bodyTypeId },
+              { label: 'Body Type', value: rel('bodyTypeName') },
               { label: 'Doors', value: vehicle.doors?.toString() },
               { label: 'Seats', value: vehicle.seats?.toString() },
-              { label: 'Color', value: vehicle.colorId },
+              { label: 'Color', value: rel('colorName') },
               { label: 'Mileage', value: vehicle.mileage ? `${formatMileage(vehicle.mileage)} km` : null },
             ]} columns={3} />
           </DetailGroup>
@@ -868,8 +924,8 @@ export function VehicleDetailClient({ vehicleId }: VehicleDetailClientProps) {
         <div className="space-y-6">
           <DetailGroup title="Shipping & Destination">
             <DetailGrid fields={[
-              { label: 'Country', value: vehicle.countryId },
-              { label: 'Port', value: vehicle.portId },
+              { label: 'Country', value: rel('countryName') },
+              { label: 'Port', value: rel('portName') },
             ]} columns={2} />
           </DetailGroup>
         </div>

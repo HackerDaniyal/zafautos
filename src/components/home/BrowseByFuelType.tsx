@@ -1,12 +1,16 @@
 ﻿import { VehicleListingSection } from '@/components/home/VehicleListingSection';
-import { placeholderVehicles } from '@/data/placeholderVehicles';
+import type { VehicleCardData } from '@/components/marketplace/VehicleCard';
 
-export function BrowseByFuelType() {
+interface BrowseByFuelTypeProps {
+  vehicles: VehicleCardData[];
+}
+
+export function BrowseByFuelType({ vehicles }: BrowseByFuelTypeProps) {
   return (
     <VehicleListingSection
       title="Browse by Fuel Type"
       description="Petrol, diesel, hybrid — pick what suits you."
-      vehicles={placeholderVehicles.slice(0, 14)}
+      vehicles={vehicles}
     />
   );
 }

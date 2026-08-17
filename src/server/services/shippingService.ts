@@ -254,6 +254,13 @@ export class ShippingService {
   }
 
   /**
+   * Lists all active ports.
+   */
+  async listPorts() {
+    return this.shippingRepo.ports.findMany({});
+  }
+
+  /**
    * Updates shipment details.
    */
   async updateShipment(

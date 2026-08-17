@@ -51,7 +51,7 @@ function DetailFieldValue({ value, mono }: { value: React.ReactNode; mono?: bool
         mono && 'font-mono text-xs'
       )}
     >
-      {value ?? <span className="text-steel">—</span>}
+      {value ?? <span className="text-steel italic">Not provided</span>}
     </div>
   );
 }

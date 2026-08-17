@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth';
 import { requirePermission } from '@/lib/auth/rbac';
 import {
   VehicleService,
+  ShippingService,
   CreateVehicleSchema,
   UpdateVehicleSchema,
 } from '@/server/services';
@@ -12,9 +13,34 @@ import { AuditService } from '@/server/services/auditService';
 import { UUIDSchema } from '@/lib/validation/common';
 import { z } from 'zod';
 import type { VehicleStatus, VehicleListParams } from '@/lib/types/vehicle';
+import type { LookupEntity } from '@/server/repositories/vehicleRepository';
 
 const vehicleService = new VehicleService();
+const shippingService = new ShippingService();
 const auditService = new AuditService();
+
+const LOOKUP_SINGULAR: Record<LookupEntity, string> = {
+  manufacturer: 'make',
+  model: 'model',
+  bodyType: 'body type',
+  fuelType: 'fuel type',
+  transmission: 'transmission',
+  driveType: 'drive type',
+  color: 'color',
+};
+
+async function guardNoLinkedVehicles(entity: LookupEntity, id: string): Promise<ActionResult | null> {
+  const counts = await vehicleService.countVehiclesByEntity(entity);
+  const found = counts.find((c) => c.id === id);
+  if (found && found.count > 0) {
+    return {
+      success: false,
+      error: `Cannot delete this ${LOOKUP_SINGULAR[entity]}: ${found.count} vehicle(s) are linked to it. Reassign or remove those vehicles first.`,
+      code: 'CONFLICT',
+    };
+  }
+  return null;
+}
 
 function toSlug(str: string): string {
   return str.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -28,6 +54,13 @@ export async function createVehicle(
     await requirePermission(auth, 'vehicles.create');
     const validated = CreateVehicleSchema.parse(data);
     const vehicle = await vehicleService.createVehicle(validated);
+    const v = vehicle as { id: string; vin?: string | null; stockNumber?: string | null };
+    await auditService.logAction({
+      action: 'vehicle.created',
+      entityType: 'vehicle',
+      entityId: v.id,
+      entityLabel: v.vin ?? v.stockNumber ?? v.id,
+    });
     return { success: true, data: vehicle };
   } catch (error) {
     return handleError(error);
@@ -44,6 +77,12 @@ export async function updateVehicle(
     UUIDSchema.parse(id);
     const validated = UpdateVehicleSchema.parse(data);
     const vehicle = await vehicleService.updateVehicle(id, validated);
+    await auditService.logAction({
+      action: 'vehicle.updated',
+      entityType: 'vehicle',
+      entityId: id,
+      entityLabel: vehicle.vin ?? vehicle.stockNumber ?? id,
+    });
     return { success: true, data: vehicle };
   } catch (error) {
     return handleError(error);
@@ -52,11 +91,17 @@ export async function updateVehicle(
 
 export async function deleteVehicle(id: string): Promise<ActionResult> {
   try {
-    const auth = await requireAuth();
-    await requirePermission(auth, 'vehicles.delete');
+    const session = await requireAuth();
+    await requirePermission(session, 'vehicles.delete');
     UUIDSchema.parse(id);
-    await vehicleService.deleteVehicle(id);
-    return { success: true, data: undefined };
+    const vehicle = await vehicleService.softDeleteVehicle(id, session.userId);
+    await auditService.logAction({
+      action: 'vehicle.deleted',
+      entityType: 'vehicle',
+      entityId: id,
+      entityLabel: vehicle.vin ?? vehicle.stockNumber ?? id,
+    });
+    return { success: true, data: vehicle };
   } catch (error) {
     return handleError(error);
   }
@@ -64,10 +109,16 @@ export async function deleteVehicle(id: string): Promise<ActionResult> {
 
 export async function publishVehicle(id: string): Promise<ActionResult> {
   try {
-    const auth = await requireAuth();
-    await requirePermission(auth, 'vehicles.update');
+    const session = await requireAuth();
+    await requirePermission(session, 'vehicles.update');
     UUIDSchema.parse(id);
-    const vehicle = await vehicleService.updateVehicle(id, { status: 'active' });
+    const vehicle = await vehicleService.changeStatus(id, 'active', session.userId, 'Published');
+    await auditService.logAction({
+      action: 'vehicle.published',
+      entityType: 'vehicle',
+      entityId: id,
+      entityLabel: vehicle.vin ?? vehicle.stockNumber ?? id,
+    });
     return { success: true, data: vehicle };
   } catch (error) {
     return handleError(error);
@@ -76,10 +127,16 @@ export async function publishVehicle(id: string): Promise<ActionResult> {
 
 export async function archiveVehicle(id: string): Promise<ActionResult> {
   try {
-    const auth = await requireAuth();
-    await requirePermission(auth, 'vehicles.update');
+    const session = await requireAuth();
+    await requirePermission(session, 'vehicles.update');
     UUIDSchema.parse(id);
-    const vehicle = await vehicleService.updateVehicle(id, { status: 'archived' });
+    const vehicle = await vehicleService.changeStatus(id, 'archived', session.userId, 'Archived');
+    await auditService.logAction({
+      action: 'vehicle.archived',
+      entityType: 'vehicle',
+      entityId: id,
+      entityLabel: vehicle.vin ?? vehicle.stockNumber ?? id,
+    });
     return { success: true, data: vehicle };
   } catch (error) {
     return handleError(error);
@@ -149,6 +206,14 @@ export async function duplicateVehicle(id: string): Promise<ActionResult> {
     await requirePermission(auth, 'vehicles.create');
     UUIDSchema.parse(id);
     const vehicle = await vehicleService.duplicateVehicle(id);
+    if (vehicle) {
+      await auditService.logAction({
+        action: 'vehicle.duplicated',
+        entityType: 'vehicle',
+        entityId: id,
+        entityLabel: `duplicated to ${vehicle.id}`,
+      });
+    }
     return { success: true, data: vehicle };
   } catch (error) {
     return handleError(error);
@@ -185,11 +250,20 @@ export async function toggleVehicleFeatured(id: string): Promise<ActionResult> {
     await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(id);
     const vehicle = await vehicleService.toggleFeatured(id);
+    await auditService.logAction({
+      action: 'vehicle.featured_toggled',
+      entityType: 'vehicle',
+      entityId: id,
+      entityLabel: vehicle.vin ?? vehicle.stockNumber ?? id,
+      metadata: { isFeatured: vehicle.isFeatured },
+    });
     return { success: true, data: vehicle };
   } catch (error) {
     return handleError(error);
   }
 }
+
+const VEHICLE_STATUS_SCHEMA = z.enum(['draft', 'active', 'sold', 'archived']);
 
 export async function bulkUpdateVehicleStatus(
   ids: string[],
@@ -198,15 +272,16 @@ export async function bulkUpdateVehicleStatus(
   try {
     const session = await requireAuth();
     await requirePermission(session, 'vehicles.update');
+    const parsedStatus = VEHICLE_STATUS_SCHEMA.parse(status);
     for (const id of ids) {
       UUIDSchema.parse(id);
     }
-    const result = await vehicleService.bulkUpdateStatus(ids, status);
+    const result = await vehicleService.bulkUpdateStatus(ids, parsedStatus);
     await auditService.logAction({
       action: 'vehicle.bulk_status_changed',
       entityType: 'vehicle',
       entityId: ids.join(','),
-      metadata: { status, vehicleIds: ids },
+      metadata: { status: parsedStatus, vehicleIds: ids },
     });
     return { success: true, data: result };
   } catch (error) {
@@ -256,6 +331,14 @@ export async function deleteVehicleImage(imageId: string): Promise<ActionResult>
     await requirePermission(auth, 'vehicles.update');
     UUIDSchema.parse(imageId);
     const image = await vehicleService.deleteImage(imageId);
+    if (image && typeof image === 'object' && 'imageUrl' in image && image.imageUrl) {
+      try {
+        const { deleteFile } = await import('@/lib/supabase/storage');
+        const imageUrl = image.imageUrl as string;
+        const path = imageUrl.split('/').slice(-2).join('/');
+        if (path) await deleteFile('vehicles', [path]);
+      } catch { /* Storage cleanup is best-effort */ }
+    }
     return { success: true, data: image };
   } catch (error) {
     return handleError(error);
@@ -332,6 +415,17 @@ export async function listVehiclesForAdmin(
   }
 }
 
+export async function getVehicleStatsAction(): Promise<ActionResult> {
+  try {
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
+    const data = await vehicleService.getVehicleStats();
+    return { success: true, data };
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
 // ── Sub-entity CRUD Actions ──────────────────────
 export async function listManufacturers(): Promise<ActionResult> {
   try {
@@ -368,6 +462,8 @@ export async function deleteManufacturer(id: string): Promise<ActionResult> {
     const auth = await requireAuth();
     await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(id);
+    const guard = await guardNoLinkedVehicles('manufacturer', id);
+    if (guard) return guard;
     await vehicleService.deleteManufacturer(id);
     return { success: true, data: undefined };
   } catch (error) { return handleError(error); }
@@ -408,6 +504,8 @@ export async function deleteModel(id: string): Promise<ActionResult> {
     const auth = await requireAuth();
     await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(id);
+    const guard = await guardNoLinkedVehicles('model', id);
+    if (guard) return guard;
     await vehicleService.deleteModel(id);
     return { success: true, data: undefined };
   } catch (error) { return handleError(error); }
@@ -447,6 +545,8 @@ export async function deleteBodyType(id: string): Promise<ActionResult> {
     const auth = await requireAuth();
     await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(id);
+    const guard = await guardNoLinkedVehicles('bodyType', id);
+    if (guard) return guard;
     await vehicleService.deleteBodyType(id);
     return { success: true, data: undefined };
   } catch (error) { return handleError(error); }
@@ -486,6 +586,8 @@ export async function deleteFuelType(id: string): Promise<ActionResult> {
     const auth = await requireAuth();
     await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(id);
+    const guard = await guardNoLinkedVehicles('fuelType', id);
+    if (guard) return guard;
     await vehicleService.deleteFuelType(id);
     return { success: true, data: undefined };
   } catch (error) { return handleError(error); }
@@ -525,6 +627,8 @@ export async function deleteTransmission(id: string): Promise<ActionResult> {
     const auth = await requireAuth();
     await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(id);
+    const guard = await guardNoLinkedVehicles('transmission', id);
+    if (guard) return guard;
     await vehicleService.deleteTransmission(id);
     return { success: true, data: undefined };
   } catch (error) { return handleError(error); }
@@ -564,6 +668,8 @@ export async function deleteDriveType(id: string): Promise<ActionResult> {
     const auth = await requireAuth();
     await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(id);
+    const guard = await guardNoLinkedVehicles('driveType', id);
+    if (guard) return guard;
     await vehicleService.deleteDriveType(id);
     return { success: true, data: undefined };
   } catch (error) { return handleError(error); }
@@ -603,6 +709,8 @@ export async function deleteColor(id: string): Promise<ActionResult> {
     const auth = await requireAuth();
     await requirePermission(auth, 'vehicles.delete');
     UUIDSchema.parse(id);
+    const guard = await guardNoLinkedVehicles('color', id);
+    if (guard) return guard;
     await vehicleService.deleteColor(id);
     return { success: true, data: undefined };
   } catch (error) { return handleError(error); }
@@ -613,6 +721,45 @@ export async function listCountries(): Promise<ActionResult> {
     const auth = await requireAuth();
     await requirePermission(auth, 'vehicles.read');
     const data = await vehicleService.listCountries();
+    return { success: true, data };
+  } catch (error) { return handleError(error); }
+}
+
+const LOOKUP_ENTITY_SCHEMA = z.enum([
+  'manufacturer',
+  'model',
+  'bodyType',
+  'fuelType',
+  'transmission',
+  'driveType',
+  'color',
+]);
+
+export async function getVehicleLookupCounts(entity: string): Promise<ActionResult> {
+  try {
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
+    const parsed = LOOKUP_ENTITY_SCHEMA.parse(entity);
+    const data = await vehicleService.countVehiclesByEntity(parsed);
+    return { success: true, data };
+  } catch (error) { return handleError(error); }
+}
+
+export async function listPorts(): Promise<ActionResult> {
+  try {
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
+    const result = await shippingService.listPorts();
+    return { success: true, data: result };
+  } catch (error) { return handleError(error); }
+}
+
+export async function getVehicleDetail(id: string): Promise<ActionResult> {
+  try {
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
+    UUIDSchema.parse(id);
+    const data = await vehicleService.getVehicleForDetail(id);
     return { success: true, data };
   } catch (error) { return handleError(error); }
 }

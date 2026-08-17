@@ -1,12 +1,16 @@
 ﻿import { VehicleListingSection } from '@/components/home/VehicleListingSection';
-import { placeholderVehicles } from '@/data/placeholderVehicles';
+import type { VehicleCardData } from '@/components/marketplace/VehicleCard';
 
-export function BrowseByPrice() {
+interface BrowseByPriceProps {
+  vehicles: VehicleCardData[];
+}
+
+export function BrowseByPrice({ vehicles }: BrowseByPriceProps) {
   return (
     <VehicleListingSection
       title="Browse by Price"
       description="Find vehicles within your budget range."
-      vehicles={placeholderVehicles.slice(0, 14)}
+      vehicles={vehicles}
     />
   );
 }

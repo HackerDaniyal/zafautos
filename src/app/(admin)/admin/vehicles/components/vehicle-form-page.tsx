@@ -7,15 +7,37 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/admin/ui/page-header';
 import { useToast } from '@/components/admin/ui/use-toast';
-import { createVehicle, updateVehicle, getVehicleForEdit } from '@/server/actions/vehicleActions';
+import {
+  createVehicle,
+  updateVehicle,
+  getVehicleForEdit,
+  listManufacturers,
+  listModels,
+  listBodyTypes,
+  listFuelTypes,
+  listTransmissions,
+  listDriveTypes,
+  listColors,
+  listCountries,
+  listPorts,
+} from '@/server/actions/vehicleActions';
+import { listCurrencies } from '@/server/actions/currenciesActions';
 import { CreateVehicleSchema, UpdateVehicleSchema } from '@/lib/validation/vehicle';
-import { VehicleFormSteps } from './vehicle-form-steps';
+import { VehicleFormSteps, type VehicleFormOptions } from './vehicle-form-steps';
 import type { VehicleFormData } from '../types';
 import { VEHICLE_FORM_STEPS, type VehicleFormStep } from '../constants';
 
 interface VehicleFormPageProps {
   mode: 'create' | 'edit';
   vehicleId?: string;
+}
+
+function extractOptionList(data: unknown): { id: string; name: string }[] {
+  if (Array.isArray(data)) return data as { id: string; name: string }[];
+  if (data && typeof data === 'object' && Array.isArray((data as { data?: unknown }).data)) {
+    return (data as { data: { id: string; name: string }[] }).data;
+  }
+  return [];
 }
 
 export function VehicleFormPage({ mode, vehicleId }: VehicleFormPageProps) {
@@ -26,6 +48,18 @@ export function VehicleFormPage({ mode, vehicleId }: VehicleFormPageProps) {
   const [existingVehicle, setExistingVehicle] = React.useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = React.useState(mode === 'edit');
   const [submitting, setSubmitting] = React.useState(false);
+  const [options, setOptions] = React.useState<VehicleFormOptions>({
+    manufacturers: [],
+    models: [],
+    bodyTypes: [],
+    fuelTypes: [],
+    transmissions: [],
+    driveTypes: [],
+    colors: [],
+    countries: [],
+    currencies: [],
+    ports: [],
+  });
 
   React.useEffect(() => {
     if (mode === 'edit' && vehicleId) {
@@ -67,6 +101,35 @@ export function VehicleFormPage({ mode, vehicleId }: VehicleFormPageProps) {
     }
   }, [mode, vehicleId, router, toast]);
 
+  React.useEffect(() => {
+    Promise.all([
+      listManufacturers(),
+      listModels(),
+      listBodyTypes(),
+      listFuelTypes(),
+      listTransmissions(),
+      listDriveTypes(),
+      listColors(),
+      listCountries(),
+      listCurrencies(),
+      listPorts(),
+    ]).then((results) => {
+      const r = results as Array<{ success: boolean; data?: unknown }>;
+      setOptions({
+        manufacturers: extractOptionList(r[0].data),
+        models: extractOptionList(r[1].data),
+        bodyTypes: extractOptionList(r[2].data),
+        fuelTypes: extractOptionList(r[3].data),
+        transmissions: extractOptionList(r[4].data),
+        driveTypes: extractOptionList(r[5].data),
+        colors: extractOptionList(r[6].data),
+        countries: extractOptionList(r[7].data),
+        currencies: extractOptionList(r[8].data),
+        ports: extractOptionList(r[9].data),
+      });
+    });
+  }, []);
+
   function handleStepChange(step: VehicleFormStep) {
     setCurrentStep(step);
   }
@@ -75,24 +138,33 @@ export function VehicleFormPage({ mode, vehicleId }: VehicleFormPageProps) {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }
 
-  async function handleSubmit() {
+  async function handleSubmit(statusOverride?: 'draft' | 'active') {
     setSubmitting(true);
     try {
-      const submitData = { ...formData, status: formData.status ?? 'draft' as const, isFeatured: formData.isFeatured ?? false };
+      const status = statusOverride ?? formData.status ?? 'draft' as const;
+      const submitData = { ...formData, status, isFeatured: formData.isFeatured ?? false };
       if (mode === 'create') {
         const result = await createVehicle(submitData);
         if (result.success) {
-          toast({ title: 'Vehicle created', description: 'Vehicle has been created successfully.', variant: 'success' });
+          toast({
+            title: status === 'active' ? 'Vehicle published' : 'Vehicle saved as draft',
+            description: 'Vehicle has been saved successfully.',
+            variant: 'success',
+          });
           router.push('/admin/vehicles');
-        } else if (!result.success) {
+        } else {
           toast({ title: 'Error', description: result.error, variant: 'error' });
         }
       } else if (vehicleId) {
         const result = await updateVehicle(vehicleId, submitData);
         if (result.success) {
-          toast({ title: 'Vehicle updated', description: 'Vehicle has been updated successfully.', variant: 'success' });
+          toast({
+            title: status === 'active' ? 'Vehicle published' : 'Vehicle updated',
+            description: 'Vehicle has been saved successfully.',
+            variant: 'success',
+          });
           router.push('/admin/vehicles');
-        } else if (!result.success) {
+        } else {
           toast({ title: 'Error', description: result.error, variant: 'error' });
         }
       }
@@ -122,25 +194,40 @@ export function VehicleFormPage({ mode, vehicleId }: VehicleFormPageProps) {
       />
 
       {/* Step Navigation */}
-      <div className="flex items-center gap-1 overflow-x-auto pb-2">
-        {VEHICLE_FORM_STEPS.map((step, index) => (
-          <button
-            key={step.id}
-            onClick={() => handleStepChange(step.id)}
-            className={`flex items-center gap-2 whitespace-nowrap rounded-[6px] px-3 py-2 text-sm font-medium transition-colors ${
-              currentStep === step.id
-                ? 'bg-signal-red/10 text-signal-red'
-                : index < stepIndex
-                  ? 'text-available-green hover:bg-white/5'
-                  : 'text-steel hover:bg-white/5 hover:text-pure-white'
-            }`}
-          >
-            <span className="flex size-5 items-center justify-center rounded-full bg-current/10 text-xs">
-              {index < stepIndex ? '✓' : index + 1}
-            </span>
-            {step.label}
-          </button>
-        ))}
+      <div className="space-y-3">
+        <div className="flex items-center gap-1 overflow-x-auto pb-1">
+          {VEHICLE_FORM_STEPS.map((step, index) => (
+            <button
+              key={step.id}
+              onClick={() => handleStepChange(step.id)}
+              className={`flex items-center gap-2 whitespace-nowrap rounded-[6px] px-3 py-2 text-sm font-medium transition-colors ${
+                currentStep === step.id
+                  ? 'bg-signal-red/10 text-signal-red'
+                  : index < stepIndex
+                    ? 'text-available-green hover:bg-white/5'
+                    : 'text-steel hover:bg-white/5 hover:text-pure-white'
+              }`}
+            >
+              <span className={`flex size-5 items-center justify-center rounded-full text-xs ${
+                index < stepIndex
+                  ? 'bg-available-green/20 text-available-green'
+                  : currentStep === step.id
+                    ? 'bg-signal-red/20 text-signal-red'
+                    : 'bg-iron/20 text-steel'
+              }`}>
+                {index < stepIndex ? '✓' : index + 1}
+              </span>
+              <span className="hidden sm:inline">{step.label}</span>
+            </button>
+          ))}
+        </div>
+        {/* Progress bar */}
+        <div className="h-1 w-full rounded-full bg-iron/20">
+          <div
+            className="h-full rounded-full bg-signal-red transition-all duration-300"
+            style={{ width: `${((stepIndex + 1) / VEHICLE_FORM_STEPS.length) * 100}%` }}
+          />
+        </div>
       </div>
 
       {/* Form Content */}
@@ -150,6 +237,7 @@ export function VehicleFormPage({ mode, vehicleId }: VehicleFormPageProps) {
           mode={mode}
           formData={formData}
           onFieldChange={handleFieldChange}
+          options={options}
         />
       </div>
 
@@ -175,9 +263,22 @@ export function VehicleFormPage({ mode, vehicleId }: VehicleFormPageProps) {
               Next
             </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? 'Saving...' : mode === 'create' ? 'Create Vehicle' : 'Save Changes'}
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={() => handleSubmit('draft')}
+                disabled={submitting}
+              >
+                {submitting ? 'Saving...' : 'Save Draft'}
+              </Button>
+              <Button
+                onClick={() => handleSubmit('active')}
+                disabled={submitting}
+                className="bg-signal-red text-pure-white hover:bg-deep-red"
+              >
+                {submitting ? 'Publishing...' : 'Save & Publish'}
+              </Button>
+            </>
           )}
         </div>
       </div>

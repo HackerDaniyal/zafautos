@@ -8,14 +8,71 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { CONDITION_OPTIONS, type VehicleFormStep } from '../constants';
 import type { VehicleFormData } from '../types';
 
+export interface VehicleFormOption {
+  id: string;
+  name: string;
+}
+
+export interface VehicleFormOptions {
+  manufacturers: VehicleFormOption[];
+  models: VehicleFormOption[];
+  bodyTypes: VehicleFormOption[];
+  fuelTypes: VehicleFormOption[];
+  transmissions: VehicleFormOption[];
+  driveTypes: VehicleFormOption[];
+  colors: VehicleFormOption[];
+  countries: VehicleFormOption[];
+  currencies: VehicleFormOption[];
+  ports: VehicleFormOption[];
+}
+
 interface VehicleFormStepsProps {
   step: VehicleFormStep;
   mode: 'create' | 'edit';
   formData: VehicleFormData;
   onFieldChange: (field: keyof VehicleFormData, value: unknown) => void;
+  options: VehicleFormOptions;
 }
 
-export function VehicleFormSteps({ step, mode, formData, onFieldChange }: VehicleFormStepsProps) {
+const NONE = '__none__';
+
+function RelationSelect({
+  field,
+  label,
+  optionsList,
+  formData,
+  onFieldChange,
+  placeholder,
+}: {
+  field: keyof VehicleFormData;
+  label: string;
+  optionsList: VehicleFormOption[];
+  formData: VehicleFormData;
+  onFieldChange: (field: keyof VehicleFormData, value: unknown) => void;
+  placeholder: string;
+}) {
+  const value = ((formData[field] as string | null) ?? '') as string;
+  return (
+    <FormField name={field as string} label={label}>
+      <Select
+        value={value === '' ? NONE : value}
+        onValueChange={(v) => onFieldChange(field, v === NONE ? null : v)}
+      >
+        <SelectTrigger className="bg-deep-carbon border-iron/30 text-pure-white">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent className="bg-carbon border-iron">
+          <SelectItem value={NONE}>None</SelectItem>
+          {optionsList.map((opt) => (
+            <SelectItem key={opt.id} value={opt.id}>{opt.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </FormField>
+  );
+}
+
+export function VehicleFormSteps({ step, mode, formData, onFieldChange, options }: VehicleFormStepsProps) {
   switch (step) {
     case 'basic':
       return (
@@ -26,12 +83,8 @@ export function VehicleFormSteps({ step, mode, formData, onFieldChange }: Vehicl
           <FormField name="stockNumber" label="Stock Number" error={undefined}>
             <Input value={formData.stockNumber ?? ''} onChange={(e) => onFieldChange('stockNumber', e.target.value || null)} placeholder="Internal stock number" className="bg-deep-carbon border-iron/30 text-pure-white" />
           </FormField>
-          <FormField name="manufacturerId" label="Make" error={undefined}>
-            <Input value={formData.manufacturerId ?? ''} onChange={(e) => onFieldChange('manufacturerId', e.target.value || null)} placeholder="Manufacturer" className="bg-deep-carbon border-iron/30 text-pure-white" />
-          </FormField>
-          <FormField name="modelId" label="Model" error={undefined}>
-            <Input value={formData.modelId ?? ''} onChange={(e) => onFieldChange('modelId', e.target.value || null)} placeholder="Model" className="bg-deep-carbon border-iron/30 text-pure-white" />
-          </FormField>
+          <RelationSelect field="manufacturerId" label="Make" optionsList={options.manufacturers} formData={formData} onFieldChange={onFieldChange} placeholder="Select make" />
+          <RelationSelect field="modelId" label="Model" optionsList={options.models} formData={formData} onFieldChange={onFieldChange} placeholder="Select model" />
           <FormField name="year" label="Year" error={undefined}>
             <Input type="number" value={formData.year ?? ''} onChange={(e) => onFieldChange('year', e.target.value ? Number(e.target.value) : null)} placeholder="e.g. 2024" className="bg-deep-carbon border-iron/30 text-pure-white" />
           </FormField>
@@ -45,12 +98,8 @@ export function VehicleFormSteps({ step, mode, formData, onFieldChange }: Vehicl
               </SelectContent>
             </Select>
           </FormField>
-          <FormField name="bodyTypeId" label="Body Type" error={undefined}>
-            <Input value={formData.bodyTypeId ?? ''} onChange={(e) => onFieldChange('bodyTypeId', e.target.value || null)} placeholder="Body type" className="bg-deep-carbon border-iron/30 text-pure-white" />
-          </FormField>
-          <FormField name="colorId" label="Color" error={undefined}>
-            <Input value={formData.colorId ?? ''} onChange={(e) => onFieldChange('colorId', e.target.value || null)} placeholder="Color" className="bg-deep-carbon border-iron/30 text-pure-white" />
-          </FormField>
+          <RelationSelect field="bodyTypeId" label="Body Type" optionsList={options.bodyTypes} formData={formData} onFieldChange={onFieldChange} placeholder="Select body type" />
+          <RelationSelect field="colorId" label="Color" optionsList={options.colors} formData={formData} onFieldChange={onFieldChange} placeholder="Select color" />
         </div>
       );
 
@@ -60,9 +109,7 @@ export function VehicleFormSteps({ step, mode, formData, onFieldChange }: Vehicl
           <FormField name="price" label="Price" error={undefined}>
             <Input type="number" value={formData.price ?? ''} onChange={(e) => onFieldChange('price', e.target.value ? Number(e.target.value) : null)} placeholder="0" className="bg-deep-carbon border-iron/30 text-pure-white" />
           </FormField>
-          <FormField name="currencyId" label="Currency" error={undefined}>
-            <Input value={formData.currencyId ?? ''} onChange={(e) => onFieldChange('currencyId', e.target.value || null)} placeholder="Currency ID" className="bg-deep-carbon border-iron/30 text-pure-white" />
-          </FormField>
+          <RelationSelect field="currencyId" label="Currency" optionsList={options.currencies} formData={formData} onFieldChange={onFieldChange} placeholder="Select currency" />
           <FormField name="auctionGrade" label="Auction Grade" error={undefined}>
             <Input value={formData.auctionGrade ?? ''} onChange={(e) => onFieldChange('auctionGrade', e.target.value || null)} placeholder="e.g. 4.5" className="bg-deep-carbon border-iron/30 text-pure-white" />
           </FormField>
@@ -72,15 +119,9 @@ export function VehicleFormSteps({ step, mode, formData, onFieldChange }: Vehicl
     case 'specs':
       return (
         <div className="grid gap-6 sm:grid-cols-2">
-          <FormField name="fuelTypeId" label="Fuel Type" error={undefined}>
-            <Input value={formData.fuelTypeId ?? ''} onChange={(e) => onFieldChange('fuelTypeId', e.target.value || null)} placeholder="Fuel type" className="bg-deep-carbon border-iron/30 text-pure-white" />
-          </FormField>
-          <FormField name="transmissionId" label="Transmission" error={undefined}>
-            <Input value={formData.transmissionId ?? ''} onChange={(e) => onFieldChange('transmissionId', e.target.value || null)} placeholder="Transmission" className="bg-deep-carbon border-iron/30 text-pure-white" />
-          </FormField>
-          <FormField name="driveTypeId" label="Drive Type" error={undefined}>
-            <Input value={formData.driveTypeId ?? ''} onChange={(e) => onFieldChange('driveTypeId', e.target.value || null)} placeholder="e.g. AWD, FWD" className="bg-deep-carbon border-iron/30 text-pure-white" />
-          </FormField>
+          <RelationSelect field="fuelTypeId" label="Fuel Type" optionsList={options.fuelTypes} formData={formData} onFieldChange={onFieldChange} placeholder="Select fuel type" />
+          <RelationSelect field="transmissionId" label="Transmission" optionsList={options.transmissions} formData={formData} onFieldChange={onFieldChange} placeholder="Select transmission" />
+          <RelationSelect field="driveTypeId" label="Drive Type" optionsList={options.driveTypes} formData={formData} onFieldChange={onFieldChange} placeholder="Select drive type" />
           <FormField name="engineCc" label="Engine (cc)" error={undefined}>
             <Input type="number" value={formData.engineCc ?? ''} onChange={(e) => onFieldChange('engineCc', e.target.value ? Number(e.target.value) : null)} placeholder="e.g. 2000" className="bg-deep-carbon border-iron/30 text-pure-white" />
           </FormField>
@@ -96,12 +137,8 @@ export function VehicleFormSteps({ step, mode, formData, onFieldChange }: Vehicl
           <FormField name="seats" label="Seats" error={undefined}>
             <Input type="number" value={formData.seats ?? ''} onChange={(e) => onFieldChange('seats', e.target.value ? Number(e.target.value) : null)} placeholder="e.g. 5" className="bg-deep-carbon border-iron/30 text-pure-white" />
           </FormField>
-          <FormField name="countryId" label="Country" error={undefined}>
-            <Input value={formData.countryId ?? ''} onChange={(e) => onFieldChange('countryId', e.target.value || null)} placeholder="Country" className="bg-deep-carbon border-iron/30 text-pure-white" />
-          </FormField>
-          <FormField name="portId" label="Port" error={undefined}>
-            <Input value={formData.portId ?? ''} onChange={(e) => onFieldChange('portId', e.target.value || null)} placeholder="Port" className="bg-deep-carbon border-iron/30 text-pure-white" />
-          </FormField>
+          <RelationSelect field="countryId" label="Country" optionsList={options.countries} formData={formData} onFieldChange={onFieldChange} placeholder="Select country" />
+          <RelationSelect field="portId" label="Port" optionsList={options.ports} formData={formData} onFieldChange={onFieldChange} placeholder="Select port" />
         </div>
       );
 

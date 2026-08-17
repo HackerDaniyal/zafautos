@@ -1,12 +1,16 @@
 ﻿import { VehicleListingSection } from '@/components/home/VehicleListingSection';
-import { placeholderVehicles } from '@/data/placeholderVehicles';
+import type { VehicleCardData } from '@/components/marketplace/VehicleCard';
 
-export function BrowseByCountry() {
+interface BrowseByCountryProps {
+  vehicles: VehicleCardData[];
+}
+
+export function BrowseByCountry({ vehicles }: BrowseByCountryProps) {
   return (
     <VehicleListingSection
       title="Browse by Country"
       description="Select your destination country for shipping estimates."
-      vehicles={placeholderVehicles.slice(0, 14)}
+      vehicles={vehicles}
     />
   );
 }

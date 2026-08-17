@@ -8,7 +8,30 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 
-const navItems = [
+interface MenuItem {
+  id: string;
+  label: string;
+  url: string | null;
+  pageSlug: string | null;
+  externalUrl: string | null;
+  openInNewTab: boolean;
+  isEnabled: boolean;
+  displayOrder: number;
+  parentId: string | null;
+}
+
+interface PublicNavbarProps {
+  menuItems?: MenuItem[];
+}
+
+function resolveHref(item: MenuItem): string {
+  if (item.externalUrl) return item.externalUrl;
+  if (item.pageSlug) return `/${item.pageSlug}`;
+  if (item.url) return item.url;
+  return '/';
+}
+
+const DEFAULT_NAV_ITEMS: { name: string; href: string; external?: boolean; openInNewTab?: boolean }[] = [
   { name: 'Home', href: '/' },
   { name: 'Vehicles', href: '/vehicles' },
   { name: 'Compare', href: '/compare' },
@@ -17,7 +40,20 @@ const navItems = [
   { name: 'Contact', href: '/contact' },
 ];
 
-export function PublicNavbar() {
+export function PublicNavbar({ menuItems = [] }: PublicNavbarProps) {
+  const hasMenuItems = menuItems.length > 0;
+  const navItems = hasMenuItems
+    ? menuItems
+        .filter((item) => item.isEnabled && !item.parentId)
+        .sort((a, b) => a.displayOrder - b.displayOrder)
+        .map((item) => ({
+          name: item.label,
+          href: resolveHref(item),
+          external: !!item.externalUrl,
+          openInNewTab: item.openInNewTab,
+        }))
+    : DEFAULT_NAV_ITEMS;
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-iron bg-race-black/95 backdrop-blur supports-[backdrop-filter]:bg-race-black/80">
       <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between px-4 md:px-6 lg:px-8">
@@ -35,13 +71,25 @@ export function PublicNavbar() {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
             {navItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="text-sm font-medium text-ash transition-colors hover:text-pure-white"
-              >
-                {item.name}
-              </Link>
+              item.external ? (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  target={item.openInNewTab ? '_blank' : undefined}
+                  rel={item.openInNewTab ? 'noopener noreferrer' : undefined}
+                  className="text-sm font-medium text-ash transition-colors hover:text-pure-white"
+                >
+                  {item.name}
+                </a>
+              ) : (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className="text-sm font-medium text-ash transition-colors hover:text-pure-white"
+                >
+                  {item.name}
+                </Link>
+              )
             ))}
           </nav>
         </div>
@@ -78,13 +126,25 @@ export function PublicNavbar() {
               </Link>
               <div className="flex flex-col space-y-3">
                 {navItems.map((item) => (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className="text-ash font-medium hover:text-pure-white transition-colors"
-                  >
-                    {item.name}
-                  </Link>
+                  item.external ? (
+                    <a
+                      key={item.name}
+                      href={item.href}
+                      target={item.openInNewTab ? '_blank' : undefined}
+                      rel={item.openInNewTab ? 'noopener noreferrer' : undefined}
+                      className="text-ash font-medium hover:text-pure-white transition-colors"
+                    >
+                      {item.name}
+                    </a>
+                  ) : (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className="text-ash font-medium hover:text-pure-white transition-colors"
+                    >
+                      {item.name}
+                    </Link>
+                  )
                 ))}
                 <div className="h-4" />
                 <Link href="/login" className="w-full">

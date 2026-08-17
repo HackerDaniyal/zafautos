@@ -1,7 +1,13 @@
 'use client';
 
 import { SubEntityPage } from '@/app/(admin)/admin/vehicles/components/sub-entity-page';
-import { listTransmissions, createTransmission, updateTransmission, deleteTransmission } from '@/server/actions/vehicleActions';
+import {
+  listTransmissions,
+  createTransmission,
+  updateTransmission,
+  deleteTransmission,
+  getVehicleLookupCounts,
+} from '@/server/actions/vehicleActions';
 
 export function TransmissionsClient() {
   return (
@@ -9,10 +15,13 @@ export function TransmissionsClient() {
       title="Transmissions"
       description="Vehicle transmission types"
       addActionLabel="Add Transmission"
+      singular="transmission"
       listAction={listTransmissions}
-      createAction={(data) => createTransmission(data)}
-      updateAction={(id, data) => updateTransmission(id, data)}
+      createAction={(data) => createTransmission(data as { name: string })}
+      updateAction={(id, data) => updateTransmission(id, data as { name: string })}
       deleteAction={deleteTransmission}
+      category="transmission"
+      countAction={() => getVehicleLookupCounts('transmission')}
     />
   );
 }

@@ -1,12 +1,16 @@
 ﻿import { VehicleListingSection } from '@/components/home/VehicleListingSection';
-import { placeholderVehicles } from '@/data/placeholderVehicles';
+import type { VehicleCardData } from '@/components/marketplace/VehicleCard';
 
-export function BrowseByYear() {
+interface BrowseByYearProps {
+  vehicles: VehicleCardData[];
+}
+
+export function BrowseByYear({ vehicles }: BrowseByYearProps) {
   return (
     <VehicleListingSection
       title="Browse by Year"
       description="Filter by model year to find the newest or best-value imports."
-      vehicles={placeholderVehicles.slice(0, 14)}
+      vehicles={vehicles}
     />
   );
 }
