@@ -1,5 +1,7 @@
 const postgres = require('postgres');
-const connStr = 'postgresql://postgres.REMOVED_PROJECT_REF:REMOVED_DB_PASS@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres';
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env.local') });
+const connStr = process.env.DATABASE_URL;
+if (!connStr) { console.error('ERROR: DATABASE_URL not set. Copy .env.example to .env.local and fill in values.'); process.exit(1); }
 const client = postgres(connStr, { max: 1, ssl: 'require' });
 
 async function run() {
