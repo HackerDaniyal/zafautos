@@ -139,11 +139,8 @@ export function HomepageClient({
   const filteredContinents = useMemo(() => {
     let result = continents;
 
-    // Filter continents by visibleContinentIds (only if explicitly configured)
-    if (hasContinentConfig) {
-      if (!visibleContinentIds || visibleContinentIds.length === 0) {
-        return [];
-      }
+    // Filter continents by visibleContinentIds (only if explicitly configured AND non-empty)
+    if (hasContinentConfig && visibleContinentIds && visibleContinentIds.length > 0) {
       const continentIdSet = new Set(visibleContinentIds);
       result = result.filter((c) => continentIdSet.has(c.id));
     }
