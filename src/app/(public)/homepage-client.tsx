@@ -103,13 +103,11 @@ export function HomepageClient({
 
   const hasMakeConfig = browseMakeExtra != null && 'visibleMakeIds' in browseMakeExtra;
   const hasCurrencyConfig = browseCurrencyExtra != null && 'visibleCurrencyIds' in browseCurrencyExtra;
-  const hasContinentConfig = browseContinentExtra != null && 'visibleContinentIds' in browseContinentExtra;
   const hasCountryConfig = browseContinentExtra != null && 'visibleCountryIds' in browseContinentExtra;
 
   const visibleMakeIds = browseMakeExtra && 'visibleMakeIds' in browseMakeExtra ? (browseMakeExtra.visibleMakeIds as string[] | undefined) : undefined;
   const visibleCurrencyIds = browseCurrencyExtra && 'visibleCurrencyIds' in browseCurrencyExtra ? (browseCurrencyExtra.visibleCurrencyIds as string[] | undefined) : undefined;
   const defaultCurrencyId = browseCurrencyExtra && 'defaultCurrencyId' in browseCurrencyExtra ? (browseCurrencyExtra.defaultCurrencyId as string | undefined) : undefined;
-  const visibleContinentIds = browseContinentExtra && 'visibleContinentIds' in browseContinentExtra ? (browseContinentExtra.visibleContinentIds as string[] | undefined) : undefined;
   const visibleCountryIds = browseContinentExtra && 'visibleCountryIds' in browseContinentExtra ? (browseContinentExtra.visibleCountryIds as string[] | undefined) : undefined;
 
   // Filter makes: unconfigured → show all; configured empty → show none
@@ -137,29 +135,23 @@ export function HomepageClient({
 
   // Filter continents and their nested countries
   const filteredContinents = useMemo(() => {
-    let result = continents;
+    // Filter countries by visibleCountryIds only — never filter by continent IDs.
+    // Admin selects countries across multiple continents, but may not check all
+    // parent continent checkboxes. Auto-show any continent that has ≥1 visible country.
+    if (!hasCountryConfig) return continents;
 
-    // Filter continents by visibleContinentIds (only if explicitly configured AND non-empty)
-    if (hasContinentConfig && visibleContinentIds && visibleContinentIds.length > 0) {
-      const continentIdSet = new Set(visibleContinentIds);
-      result = result.filter((c) => continentIdSet.has(c.id));
+    if (!visibleCountryIds || visibleCountryIds.length === 0) {
+      return [];
     }
 
-    // Filter countries within each continent by visibleCountryIds (only if explicitly configured)
-    if (hasCountryConfig) {
-      if (!visibleCountryIds || visibleCountryIds.length === 0) {
-        return result.map((continent) => ({ ...continent, countries: [] })).filter((c) => c.countries.length > 0);
-      }
-      const countryIdSet = new Set(visibleCountryIds);
-      result = result.map((continent) => ({
+    const countryIdSet = new Set(visibleCountryIds);
+    return continents
+      .map((continent) => ({
         ...continent,
         countries: continent.countries.filter((country) => countryIdSet.has(country.id)),
-      }));
-    }
-
-    // Remove empty continents (no countries left after filtering)
-    return result.filter((continent) => continent.countries.length > 0);
-  }, [continents, visibleContinentIds, visibleCountryIds, hasContinentConfig, hasCountryConfig]);
+      }))
+      .filter((continent) => continent.countries.length > 0);
+  }, [continents, visibleCountryIds, hasCountryConfig]);
 
   const allVehicles = useMemo(() => [...featuredVehicles, ...latestVehicles], [featuredVehicles, latestVehicles]);
 
