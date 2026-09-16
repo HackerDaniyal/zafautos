@@ -512,10 +512,6 @@ export async function getSimilarPublicVehicles(
 // ── Quick Search Lookups ────────────────────────────────────────────────────
 
 export async function getModelsByManufacturer(manufacturerId: string): Promise<Array<{ id: string; name: string; slug: string }>> {
-  const { db } = await import('@/server/db/client');
-  const { models: modelsTable } = await import('@/server/db/schema');
-  const { eq, and, isNull } = await import('drizzle-orm');
-
   const rows = await db
     .select({ id: modelsTable.id, name: modelsTable.name, slug: modelsTable.slug })
     .from(modelsTable)
