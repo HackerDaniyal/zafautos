@@ -331,6 +331,47 @@ export async function updateAllHomepageSections(
     for (const s of sections) {
       await cmsService.updateSection(s.id, s as any);
     }
+
+    // Auto-assign all active vehicles to newly-added destination countries
+    const continentSection = sections.find((s) => {
+      const ed = s.extraData as Record<string, unknown> | null;
+      return ed != null && 'visibleCountryIds' in ed;
+    });
+    if (continentSection) {
+      const extraData = continentSection.extraData as Record<string, unknown>;
+      const visibleCountryIds = extraData.visibleCountryIds as string[] | undefined;
+      if (visibleCountryIds && visibleCountryIds.length > 0) {
+        const { createServiceRoleClient } = await import('@/lib/supabase/service-role');
+        const supabase = createServiceRoleClient();
+
+        const [vehiclesRes, linksRes] = await Promise.all([
+          supabase.from('vehicles').select('id').is('deleted_at', null).eq('status', 'active'),
+          supabase.from('vehicle_destination_countries').select('vehicle_id, country_id'),
+        ]);
+
+        const vehicleIds = (vehiclesRes.data ?? []).map((v: any) => v.id);
+        const existingSet = new Set(
+          (linksRes.data ?? []).map((l: any) => `${l.vehicle_id}|${l.country_id}`),
+        );
+
+        const newLinks: Array<{ vehicle_id: string; country_id: string }> = [];
+        for (const vid of vehicleIds) {
+          for (const cid of visibleCountryIds) {
+            if (!existingSet.has(`${vid}|${cid}`)) {
+              newLinks.push({ vehicle_id: vid, country_id: cid });
+            }
+          }
+        }
+
+        for (let i = 0; i < newLinks.length; i += 100) {
+          const batch = newLinks.slice(i, i + 100);
+          if (batch.length > 0) {
+            await supabase.from('vehicle_destination_countries').insert(batch);
+          }
+        }
+      }
+    }
+
     await auditService.logAction({
       action: 'cms.sections.bulk_updated',
       entityType: 'homepage_section',
@@ -339,7 +380,7 @@ export async function updateAllHomepageSections(
       changes: { count: { old: null, new: sections.length } },
     });
     revalidatePath('/');
-    return { success: true };
+    return { success: true, data: undefined };
   } catch (error) {
     return handleError(error);
   }
