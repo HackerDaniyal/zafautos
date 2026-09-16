@@ -101,6 +101,24 @@ async function resolveIds(
   return ids.length > 0 ? ids : undefined;
 }
 
+async function resolveIdsBySlug(
+  table: any,
+  slugs: string[] | undefined,
+): Promise<string[] | undefined> {
+  if (!slugs || slugs.length === 0) return undefined;
+  const rows = await db
+    .select({ id: table.id })
+    .from(table)
+    .where(
+      and(
+        sql`${table.deletedAt} IS NULL`,
+        sql`${table.slug} IN ${slugs}`,
+      ),
+    );
+  const ids = rows.map((r) => r.id as string);
+  return ids.length > 0 ? ids : undefined;
+}
+
 async function resolveModelIdsByManufacturer(
   modelNames: string[] | undefined,
   manufacturerIds: string[] | undefined,
@@ -109,6 +127,26 @@ async function resolveModelIdsByManufacturer(
   const conditions: any[] = [
     sql`${modelsTable.deletedAt} IS NULL`,
     sql`${modelsTable.name} IN ${modelNames}`,
+  ];
+  if (manufacturerIds && manufacturerIds.length > 0) {
+    conditions.push(sql`${modelsTable.manufacturerId} IN ${manufacturerIds}`);
+  }
+  const rows = await db
+    .select({ id: modelsTable.id })
+    .from(modelsTable)
+    .where(and(...conditions));
+  const ids = rows.map((r) => r.id as string);
+  return ids.length > 0 ? ids : undefined;
+}
+
+async function resolveModelIdsBySlug(
+  modelSlugs: string[] | undefined,
+  manufacturerIds: string[] | undefined,
+): Promise<string[] | undefined> {
+  if (!modelSlugs || modelSlugs.length === 0) return undefined;
+  const conditions: any[] = [
+    sql`${modelsTable.deletedAt} IS NULL`,
+    sql`${modelsTable.slug} IN ${modelSlugs}`,
   ];
   if (manufacturerIds && manufacturerIds.length > 0) {
     conditions.push(sql`${modelsTable.manufacturerId} IN ${manufacturerIds}`);
@@ -162,14 +200,14 @@ export async function getPublicVehicles(
   } = params;
 
   const [manufacturerIds, bodyTypeIds, fuelTypeIds, transmissionIds, countryIds] = await Promise.all([
-    resolveIds(manufacturers, makes),
+    resolveIdsBySlug(manufacturers, makes),
     resolveIds(bodyTypesTable, bodyTypes),
     resolveIds(fuelTypesTable, fuelTypes),
     resolveIds(transmissionsTable, transmissions),
     resolveIds(countriesTable, countries),
   ]);
 
-  const modelIds = await resolveModelIdsByManufacturer(modelNames, manufacturerIds);
+  const modelIds = await resolveModelIdsBySlug(modelNames, manufacturerIds);
 
   // If destination country filter is applied, get vehicle IDs that have those destinations
   let destinationVehicleIds: string[] | undefined;
