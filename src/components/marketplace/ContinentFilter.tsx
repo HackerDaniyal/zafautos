@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { Globe } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -9,6 +10,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import type { HomepageContinent } from '@/lib/homepage-data';
+import { getCountryFlagPath } from '@/lib/country-flags';
 
 export interface Country {
   code: string;
@@ -31,15 +33,25 @@ interface ContinentFilterProps {
   variant?: 'default' | 'sidebar';
 }
 
-function CountryFlag({ src, size = 40 }: { src: string; size?: number }) {
+function CountryFlag({ src, name, slug, size = 40 }: { src: string; name?: string; slug?: string; size?: number }) {
+  const [imgFailed, setImgFailed] = React.useState(false);
+  const resolvedSrc = src || (name ? getCountryFlagPath(name, slug) : null);
+  if (!resolvedSrc || imgFailed) {
+    return (
+      <div className="w-[44px] h-[44px] rounded-full bg-gray-100 flex items-center justify-center">
+        <Globe className="w-5 h-5 text-gray-400" />
+      </div>
+    );
+  }
   return (
     <img
-      src={src}
+      src={resolvedSrc}
       alt=""
       width={size}
       height={size}
       className="rounded-full object-cover shadow-sm"
       loading="lazy"
+      onError={() => setImgFailed(true)}
     />
   );
 }
@@ -59,7 +71,7 @@ export function ContinentFilter({
     countries: c.countries.map((co) => ({
       code: co.slug,
       name: co.name,
-      flag: co.flagImage ?? '',
+      flag: co.flagImage || getCountryFlagPath(co.name, co.slug) || '',
       count: co.count,
     })),
   }));
@@ -151,10 +163,10 @@ export function ContinentFilter({
                         )}
                       >
                         {country.flag ? (
-                          <CountryFlag src={country.flag} size={44} />
+                          <CountryFlag src={country.flag} name={country.name} slug={country.code} size={44} />
                         ) : (
-                          <div className="w-[44px] h-[44px] rounded-full bg-gray-100 flex items-center justify-center text-xl">
-                            🌍
+                          <div className="w-[44px] h-[44px] rounded-full bg-gray-100 flex items-center justify-center">
+                            <Globe className="w-5 h-5 text-gray-400" />
                           </div>
                         )}
                         <span className={cn(

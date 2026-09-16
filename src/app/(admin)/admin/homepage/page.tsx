@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import { requireAuth } from '@/lib/auth';
+import { getHomepageData } from '@/lib/homepage-data';
 import { HomepageClient } from './client';
 
 export const metadata: Metadata = {
-  title: 'Homepage Sections | ZafAutos Admin',
+  title: 'Homepage Builder | ZafAutos Admin',
 };
 
 export default async function HomepageSectionsPage() {
   await requireAuth();
-  return <HomepageClient />;
+  const data = await getHomepageData();
+  return <HomepageClient homepageData={data} />;
 }

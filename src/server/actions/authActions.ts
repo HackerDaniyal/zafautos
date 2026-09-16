@@ -6,6 +6,7 @@ import { AuthRepository } from '@/server/repositories';
 import { profiles } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
+import { cookies } from 'next/headers';
 import {
   loginSchema,
   registerSchema,
@@ -20,6 +21,25 @@ import {
 } from '@/lib/auth/validation';
 
 const userService = new UserProvisioningService();
+
+const ROLE_COOKIE = 'zaf_role';
+const ROLE_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+
+async function setRoleCookie(role: string) {
+  const store = await cookies();
+  store.set(ROLE_COOKIE, role, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: ROLE_COOKIE_MAX_AGE,
+  });
+}
+
+async function clearRoleCookie() {
+  const store = await cookies();
+  store.set(ROLE_COOKIE, '', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 0 });
+}
 
 /**
  * Sign in with email and password.
@@ -48,6 +68,8 @@ export async function login(data: LoginInput): Promise<ActionResult<{ role: stri
 
     const dbUser = await userService.findUserById(authData.user.id);
     const role = (dbUser?.role as string) ?? 'customer';
+
+    try { await setRoleCookie(role); } catch { /* non-fatal */ }
 
     return { success: true, data: { role } };
   } catch (error) {
@@ -82,6 +104,8 @@ export async function register(data: RegisterInput): Promise<ActionResult> {
       };
     }
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: validated.email,
       password: validated.password,
@@ -90,6 +114,7 @@ export async function register(data: RegisterInput): Promise<ActionResult> {
           first_name: validated.firstName,
           last_name: validated.lastName,
         },
+        emailRedirectTo: `${appUrl}/auth/callback`,
       },
     });
 
@@ -110,6 +135,8 @@ export async function register(data: RegisterInput): Promise<ActionResult> {
       firstName: validated.firstName,
       lastName: validated.lastName,
     });
+
+    try { await setRoleCookie('customer'); } catch { /* non-fatal */ }
 
     return { success: true, data: undefined };
   } catch (error) {
@@ -136,6 +163,8 @@ export async function logout(): Promise<ActionResult> {
     if (error) {
       return { success: false, error: error.message, code: 'AUTH_ERROR' };
     }
+
+    try { await clearRoleCookie(); } catch { /* non-fatal */ }
 
     return { success: true, data: undefined };
   } catch (error) {

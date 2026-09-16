@@ -17,10 +17,21 @@ interface CurrencyContextValue extends CurrencyState {
 
 const CurrencyContext = createContext<CurrencyContextValue | null>(null);
 
+const FALLBACK_CURRENCY = { code: 'USD', symbol: '$', name: 'US Dollar', exchangeRate: 1 };
+const FALLBACK_RATES: Record<string, number> = { USD: 1 };
+
+const fallbackValue: CurrencyContextValue = {
+  selectedCurrency: 'USD',
+  currencies: [FALLBACK_CURRENCY],
+  rates: FALLBACK_RATES,
+  setSelectedCurrency: () => {},
+  convertPrice: (basePrice: number) => basePrice,
+  formatConvertedPrice: (basePrice: number) => `$${basePrice.toLocaleString('en-US')}`,
+};
+
 export function useCurrency() {
   const ctx = useContext(CurrencyContext);
-  if (!ctx) throw new Error('useCurrency must be used within CurrencyProvider');
-  return ctx;
+  return ctx ?? fallbackValue;
 }
 
 interface CurrencyProviderProps {

@@ -1,4 +1,5 @@
 import { requireAuth } from '@/lib/auth';
+import { requireRole } from '@/lib/auth/rbac';
 import { getProfileByUserId } from '@/server/actions/authActions';
 import type { Metadata } from 'next';
 
@@ -8,6 +9,7 @@ export const metadata: Metadata = {
 
 export default async function CustomerDashboardPage() {
   const auth = await requireAuth();
+  requireRole(auth, 'customer');
 
   const profileResult = await getProfileByUserId(auth.userId);
   const profile = profileResult.success ? profileResult.data : null;

@@ -6,6 +6,23 @@ import { fetchHomepageContinents, type HomepageContinent } from '@/lib/homepage-
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://zafautos.com';
 
+async function getCurrencyData() {
+  try {
+    const { currencies: currenciesTable } = await import('@/server/db/schema');
+    const { db } = await import('@/server/db/client');
+    const { eq } = await import('drizzle-orm');
+    const rows = await db.select().from(currenciesTable).where(eq(currenciesTable.isActive, true));
+    const exchangeRates: Record<string, number> = { USD: 1 };
+    const list = rows.map((r) => {
+      exchangeRates[r.code] = r.exchangeRate ?? 1;
+      return { code: r.code, symbol: r.symbol, name: r.name, exchangeRate: r.exchangeRate ?? 1 };
+    });
+    return { currencies: list, exchangeRates };
+  } catch {
+    return { currencies: [], exchangeRates: { USD: 1 } };
+  }
+}
+
 function parseArrayParam(value: string | undefined): string[] | undefined {
   if (!value) return undefined;
   const decoded = decodeURIComponent(value);
@@ -116,6 +133,7 @@ async function VehiclesContent({ searchParams }: VehiclesPageProps) {
       destinationCountryIds = [rows[0].id];
     } else {
       const continents = await fetchHomepageContinents();
+      const { currencies, exchangeRates } = await getCurrencyData();
       return (
         <VehiclesPageClient
           initialVehicles={[]}
@@ -127,6 +145,8 @@ async function VehiclesContent({ searchParams }: VehiclesPageProps) {
           initialSearch={params.q ?? ''}
           initialQueryParams={params}
           initialContinents={continents}
+          initialCurrencies={currencies}
+          initialExchangeRates={exchangeRates}
         />
       );
     }
@@ -153,6 +173,7 @@ async function VehiclesContent({ searchParams }: VehiclesPageProps) {
 
   const data = await getPublicVehicles(filters);
   const continents = await fetchHomepageContinents();
+  const { currencies, exchangeRates } = await getCurrencyData();
 
   return (
     <VehiclesPageClient
@@ -165,6 +186,8 @@ async function VehiclesContent({ searchParams }: VehiclesPageProps) {
       initialSearch={filters.search ?? ''}
       initialQueryParams={params}
       initialContinents={continents}
+      initialCurrencies={currencies}
+      initialExchangeRates={exchangeRates}
     />
   );
 }

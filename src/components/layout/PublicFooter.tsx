@@ -96,7 +96,7 @@ export function PublicFooter({ menuItems = [], company }: PublicFooterProps) {
                     href={url || '#'}
                     target={url ? '_blank' : undefined}
                     rel={url ? 'noopener noreferrer' : undefined}
-                    className="h-9 w-9 rounded-full bg-white/10 hover:bg-signal-red flex items-center justify-center text-gray-300 hover:text-white transition-colors"
+                    className="h-9 w-9 rounded-full bg-white/10 hover:bg-signal-red flex items-center justify-center text-gray-400 hover:text-white transition-colors"
                     aria-label={platform.label}
                   >
                     {platform.icon}
@@ -116,7 +116,7 @@ export function PublicFooter({ menuItems = [], company }: PublicFooterProps) {
                     return href.startsWith('/vehicles') || href === '/';
                   }).slice(0, 4).map((item) => (
                     <li key={item.id}>
-                      <Link href={resolveHref(item)} className="hover:text-white transition-colors">
+                      <Link href={resolveHref(item)}                         className="hover:text-white transition-colors">
                         {item.label}
                       </Link>
                     </li>
@@ -131,7 +131,7 @@ export function PublicFooter({ menuItems = [], company }: PublicFooterProps) {
                     return !href.startsWith('/vehicles') && href !== '/';
                   }).slice(0, 4).map((item) => (
                     <li key={item.id}>
-                      <Link href={resolveHref(item)} className="hover:text-white transition-colors">
+                      <Link href={resolveHref(item)}                         className="hover:text-white transition-colors">
                         {item.label}
                       </Link>
                     </li>
@@ -146,7 +146,7 @@ export function PublicFooter({ menuItems = [], company }: PublicFooterProps) {
                 <ul className="space-y-3 text-sm text-gray-400">
                   {DEFAULT_MARKETPLACE_LINKS.map((link) => (
                     <li key={link.href}>
-                      <Link href={link.href} className="hover:text-white transition-colors">{link.label}</Link>
+                      <Link href={link.href}                         className="hover:text-white transition-colors">{link.label}</Link>
                     </li>
                   ))}
                 </ul>
@@ -156,7 +156,7 @@ export function PublicFooter({ menuItems = [], company }: PublicFooterProps) {
                 <ul className="space-y-3 text-sm text-gray-400">
                   {DEFAULT_COMPANY_LINKS.map((link) => (
                     <li key={link.href}>
-                      <Link href={link.href} className="hover:text-white transition-colors">{link.label}</Link>
+                      <Link href={link.href}                         className="hover:text-white transition-colors">{link.label}</Link>
                     </li>
                   ))}
                 </ul>
@@ -166,7 +166,7 @@ export function PublicFooter({ menuItems = [], company }: PublicFooterProps) {
                 <ul className="space-y-3 text-sm text-gray-400">
                   {DEFAULT_SUPPORT_LINKS.map((link) => (
                     <li key={link.href}>
-                      <Link href={link.href} className="hover:text-white transition-colors">{link.label}</Link>
+                      <Link href={link.href}                         className="hover:text-white transition-colors">{link.label}</Link>
                     </li>
                   ))}
                 </ul>
@@ -192,9 +192,9 @@ export function PublicFooter({ menuItems = [], company }: PublicFooterProps) {
               </a>
             </div>
             <div className="flex gap-4 text-sm text-gray-400">
-              <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-              <Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy</Link>
-              <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
+              <Link href="/terms"                         className="hover:text-white transition-colors">Terms</Link>
+              <Link href="/privacy-policy"                         className="hover:text-white transition-colors">Privacy</Link>
+              <Link href="/contact"                         className="hover:text-white transition-colors">Contact</Link>
             </div>
           </div>
         </div>

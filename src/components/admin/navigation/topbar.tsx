@@ -22,7 +22,7 @@ function Topbar({ onMenuClick }: TopbarProps) {
   });
 
   return (
-    <header className="flex items-center justify-between border-b border-iron/30 bg-deep-carbon px-4 py-3 lg:px-6">
+    <header className="flex items-center justify-between border-b border-white/10 bg-[#111111] px-4 py-3 lg:px-6">
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"

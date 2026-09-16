@@ -1,8 +1,21 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { UserProvisioningService } from '@/server/services/userProvisioningService';
+import { cookies } from 'next/headers';
 
 const userService = new UserProvisioningService();
+
+function getDashboardForRole(role: string): string {
+  switch (role) {
+    case 'super_admin':
+    case 'admin':
+      return '/admin';
+    case 'dealer':
+      return '/dealer';
+    default:
+      return '/customer';
+  }
+}
 
 /**
  * Handles the Supabase Auth callback after email verification.
@@ -15,11 +28,15 @@ const userService = new UserProvisioningService();
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/';
+  const next = searchParams.get('next');
 
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (error) {
+      console.error('[Auth Callback] exchangeCodeForSession failed:', error.message);
+    }
 
     if (!error) {
       const {
@@ -46,17 +63,32 @@ export async function GET(request: Request) {
             // and cannot be deleted (exchangeCodeForSession already succeeded).
           }
         }
-      }
 
-      const forwardedHost = request.headers.get('x-forwarded-host');
-      const isLocalEnv = process.env.NODE_ENV === 'development';
+        // Set role cookie for middleware portal guard
+        const dbUser = await userService.findUserById(user.id);
+        const role = (dbUser?.role as string) ?? 'customer';
+        const store = await cookies();
+        store.set('zaf_role', role, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 60 * 60 * 24 * 7,
+        });
 
-      if (isLocalEnv) {
-        return NextResponse.redirect(`${origin}${next}`);
-      } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${next}`);
-      } else {
-        return NextResponse.redirect(`${origin}${next}`);
+        // Redirect to the correct portal for their role
+        const destination = next || getDashboardForRole(role);
+
+        const forwardedHost = request.headers.get('x-forwarded-host');
+        const isLocalEnv = process.env.NODE_ENV === 'development';
+
+        if (isLocalEnv) {
+          return NextResponse.redirect(`${origin}${destination}`);
+        } else if (forwardedHost) {
+          return NextResponse.redirect(`https://${forwardedHost}${destination}`);
+        } else {
+          return NextResponse.redirect(`${origin}${destination}`);
+        }
       }
     }
   }

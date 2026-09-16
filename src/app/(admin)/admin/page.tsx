@@ -1,4 +1,5 @@
 import { requireAuth } from '@/lib/auth';
+import { requireRole } from '@/lib/auth/rbac';
 import { StatCard } from '@/components/admin/ui/stat-card';
 import type { Metadata } from 'next';
 import { getDashboardStats } from '@/server/actions/dashboardStatsActions';
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
 
 export default async function AdminDashboardPage() {
   const auth = await requireAuth();
+  requireRole(auth, 'admin', 'super_admin');
 
   const profileResult = await getProfileByUserId(auth.userId);
   const profile = profileResult.success ? profileResult.data : null;

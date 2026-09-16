@@ -55,7 +55,7 @@ export function PublicNavbar({ menuItems = [] }: PublicNavbarProps) {
     : DEFAULT_NAV_ITEMS;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#0A0A0A]/95 backdrop-blur supports-[backdrop-filter]:bg-[#0A0A0A]/80">
+    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#0A0A0A] backdrop-blur supports-[backdrop-filter]:bg-[#0A0A0A]/95">
       <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between px-4 md:px-6 lg:px-8">
         {/* Logo */}
         <div className="flex gap-6 md:gap-10">
@@ -77,7 +77,7 @@ export function PublicNavbar({ menuItems = [] }: PublicNavbarProps) {
                   href={item.href}
                   target={item.openInNewTab ? '_blank' : undefined}
                   rel={item.openInNewTab ? 'noopener noreferrer' : undefined}
-                  className="text-sm font-medium text-gray-400 transition-colors hover:text-white"
+                  className="text-sm font-medium text-gray-300 transition-colors hover:text-white"
                 >
                   {item.name}
                 </a>
@@ -85,7 +85,7 @@ export function PublicNavbar({ menuItems = [] }: PublicNavbarProps) {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className="text-sm font-medium text-gray-400 transition-colors hover:text-white"
+                  className="text-sm font-medium text-gray-300 transition-colors hover:text-white"
                 >
                   {item.name}
                 </Link>
@@ -97,7 +97,7 @@ export function PublicNavbar({ menuItems = [] }: PublicNavbarProps) {
         {/* CTA & Mobile Nav */}
         <div className="flex items-center gap-3">
           <Link href="/login" className="hidden md:block">
-            <Button variant="ghost" className="text-gray-400 hover:text-white hover:bg-white/10">
+            <Button variant="ghost" className="text-gray-300 hover:text-white hover:bg-white/10">
               Login
             </Button>
           </Link>
@@ -132,7 +132,7 @@ export function PublicNavbar({ menuItems = [] }: PublicNavbarProps) {
                       href={item.href}
                       target={item.openInNewTab ? '_blank' : undefined}
                       rel={item.openInNewTab ? 'noopener noreferrer' : undefined}
-                      className="text-gray-400 font-medium hover:text-white transition-colors"
+                      className="text-gray-300 font-medium hover:text-white transition-colors"
                     >
                       {item.name}
                     </a>
@@ -140,7 +140,7 @@ export function PublicNavbar({ menuItems = [] }: PublicNavbarProps) {
                     <Link
                       key={item.name}
                       href={item.href}
-                      className="text-gray-400 font-medium hover:text-white transition-colors"
+                      className="text-gray-300 font-medium hover:text-white transition-colors"
                     >
                       {item.name}
                     </Link>

@@ -322,6 +322,29 @@ export async function updateHomepageSection(id: string, data: Record<string, unk
   }
 }
 
+export async function updateAllHomepageSections(
+  sections: Array<{ id: string; isEnabled: boolean; displayOrder: number; title: string | null; subtitle: string | null; content: string | null; imageUrl: string | null; extraData: Record<string, unknown> | null }>,
+): Promise<ActionResult> {
+  try {
+    const auth = await requireAuth();
+    await requirePermission(auth, 'cms.update');
+    for (const s of sections) {
+      await cmsService.updateSection(s.id, s as any);
+    }
+    await auditService.logAction({
+      action: 'cms.sections.bulk_updated',
+      entityType: 'homepage_section',
+      entityId: 'bulk',
+      entityLabel: `${sections.length} sections`,
+      changes: { count: { old: null, new: sections.length } },
+    });
+    revalidatePath('/');
+    return { success: true };
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
 export async function deleteHomepageSection(id: string): Promise<ActionResult> {
   try {
     const auth = await requireAuth();
@@ -969,6 +992,92 @@ export async function getHomepageSections(): Promise<ActionResult> {
   try {
     const data = await cmsService.getActiveHomepageSections();
     return { success: true, data };
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+// ── Homepage Builder Config Data ──────────────────────────────────────────────
+
+export async function getHomepageConfigData(): Promise<ActionResult> {
+  try {
+    const auth = await requireAuth();
+    await requirePermission(auth, 'cms.update');
+    const { createServiceRoleClient } = await import('@/lib/supabase/service-role');
+    const supabase = createServiceRoleClient();
+
+    const [currenciesRes, manufacturersRes, continentsRes, countriesRes, vehicleCountsRes] = await Promise.all([
+      supabase.from('currencies').select('id, code, name, symbol, is_active').order('display_order'),
+      supabase.from('manufacturers').select('id, name, logo_url, is_active').order('display_order').order('name'),
+      supabase.from('continents').select('id, name, slug, is_active').order('display_order'),
+      supabase.from('countries').select('id, name, slug, flag_image, continent_id, is_active').order('display_order').order('name'),
+      supabase.from('vehicles').select('manufacturer_id').is('deleted_at', null).eq('status', 'active'),
+    ]);
+
+    const countMap = new Map<string, number>();
+    (vehicleCountsRes.data ?? []).forEach((v: any) => {
+      countMap.set(v.manufacturer_id, (countMap.get(v.manufacturer_id) ?? 0) + 1);
+    });
+
+    return {
+      success: true,
+      data: {
+        currencies: currenciesRes.data ?? [],
+        manufacturers: (manufacturersRes.data ?? []).map((m: any) => ({
+          id: m.id, name: m.name, logo_url: m.logo_url, is_active: m.is_active, count: countMap.get(m.id) ?? 0,
+        })),
+        continents: continentsRes.data ?? [],
+        countries: countriesRes.data ?? [],
+      },
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+const ALLOWED_LOOKUP_TABLES = new Set(['body_types', 'fuel_types', 'transmissions', 'drive_types']);
+
+export async function getHomepageLookupData(tableName: string): Promise<ActionResult> {
+  try {
+    if (!ALLOWED_LOOKUP_TABLES.has(tableName)) throw new Error('Invalid table');
+    const auth = await requireAuth();
+    await requirePermission(auth, 'cms.update');
+    const { createServiceRoleClient } = await import('@/lib/supabase/service-role');
+    const supabase = createServiceRoleClient();
+    const { data, error } = await supabase.from(tableName).select('id, name, is_active').order('display_order').order('name');
+    if (error) throw error;
+    return { success: true, data: (data ?? []).map((r: any) => ({ id: r.id, name: r.name, isActive: r.is_active })) };
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+export async function toggleHomepageLookupItem(tableName: string, id: string, isActive: boolean): Promise<ActionResult> {
+  try {
+    if (!ALLOWED_LOOKUP_TABLES.has(tableName)) throw new Error('Invalid table');
+    const auth = await requireAuth();
+    await requirePermission(auth, 'cms.update');
+    const { createServiceRoleClient } = await import('@/lib/supabase/service-role');
+    const supabase = createServiceRoleClient();
+    const { error } = await supabase.from(tableName).update({ is_active: isActive, updated_at: new Date().toISOString() }).eq('id', id);
+    if (error) throw error;
+    return { success: true, data: undefined };
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+export async function reorderHomepageLookupItems(tableName: string, orderedIds: string[]): Promise<ActionResult> {
+  try {
+    if (!ALLOWED_LOOKUP_TABLES.has(tableName)) throw new Error('Invalid table');
+    const auth = await requireAuth();
+    await requirePermission(auth, 'cms.update');
+    const { createServiceRoleClient } = await import('@/lib/supabase/service-role');
+    const supabase = createServiceRoleClient();
+    for (let i = 0; i < orderedIds.length; i++) {
+      await supabase.from(tableName).update({ display_order: i, updated_at: new Date().toISOString() }).eq('id', orderedIds[i]);
+    }
+    return { success: true, data: undefined };
   } catch (error) {
     return handleError(error);
   }

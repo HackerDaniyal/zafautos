@@ -15,7 +15,7 @@ export default function AdminPortalLayout({
   const [collapsed, setCollapsed] = React.useState(false);
 
   return (
-    <div className="flex min-h-screen bg-race-black">
+    <div className="admin-theme flex min-h-screen">
       <ToastProvider />
       {/* Mobile overlay */}
       {sidebarOpen && (
@@ -34,7 +34,7 @@ export default function AdminPortalLayout({
       </div>
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="flex flex-1 flex-col min-w-0 bg-race-black">
         <Topbar onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 p-4 lg:p-6 overflow-auto">
           {children}

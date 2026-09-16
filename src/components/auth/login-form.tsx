@@ -58,7 +58,6 @@ function LoginForm() {
         const dashboard = await getDefaultDashboard();
         router.push(dashboard.success ? dashboard.data.path : '/customer');
       }
-      router.refresh();
     } catch {
       setServerError('An unexpected error occurred. Please try again.');
     } finally {

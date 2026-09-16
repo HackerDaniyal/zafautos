@@ -308,7 +308,6 @@ async function fetchHomepageMakes(): Promise<HomepageMake[]> {
 }
 
 export async function fetchHomepageContinents(): Promise<HomepageContinent[]> {
-  // Count vehicles per destination country using the junction table
   const destCounts = await db
     .select({ countryId: vehicleDestinationCountries.countryId, count: sql<number>`count(*)::int` })
     .from(vehicleDestinationCountries)
@@ -316,10 +315,6 @@ export async function fetchHomepageContinents(): Promise<HomepageContinent[]> {
     .where(and(isNull(vehicles.deletedAt), eq(vehicles.status, 'active')))
     .groupBy(vehicleDestinationCountries.countryId);
   const destCountMap = new Map(destCounts.map((c) => [c.countryId, c.count]));
-
-  // Only fetch continents that have at least one active destination country
-  const activeCountryIds = destCounts.map((c) => c.countryId).filter(Boolean) as string[];
-  if (activeCountryIds.length === 0) return [];
 
   const continentRows = await db
     .select({ id: continents.id, name: continents.name, slug: continents.slug })
@@ -336,7 +331,7 @@ export async function fetchHomepageContinents(): Promise<HomepageContinent[]> {
       continentId: countries.continentId,
     })
     .from(countries)
-    .where(and(eq(countries.isActive, true), isNull(countries.deletedAt), inArray(countries.id, activeCountryIds)))
+    .where(and(eq(countries.isActive, true), isNull(countries.deletedAt)))
     .orderBy(countries.displayOrder, countries.name);
 
   return continentRows
@@ -345,7 +340,7 @@ export async function fetchHomepageContinents(): Promise<HomepageContinent[]> {
       name: cont.name,
       slug: cont.slug,
       countries: countryRows
-        .filter((c) => c.continentId === cont.id && (destCountMap.get(c.id) ?? 0) > 0)
+        .filter((c) => c.continentId === cont.id)
         .map((c) => ({ id: c.id, name: c.name, slug: c.slug, flagImage: c.flagImage, count: destCountMap.get(c.id) ?? 0 })),
     }))
     .filter((cont) => cont.countries.length > 0);

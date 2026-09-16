@@ -109,13 +109,13 @@ function Sidebar({ collapsed = false, onNavigate }: SidebarProps) {
   return (
     <aside
       className={cn(
-        'flex h-full flex-col border-r border-iron/30 bg-deep-carbon transition-all',
+        'flex h-full flex-col border-r border-white/10 bg-[#111111] transition-all',
         collapsed ? 'w-16' : 'w-64'
       )}
     >
       {/* Logo */}
       <div className={cn(
-        'flex items-center border-b border-iron/30',
+        'flex items-center border-b border-white/10',
         collapsed ? 'justify-center px-2 py-4' : 'justify-between px-6 py-4'
       )}>
         {!collapsed && (
@@ -185,7 +185,7 @@ function Sidebar({ collapsed = false, onNavigate }: SidebarProps) {
       </nav>
 
       {/* Logout */}
-      <div className="border-t border-iron/30 px-3 py-3">
+      <div className="border-t border-white/10 px-3 py-3">
         <button
           onClick={handleLogout}
           className={cn(

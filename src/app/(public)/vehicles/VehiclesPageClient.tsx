@@ -17,7 +17,8 @@ import { SectionWrapper } from '@/components/layout/ResponsiveLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getPublicVehicles, type PublicVehicleFilters } from '@/server/actions/publicVehicleActions';
-import type { HomepageContinent } from '@/lib/homepage-data';
+import { CurrencyProvider } from '@/contexts/CurrencyContext';
+import type { HomepageContinent, HomepageCurrency } from '@/lib/homepage-data';
 
 type FilterOptions = {
   makes: Array<{ id: string; name: string; count: number }>;
@@ -38,6 +39,8 @@ interface VehiclesPageClientProps {
   initialSearch: string;
   initialQueryParams: Record<string, string | undefined>;
   initialContinents: HomepageContinent[];
+  initialCurrencies?: HomepageCurrency[];
+  initialExchangeRates?: Record<string, number>;
 }
 
 export function VehiclesPageClient({
@@ -50,6 +53,8 @@ export function VehiclesPageClient({
   initialSearch,
   initialQueryParams,
   initialContinents,
+  initialCurrencies = [],
+  initialExchangeRates = { USD: 1 },
 }: VehiclesPageClientProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -270,6 +275,7 @@ export function VehiclesPageClient({
   const endCount = Math.min(initialPage * 12, initialTotal);
 
   return (
+    <CurrencyProvider currencies={initialCurrencies} rates={initialExchangeRates}>
     <>
       <SectionWrapper className="space-y-0 pb-4 pt-6 md:pt-10">
         {/* Page Header */}
@@ -444,5 +450,6 @@ export function VehiclesPageClient({
         </div>
       </SectionWrapper>
     </>
+    </CurrencyProvider>
   );
 }

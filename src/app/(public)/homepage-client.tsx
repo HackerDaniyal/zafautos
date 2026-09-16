@@ -86,6 +86,84 @@ export function HomepageClient({
   const statisticsSection = getSectionByType(sections, 'statistics');
   const testimonialsSection = getSectionByType(sections, 'testimonials');
 
+  // ── Admin CMS visibility filtering ──────────────────────────────────────────
+  // Read extraData from browse_make / browse_currency / browse_continent sections
+  // to filter which items appear in homepage widgets.
+
+  const browseMakeSection = getSectionByType(sections, 'browse_make');
+  const browseCurrencySection = getSectionByType(sections, 'browse_currency');
+  const browseContinentSection = getSectionByType(sections, 'browse_continent');
+
+  // Distinguish "not configured" (show all) from "explicitly empty" (show none).
+  // If the key exists in extraData → explicitly configured (even if empty array).
+  // If the key is absent → legacy/unconfigured → show all.
+  const browseMakeExtra = browseMakeSection?.extraData as Record<string, unknown> | undefined;
+  const browseCurrencyExtra = browseCurrencySection?.extraData as Record<string, unknown> | undefined;
+  const browseContinentExtra = browseContinentSection?.extraData as Record<string, unknown> | undefined;
+
+  const hasMakeConfig = browseMakeExtra != null && 'visibleMakeIds' in browseMakeExtra;
+  const hasCurrencyConfig = browseCurrencyExtra != null && 'visibleCurrencyIds' in browseCurrencyExtra;
+  const hasContinentConfig = browseContinentExtra != null && 'visibleContinentIds' in browseContinentExtra;
+  const hasCountryConfig = browseContinentExtra != null && 'visibleCountryIds' in browseContinentExtra;
+
+  const visibleMakeIds = browseMakeExtra && 'visibleMakeIds' in browseMakeExtra ? (browseMakeExtra.visibleMakeIds as string[] | undefined) : undefined;
+  const visibleCurrencyIds = browseCurrencyExtra && 'visibleCurrencyIds' in browseCurrencyExtra ? (browseCurrencyExtra.visibleCurrencyIds as string[] | undefined) : undefined;
+  const defaultCurrencyId = browseCurrencyExtra && 'defaultCurrencyId' in browseCurrencyExtra ? (browseCurrencyExtra.defaultCurrencyId as string | undefined) : undefined;
+  const visibleContinentIds = browseContinentExtra && 'visibleContinentIds' in browseContinentExtra ? (browseContinentExtra.visibleContinentIds as string[] | undefined) : undefined;
+  const visibleCountryIds = browseContinentExtra && 'visibleCountryIds' in browseContinentExtra ? (browseContinentExtra.visibleCountryIds as string[] | undefined) : undefined;
+
+  // Filter makes: unconfigured → show all; configured empty → show none
+  const filteredMakes = useMemo(() => {
+    if (!hasMakeConfig) return makes;
+    if (!visibleMakeIds || visibleMakeIds.length === 0) return [];
+    const idSet = new Set(visibleMakeIds);
+    return makes.filter((m) => idSet.has(m.id));
+  }, [makes, visibleMakeIds, hasMakeConfig]);
+
+  // Filter currencies: unconfigured → show all; configured empty → show none
+  const filteredCurrencies = useMemo(() => {
+    if (!hasCurrencyConfig) return currencies;
+    if (!visibleCurrencyIds || visibleCurrencyIds.length === 0) return [];
+    const idSet = new Set(visibleCurrencyIds);
+    return currencies.filter((c) => idSet.has(c.id));
+  }, [currencies, visibleCurrencyIds, hasCurrencyConfig]);
+
+  // Resolve defaultCurrencyId (UUID) to currency code for CurrencyProvider
+  const defaultCurrencyCode = useMemo(() => {
+    if (!defaultCurrencyId || filteredCurrencies.length === 0) return 'USD';
+    const match = filteredCurrencies.find((c) => c.id === defaultCurrencyId);
+    return match?.code ?? 'USD';
+  }, [defaultCurrencyId, filteredCurrencies]);
+
+  // Filter continents and their nested countries
+  const filteredContinents = useMemo(() => {
+    let result = continents;
+
+    // Filter continents by visibleContinentIds (only if explicitly configured)
+    if (hasContinentConfig) {
+      if (!visibleContinentIds || visibleContinentIds.length === 0) {
+        return [];
+      }
+      const continentIdSet = new Set(visibleContinentIds);
+      result = result.filter((c) => continentIdSet.has(c.id));
+    }
+
+    // Filter countries within each continent by visibleCountryIds (only if explicitly configured)
+    if (hasCountryConfig) {
+      if (!visibleCountryIds || visibleCountryIds.length === 0) {
+        return result.map((continent) => ({ ...continent, countries: [] })).filter((c) => c.countries.length > 0);
+      }
+      const countryIdSet = new Set(visibleCountryIds);
+      result = result.map((continent) => ({
+        ...continent,
+        countries: continent.countries.filter((country) => countryIdSet.has(country.id)),
+      }));
+    }
+
+    // Remove empty continents (no countries left after filtering)
+    return result.filter((continent) => continent.countries.length > 0);
+  }, [continents, visibleContinentIds, visibleCountryIds, hasContinentConfig, hasCountryConfig]);
+
   const allVehicles = useMemo(() => [...featuredVehicles, ...latestVehicles], [featuredVehicles, latestVehicles]);
 
   const compact33 = useMemo(() => {
@@ -139,7 +217,7 @@ export function HomepageClient({
   }, [faqs, faqSection]);
 
   return (
-    <CurrencyProvider currencies={currencies} rates={exchangeRates}>
+    <CurrencyProvider currencies={filteredCurrencies} rates={exchangeRates} defaultCurrency={defaultCurrencyCode}>
       <div className="bg-white">
         {/* Hero Section */}
         <HeroSection
@@ -179,13 +257,13 @@ export function HomepageClient({
         )}
 
         {/* Quick Search */}
-        <QuickSearch makes={makes} bodyTypes={bodyTypes} />
+        <QuickSearch makes={filteredMakes} bodyTypes={bodyTypes} />
 
         {/* Vehicle Listings with Sidebar */}
         <MainContainer className="pt-6 pb-4 lg:pt-8 lg:pb-4">
           <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr_220px] gap-5 lg:gap-6 items-start">
             {/* Left Sidebar */}
-            <MarketplaceSidebar filters={filters} onFilterChange={setFilters} makes={makes} />
+            <MarketplaceSidebar filters={filters} onFilterChange={setFilters} makes={filteredMakes} />
             <div className="flex flex-col gap-6">
               {/* Compact Vehicle Cards — 6 per row */}
               {compact33.length > 0 && (
@@ -218,7 +296,7 @@ export function HomepageClient({
                   onCountrySelect={(code) =>
                     setFilters({ ...filters, destinationCountry: filters.destinationCountry === code ? '' : code })
                   }
-                  continents={continents}
+                  continents={filteredContinents}
                 />
               </div>
             </aside>
