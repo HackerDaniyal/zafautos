@@ -50,22 +50,22 @@ function FilterSection({
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="border-b border-gray-200 last:border-0">
+    <div className="border-b border-gray-100 last:border-0">
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between py-3 text-left transition-colors hover:text-gray-400"
+        className="flex w-full items-center justify-between py-3 text-left"
       >
         <div className="flex items-center gap-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-600">{title}</h3>
+          <h3 className="text-[13px] font-semibold text-gray-800">{title}</h3>
           {count !== undefined && count > 0 && (
-            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-signal-red px-1 text-[9px] font-bold text-gray-900">
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#E5231B] px-1.5 text-[10px] font-bold text-white">
               {count}
             </span>
           )}
         </div>
         <ChevronDown
           className={cn(
-            'h-3.5 w-3.5 text-gray-500 transition-transform duration-200',
+            'h-4 w-4 text-gray-400 transition-transform duration-200',
             open && 'rotate-180',
           )}
         />
@@ -105,18 +105,50 @@ function CheckboxGroup({
           key={option.id}
           onClick={() => toggle(option.name)}
           className={cn(
-            'rounded-[4px] border px-2.5 py-1 text-[10px] font-medium transition-all duration-150',
+            'rounded-md border px-3 py-1.5 text-[12px] font-medium transition-all duration-150',
             selected.includes(option.name)
-              ? 'border-signal-red bg-signal-red/10 text-gray-900'
-              : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-400 hover:text-gray-600',
+              ? 'border-[#E5231B] bg-[#E5231B]/10 text-[#E5231B]'
+              : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800',
           )}
         >
           {option.name}
           {option.count > 0 && (
-            <span className="ml-1 text-[8px] opacity-60">({option.count})</span>
+            <span className="ml-1 text-[10px] text-gray-400">({option.count})</span>
           )}
         </button>
       ))}
+    </div>
+  );
+}
+
+function PillGroup<T extends string | number>({
+  options,
+  activeValue,
+  onSelect,
+}: {
+  options: Array<{ label: string; value: T }>;
+  activeValue: T;
+  onSelect: (value: T) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((option) => {
+        const isActive = activeValue === option.value;
+        return (
+          <button
+            key={option.label}
+            onClick={() => onSelect(option.value)}
+            className={cn(
+              'rounded-md border px-3 py-1.5 text-[12px] font-medium transition-all duration-150',
+              isActive
+                ? 'border-[#E5231B] bg-[#E5231B] text-white'
+                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800',
+            )}
+          >
+            {option.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -157,11 +189,11 @@ export function FilterSidebar({
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3">
+      <div className="flex items-center justify-between pb-3 border-b border-gray-100">
         <div className="flex items-center gap-2">
-          <h2 className="font-[Oswald] text-sm font-bold uppercase tracking-wider text-gray-900">Filters</h2>
+          <h2 className="text-[15px] font-bold text-gray-900">Filters</h2>
           {activeCount > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-signal-red px-1.5 text-[10px] font-bold text-gray-900">
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#E5231B] px-1.5 text-[10px] font-bold text-white">
               {activeCount}
             </span>
           )}
@@ -171,117 +203,71 @@ export function FilterSidebar({
             variant="ghost"
             size="sm"
             onClick={onReset}
-            className="h-7 gap-1 px-1.5 text-[10px] text-gray-500 hover:text-gray-900 hover:bg-transparent"
+            className="h-7 gap-1.5 px-2 text-[12px] font-medium text-gray-500 hover:text-[#E5231B] hover:bg-transparent"
           >
             <RotateCcw className="h-3 w-3" />
-            Clear
+            Clear All
           </Button>
         )}
       </div>
 
       {/* Scrollable filter sections */}
       <div className="flex-1 overflow-y-auto -mr-2 pr-2 scrollbar-thin">
-        <FilterSection title="Price & Range">
-          <div className="space-y-4">
-            {/* Price */}
-            <div className="space-y-2">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">Price</span>
-              <div className="flex flex-wrap gap-1">
-                {[
-                  { label: 'Any', range: [0, 100000] as [number, number] },
-                  { label: 'Under $5K', range: [0, 5000] as [number, number] },
-                  { label: '$5K–$10K', range: [5000, 10000] as [number, number] },
-                  { label: '$10K–$20K', range: [10000, 20000] as [number, number] },
-                  { label: '$20K–$30K', range: [20000, 30000] as [number, number] },
-                  { label: '$30K–$50K', range: [30000, 50000] as [number, number] },
-                  { label: '$50K+', range: [50000, 100000] as [number, number] },
-                ].map((preset) => {
-                  const isActive = priceRange[0] === preset.range[0] && priceRange[1] === preset.range[1];
-                  return (
-                    <button
-                      key={preset.label}
-                      onClick={() => update({ priceRange: preset.range })}
-                      className={cn(
-                        'rounded-[3px] border px-2 py-[5px] text-[9px] font-medium transition-all duration-150',
-                        isActive
-                          ? 'border-[#E5231B]/60 bg-[#E5231B]/10 text-white'
-                          : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300 hover:text-gray-400'
-                      )}
-                    >
-                      {preset.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="border-t border-gray-200" />
-
-            {/* Year */}
-            <div className="space-y-2">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">Year</span>
-              <div className="flex flex-wrap gap-1">
-                {[
-                  { label: 'Any', range: [2000, 2026] as [number, number] },
-                  { label: '2024+', range: [2024, 2026] as [number, number] },
-                  { label: '2020–2024', range: [2020, 2024] as [number, number] },
-                  { label: '2015–2020', range: [2015, 2020] as [number, number] },
-                  { label: '2010–2015', range: [2010, 2015] as [number, number] },
-                  { label: 'Before 2010', range: [2000, 2010] as [number, number] },
-                ].map((preset) => {
-                  const isActive = yearRange[0] === preset.range[0] && yearRange[1] === preset.range[1];
-                  return (
-                    <button
-                      key={preset.label}
-                      onClick={() => update({ yearRange: preset.range })}
-                      className={cn(
-                        'rounded-[3px] border px-2 py-[5px] text-[9px] font-medium transition-all duration-150',
-                        isActive
-                          ? 'border-[#E5231B]/60 bg-[#E5231B]/10 text-white'
-                          : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300 hover:text-gray-400'
-                      )}
-                    >
-                      {preset.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="border-t border-gray-200" />
-
-            {/* Max Mileage */}
-            <div className="space-y-2">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">Max Mileage</span>
-              <div className="flex flex-wrap gap-1">
-                {[
-                  { label: 'Any', value: 200000 },
-                  { label: '50K km', value: 50000 },
-                  { label: '100K km', value: 100000 },
-                  { label: '150K km', value: 150000 },
-                  { label: '200K km', value: 200000 },
-                ].map((preset) => {
-                  const isActive = mileageMax === preset.value;
-                  return (
-                    <button
-                      key={preset.label}
-                      onClick={() => update({ mileageMax: preset.value })}
-                      className={cn(
-                        'rounded-[3px] border px-2 py-[5px] text-[9px] font-medium transition-all duration-150',
-                        isActive
-                          ? 'border-[#E5231B]/60 bg-[#E5231B]/10 text-white'
-                          : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300 hover:text-gray-400'
-                      )}
-                    >
-                      {preset.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+        {/* Price */}
+        <FilterSection title="Price">
+          <PillGroup
+            activeValue={`${priceRange[0]}-${priceRange[1]}`}
+            onSelect={(val) => {
+              const [min, max] = val.split('-').map(Number);
+              update({ priceRange: [min, max] });
+            }}
+            options={[
+              { label: 'Any', value: '0-100000' },
+              { label: 'Under $5K', value: '0-5000' },
+              { label: '$5K–$10K', value: '5000-10000' },
+              { label: '$10K–$20K', value: '10000-20000' },
+              { label: '$20K–$30K', value: '20000-30000' },
+              { label: '$30K–$50K', value: '30000-50000' },
+              { label: '$50K+', value: '50000-100000' },
+            ]}
+          />
         </FilterSection>
 
+        {/* Year */}
+        <FilterSection title="Year">
+          <PillGroup
+            activeValue={`${yearRange[0]}-${yearRange[1]}`}
+            onSelect={(val) => {
+              const [min, max] = val.split('-').map(Number);
+              update({ yearRange: [min, max] });
+            }}
+            options={[
+              { label: 'Any', value: '2000-2026' },
+              { label: '2024+', value: '2024-2026' },
+              { label: '2020–2024', value: '2020-2024' },
+              { label: '2015–2020', value: '2015-2020' },
+              { label: '2010–2015', value: '2010-2015' },
+              { label: 'Before 2010', value: '2000-2010' },
+            ]}
+          />
+        </FilterSection>
+
+        {/* Max Mileage */}
+        <FilterSection title="Max Mileage">
+          <PillGroup
+            activeValue={mileageMax}
+            onSelect={(val) => update({ mileageMax: val })}
+            options={[
+              { label: 'Any', value: 200000 },
+              { label: '50K km', value: 50000 },
+              { label: '100K km', value: 100000 },
+              { label: '150K km', value: 150000 },
+              { label: '200K km', value: 200000 },
+            ]}
+          />
+        </FilterSection>
+
+        {/* Make */}
         <FilterSection title="Make" count={makes.length}>
           <CheckboxGroup
             options={filterOptions.makes ?? []}
@@ -290,6 +276,7 @@ export function FilterSidebar({
           />
         </FilterSection>
 
+        {/* Model */}
         <FilterSection title="Model" count={models.length}>
           <CheckboxGroup
             options={filterOptions.models ?? []}
@@ -298,6 +285,7 @@ export function FilterSidebar({
           />
         </FilterSection>
 
+        {/* Body Type */}
         <FilterSection title="Body Type" count={bodyTypes.length}>
           <CheckboxGroup
             options={filterOptions.bodyTypes ?? []}
@@ -306,6 +294,7 @@ export function FilterSidebar({
           />
         </FilterSection>
 
+        {/* Fuel Type */}
         <FilterSection title="Fuel Type" count={fuelTypes.length}>
           <CheckboxGroup
             options={filterOptions.fuelTypes ?? []}
@@ -314,6 +303,7 @@ export function FilterSidebar({
           />
         </FilterSection>
 
+        {/* Transmission */}
         <FilterSection title="Transmission" count={transmissions.length}>
           <CheckboxGroup
             options={filterOptions.transmissions ?? []}
@@ -322,6 +312,7 @@ export function FilterSidebar({
           />
         </FilterSection>
 
+        {/* Country */}
         <FilterSection title="Country" count={countries.length}>
           <CheckboxGroup
             options={filterOptions.countries ?? []}
