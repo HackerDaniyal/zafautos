@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import React, { useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { MakeLogo } from '@/components/admin/vehicles/entity-visuals';
 import type { HomepageMake } from '@/lib/homepage-data';
@@ -23,45 +24,26 @@ interface MarketplaceSidebarProps {
 
 function MakeItem({
   make,
-  isSelected,
-  onToggle,
+  onNavigate,
 }: {
   make: { name: string; slug: string; logoUrl: string | null; count: number };
-  isSelected: boolean;
-  onToggle: () => void;
+  onNavigate: (slug: string) => void;
 }) {
   return (
     <button
-      onClick={onToggle}
+      onClick={() => onNavigate(make.slug)}
       className={cn(
-        'group/make flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-all duration-150 w-full',
-        isSelected
-          ? 'border-[#E5231B] bg-[#E5231B]/5'
-          : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+        'group/make flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 transition-all duration-150 w-full',
+        'hover:border-[#E5231B]/40 hover:bg-red-50'
       )}
     >
-      <div className={cn(
-        'h-8 w-8 rounded-full overflow-hidden shrink-0',
-        isSelected && 'ring-1 ring-[#E5231B]/30'
-      )}>
+      <div className="h-8 w-8 rounded-full overflow-hidden shrink-0">
         <MakeLogo name={make.name} url={make.logoUrl} className="h-8 w-8" />
       </div>
-      <span
-        className={cn(
-          'flex-1 text-left text-xs font-bold uppercase tracking-wide',
-          isSelected ? 'text-[#E5231B]' : 'text-gray-800'
-        )}
-      >
+      <span className="flex-1 text-left text-xs font-bold uppercase tracking-wide text-gray-800 group-hover/make:text-[#E5231B] transition-colors">
         {make.name}
       </span>
-      <span
-        className={cn(
-          'rounded-full px-2.5 py-0.5 text-[10px] font-bold tabular-nums shrink-0',
-          isSelected
-            ? 'bg-[#E5231B] text-white'
-            : 'bg-gray-100 text-gray-600'
-        )}
-      >
+      <span className="rounded-full bg-gray-100 text-gray-600 px-2.5 py-0.5 text-[10px] font-bold tabular-nums shrink-0 group-hover/make:bg-[#E5231B] group-hover/make:text-white transition-colors">
         {make.count}
       </span>
     </button>
@@ -69,33 +51,17 @@ function MakeItem({
 }
 
 export function MarketplaceSidebar({ filters, onFilterChange, makes }: MarketplaceSidebarProps) {
+  const router = useRouter();
   const {
     makes: selectedMakes,
     destinationCountry,
   } = filters;
 
-  const update = useCallback(
-    (partial: Partial<SidebarFilterState>) => {
-      onFilterChange({
-        makes: selectedMakes,
-        bodyTypes: [],
-        fuelTypes: [],
-        transmissions: [],
-        priceRange: [0, 100000],
-        yearRange: [2000, 2026],
-        destinationCountry,
-        ...partial,
-      });
+  const navigateToMake = useCallback(
+    (slug: string) => {
+      router.push(`/vehicles?make=${encodeURIComponent(slug)}`);
     },
-    [selectedMakes, destinationCountry, onFilterChange]
-  );
-
-  const toggleMake = useCallback(
-    (make: string) => {
-      const next = selectedMakes.includes(make) ? selectedMakes.filter((m) => m !== make) : [...selectedMakes, make];
-      update({ makes: next });
-    },
-    [selectedMakes, update]
+    [router],
   );
 
   const activeFilters = selectedMakes.length + (destinationCountry ? 1 : 0);
@@ -113,8 +79,7 @@ export function MarketplaceSidebar({ filters, onFilterChange, makes }: Marketpla
                 <MakeItem
                   key={make.slug}
                   make={make}
-                  isSelected={selectedMakes.includes(make.name)}
-                  onToggle={() => toggleMake(make.name)}
+                  onNavigate={navigateToMake}
                 />
               ))}
             </div>
