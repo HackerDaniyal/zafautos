@@ -10,7 +10,7 @@ import {
   countries as countriesTable,
   currencies,
 } from '@/server/db/schema';
-import { and, sql, eq } from 'drizzle-orm';
+import { and, sql, eq, isNull } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 
 const vehicleRepo = new VehicleRepository();
