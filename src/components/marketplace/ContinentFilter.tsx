@@ -97,10 +97,7 @@ export function ContinentFilter({
         )}
       >
         {displayContinents.map((continent) => {
-          const totalCount = continent.countries.reduce(
-            (sum, c) => sum + c.count,
-            0
-          );
+          const countryCount = continent.countries.length;
 
           return (
             <AccordionItem
@@ -135,7 +132,7 @@ export function ContinentFilter({
                         : 'text-[9px] font-sans tracking-normal font-semibold rounded-[3px] border text-gray-500 bg-gray-50 px-2 py-0.5 border-gray-200'
                     )}
                   >
-                    {totalCount}
+                    {countryCount}
                   </span>
                 </div>
               </AccordionTrigger>
