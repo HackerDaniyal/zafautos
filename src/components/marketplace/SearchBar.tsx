@@ -193,9 +193,9 @@ export function SearchBar({
           onFocus={() => setIsFocused(true)}
           placeholder={placeholder}
           className={cn(
-            'w-full rounded-full border border-gray-200 bg-gray-50 py-3 pl-10 pr-10 text-sm text-gray-900 transition-all',
+            'w-full rounded-full border border-gray-200 bg-white py-3 pl-10 pr-10 text-sm text-gray-900 transition-all',
             'placeholder:text-gray-500',
-            'focus:outline-none focus:border-gray-400',
+            'focus:outline-none focus:border-[#E5231B] focus:ring-1 focus:ring-[#E5231B]/20',
             isFocused && showDropdown && 'rounded-b-none border-b-transparent shadow-none'
           )}
         />
@@ -216,7 +216,7 @@ export function SearchBar({
         <div
           id="search-suggestions"
           role="listbox"
-          className="absolute top-full left-0 right-0 z-50 overflow-hidden rounded-b-[10px] border border-gray-200 border-t-0 bg-white animate-in fade-in slide-in-from-top-1"
+          className="absolute top-full left-0 right-0 z-50 overflow-hidden rounded-b-xl border border-gray-200 border-t-0 bg-white shadow-lg animate-in fade-in slide-in-from-top-1"
         >
           <div className="max-h-[60vh] overflow-y-auto p-2">
 

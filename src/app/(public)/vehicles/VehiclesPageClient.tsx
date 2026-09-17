@@ -287,7 +287,7 @@ export function VehiclesPageClient({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <Button variant="outline" className="bg-background shadow-sm hover:bg-muted font-medium text-sm">
+            <Button variant="outline" className="border-gray-200 text-gray-700 shadow-sm hover:bg-gray-50 hover:text-gray-900 font-medium text-sm">
               <BookmarkPlus className="mr-2 h-4 w-4" /> Save Search
             </Button>
           </div>
