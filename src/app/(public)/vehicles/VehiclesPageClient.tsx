@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useCallback, useTransition } from 'react';
+import React, { useState, useCallback, useTransition, useEffect } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { SlidersHorizontal, BookmarkPlus, RotateCcw, Loader2 } from 'lucide-react';
+import { SlidersHorizontal, BookmarkPlus, BookmarkCheck, RotateCcw, Loader2 } from 'lucide-react';
 
 import { SearchBar } from '@/components/marketplace/SearchBar';
 import { FilterSidebar, type FilterState } from '@/components/marketplace/FilterSidebar';
@@ -141,6 +141,41 @@ export function VehiclesPageClient({
     },
     [query, filters, sort, page, destinationCountry],
   );
+
+  const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('zaf_saved_searches');
+      if (!saved) { setIsSaved(false); return; }
+      const searches: Array<{ url: string }> = JSON.parse(saved);
+      const currentUrl = `${pathname}?${buildParams().toString()}`;
+      setIsSaved(searches.some((s) => s.url === currentUrl));
+    } catch {
+      setIsSaved(false);
+    }
+  }, [query, filters, sort, destinationCountry, pathname, buildParams]);
+
+  const handleSaveSearch = () => {
+    try {
+      const saved = localStorage.getItem('zaf_saved_searches');
+      const searches: Array<{ url: string; label: string; date: string }> = saved ? JSON.parse(saved) : [];
+      const currentUrl = `${pathname}?${buildParams().toString()}`;
+      const label = [query, filters.makes?.join(', '), filters.bodyTypes?.join(', ')].filter(Boolean).join(' · ') || 'All vehicles';
+
+      if (isSaved) {
+        const updated = searches.filter((s) => s.url !== currentUrl);
+        localStorage.setItem('zaf_saved_searches', JSON.stringify(updated));
+        setIsSaved(false);
+      } else {
+        searches.unshift({ url: currentUrl, label, date: new Date().toISOString() });
+        localStorage.setItem('zaf_saved_searches', JSON.stringify(searches.slice(0, 10)));
+        setIsSaved(true);
+      }
+    } catch (e) {
+      console.error('Failed to save search', e);
+    }
+  };
 
   // Navigate to new URL (triggers server refetch via searchParams)
   const navigate = useCallback(
@@ -287,8 +322,24 @@ export function VehiclesPageClient({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <Button variant="outline" className="border-gray-200 text-gray-700 shadow-sm hover:bg-gray-50 hover:text-gray-900 font-medium text-sm">
-              <BookmarkPlus className="mr-2 h-4 w-4" /> Save Search
+            <Button
+              variant="outline"
+              onClick={handleSaveSearch}
+              className={`border-gray-200 shadow-sm font-medium text-sm transition-all duration-200 ${
+                isSaved
+                  ? 'bg-[#E5231B]/10 border-[#E5231B]/30 text-[#E5231B] hover:bg-[#E5231B]/20'
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 hover:border-gray-300'
+              }`}
+            >
+              {isSaved ? (
+                <>
+                  <BookmarkCheck className="mr-2 h-4 w-4" /> Saved
+                </>
+              ) : (
+                <>
+                  <BookmarkPlus className="mr-2 h-4 w-4" /> Save Search
+                </>
+              )}
             </Button>
           </div>
         </div>
