@@ -81,8 +81,8 @@ export function PublicFooter({ menuItems = [], company }: PublicFooterProps) {
       <div className="mx-auto max-w-[1280px] px-4 py-12 md:py-16 lg:py-20 md:px-6 lg:px-8">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4 lg:grid-cols-5">
           <div className="col-span-2 lg:col-span-2">
-            <Link href="/" className="mb-4 flex items-center space-x-2">
-              <span className="inline-block font-[Oswald] font-bold text-xl uppercase tracking-wider text-white">{companyName}</span>
+            <Link href="/" className="mb-4 flex items-center">
+              <img src="/logo.png" alt="ZafAutos" className="h-10 w-auto" />
             </Link>
             <p className="mb-6 text-sm text-gray-400 pr-4">
               {companyDescription}

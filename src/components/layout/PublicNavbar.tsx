@@ -59,13 +59,8 @@ export function PublicNavbar({ menuItems = [] }: PublicNavbarProps) {
       <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between px-4 md:px-6 lg:px-8">
         {/* Logo */}
         <div className="flex gap-6 md:gap-10">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded bg-signal-red text-[10px] font-bold text-white">
-              ZA
-            </div>
-            <span className="font-[Oswald] text-lg font-bold uppercase tracking-wide text-white">
-              ZafAutos <span className="text-sm font-medium text-gray-400">Japan</span>
-            </span>
+          <Link href="/" className="flex items-center">
+            <img src="/logo.png" alt="ZafAutos" className="h-10 w-auto" />
           </Link>
 
           {/* Desktop Navigation */}
@@ -116,13 +111,8 @@ export function PublicNavbar({ menuItems = [] }: PublicNavbarProps) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="border-white/10 bg-[#0A0A0A] pr-0">
-              <Link href="/" className="flex items-center space-x-2 mb-8">
-                <div className="flex h-8 w-8 items-center justify-center rounded bg-signal-red text-[10px] font-bold text-white">
-                  ZA
-                </div>
-                <span className="font-[Oswald] text-lg font-bold uppercase tracking-wide text-white">
-                  ZafAutos
-                </span>
+              <Link href="/" className="flex items-center mb-8">
+                <img src="/logo.png" alt="ZafAutos" className="h-10 w-auto" />
               </Link>
               <div className="flex flex-col space-y-3">
                 {navItems.map((item) => (

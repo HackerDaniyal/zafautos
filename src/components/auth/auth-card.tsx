@@ -36,18 +36,8 @@ function AuthCard({ children, title, description, className, footer }: AuthCardP
 
 function AuthLogo() {
   return (
-    <Link href="/" className="flex items-center justify-center gap-2 mb-6">
-      <div className="flex items-center gap-1">
-        <span className="font-display text-2xl font-bold text-signal-red tracking-wider">
-          ZAF
-        </span>
-        <span className="font-display text-2xl font-bold text-pure-white tracking-wider">
-          AUTOS
-        </span>
-      </div>
-      <span className="text-xs text-steel font-medium tracking-widest uppercase">
-        Japan
-      </span>
+    <Link href="/" className="flex items-center justify-center mb-6">
+      <img src="/logo.png" alt="ZafAutos" className="h-12 w-auto" />
     </Link>
   );
 }
