@@ -14,8 +14,8 @@ async function getCurrencyData() {
     const rows = await db.select().from(currenciesTable).where(eq(currenciesTable.isActive, true));
     const exchangeRates: Record<string, number> = { USD: 1 };
     const list = rows.map((r) => {
-      exchangeRates[r.code] = r.exchangeRate ?? 1;
-      return { code: r.code, symbol: r.symbol, name: r.name, exchangeRate: r.exchangeRate ?? 1 };
+      exchangeRates[r.code] = Number(r.exchangeRate) || 1;
+      return { code: r.code, symbol: r.symbol ?? r.code, name: r.name };
     });
     return { currencies: list, exchangeRates };
   } catch {

@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getPublicVehicles, type PublicVehicleFilters } from '@/server/actions/publicVehicleActions';
 import { CurrencyProvider } from '@/contexts/CurrencyContext';
+import { CurrencySwitcher } from '@/components/marketplace/CurrencySwitcher';
 import type { HomepageContinent, HomepageCurrency } from '@/lib/homepage-data';
 
 type FilterOptions = {
@@ -393,6 +394,11 @@ export function VehiclesPageClient({
                   onCountrySelect={handleDestinationCountrySelect}
                   continents={initialContinents}
                 />
+              </div>
+            )}
+            {initialCurrencies && initialCurrencies.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <CurrencySwitcher variant="sidebar" />
               </div>
             )}
           </aside>

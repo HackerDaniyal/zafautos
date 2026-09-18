@@ -28,7 +28,7 @@ export interface HomepageSectionData {
 }
 
 export interface HomepageCurrency {
-  id: string;
+  id?: string;
   code: string;
   name: string;
   symbol: string;

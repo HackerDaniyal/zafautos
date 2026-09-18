@@ -10,7 +10,8 @@ import { VehicleContactForm } from '@/components/marketplace/VehicleContactForm'
 import { SimilarVehicles } from '@/components/marketplace/SimilarVehicles';
 import { type VehicleCardData } from '@/components/marketplace/VehicleCard';
 import { ChequeredDivider } from '@/components/ui/ChequeredDivider';
-import { formatPrice, formatMileage, cn } from '@/lib/utils';
+import { formatMileage, cn } from '@/lib/utils';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import {
   toggleWishlist,
   checkWishlistStatus,
@@ -74,7 +75,8 @@ function SpecBadge({ icon: Icon, label, value }: { icon: React.ElementType; labe
 }
 
 export function VehicleDetailClient({ vehicle, images, features, similar }: VehicleDetailClientProps) {
-  const priceFormatted = formatPrice(vehicle.price, vehicle.currency);
+  const { formatConvertedPrice } = useCurrency();
+  const priceFormatted = formatConvertedPrice(vehicle.price, vehicle.currency);
   const [wishlisted, setWishlisted] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [enquirySubmitted, setEnquirySubmitted] = useState(false);

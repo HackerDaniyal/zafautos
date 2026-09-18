@@ -120,7 +120,7 @@ export function VehicleCard({
 }: VehicleCardProps) {
   const [wishlisted, setWishlisted] = useState(isWishlisted);
   const [compared, setCompared] = useState(isCompared);
-  const { convertPrice } = useCurrency();
+  const { formatConvertedPrice } = useCurrency();
 
   const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -136,7 +136,7 @@ export function VehicleCard({
     onCompareToggle?.(vehicle.id);
   };
 
-  const priceFormatted = convertPrice(vehicle.price, vehicle.currency);
+  const priceFormatted = formatConvertedPrice(vehicle.price, vehicle.currency);
   const mileageFormatted = vehicle.mileage > 0 ? `${formatMileage(vehicle.mileage)} km` : null;
 
   if (variant === 'list') {
@@ -249,28 +249,29 @@ export function VehicleCard({
           </h3>
         </Link>
 
-        <div className="flex items-center gap-1.5 flex-wrap mt-2 text-[10px] leading-none text-gray-400">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-2.5">
           {mileageFormatted && (
-            <>
-              <Gauge className="h-3 w-3 shrink-0" />
-              <span className="tabular-nums">{mileageFormatted}</span>
-              <span className="text-gray-200">·</span>
-            </>
+            <div className="flex items-center gap-1.5">
+              <Gauge className="h-3 w-3 shrink-0 text-gray-400" />
+              <span className="text-[11px] font-medium text-gray-600">{mileageFormatted}</span>
+            </div>
           )}
-          <Fuel className="h-3 w-3 shrink-0" />
-          <span>{vehicle.fuelType}</span>
+          {vehicle.fuelType && (
+            <div className="flex items-center gap-1.5">
+              <Fuel className="h-3 w-3 shrink-0 text-gray-400" />
+              <span className="text-[11px] font-medium text-gray-600">{vehicle.fuelType}</span>
+            </div>
+          )}
           {vehicle.transmission && (
-            <>
-              <span className="text-gray-200">·</span>
-              <span>{vehicle.transmission}</span>
-            </>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-medium text-gray-600">{vehicle.transmission}</span>
+            </div>
           )}
           {vehicle.location && (
-            <>
-              <span className="text-gray-200">·</span>
-              <MapPin className="h-3 w-3 shrink-0" />
-              <span className="truncate">{vehicle.location}</span>
-            </>
+            <div className="flex items-center gap-1.5">
+              <MapPin className="h-3 w-3 shrink-0 text-gray-400" />
+              <span className="text-[11px] font-medium text-gray-600 truncate">{vehicle.location}</span>
+            </div>
           )}
         </div>
 

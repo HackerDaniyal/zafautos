@@ -123,7 +123,7 @@ export function HomepageClient({
     if (!hasCurrencyConfig) return currencies;
     if (!visibleCurrencyIds || visibleCurrencyIds.length === 0) return [];
     const idSet = new Set(visibleCurrencyIds);
-    return currencies.filter((c) => idSet.has(c.id));
+    return currencies.filter((c) => c.id && idSet.has(c.id));
   }, [currencies, visibleCurrencyIds, hasCurrencyConfig]);
 
   // Resolve defaultCurrencyId (UUID) to currency code for CurrencyProvider

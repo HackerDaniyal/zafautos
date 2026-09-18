@@ -17,7 +17,7 @@ interface CurrencyContextValue extends CurrencyState {
 
 const CurrencyContext = createContext<CurrencyContextValue | null>(null);
 
-const FALLBACK_CURRENCY = { code: 'USD', symbol: '$', name: 'US Dollar', exchangeRate: 1 };
+const FALLBACK_CURRENCY = { code: 'USD', symbol: '$', name: 'US Dollar', exchangeRate: 1 } as HomepageCurrency;
 const FALLBACK_RATES: Record<string, number> = { USD: 1 };
 
 const fallbackValue: CurrencyContextValue = {

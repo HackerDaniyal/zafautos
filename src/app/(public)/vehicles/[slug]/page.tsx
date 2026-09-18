@@ -68,7 +68,7 @@ export default async function VehicleDetailPage({ params }: VehicleDetailPagePro
     },
   );
 
-  let currencyData = { currencies: [], exchangeRates: { USD: 1 } };
+  let currencyData: { currencies: Array<{ code: string; symbol: string; name: string }>; exchangeRates: Record<string, number> } = { currencies: [], exchangeRates: { USD: 1 } };
   try {
     const { currencies: currenciesTable } = await import('@/server/db/schema');
     const { db } = await import('@/server/db/client');
@@ -76,8 +76,8 @@ export default async function VehicleDetailPage({ params }: VehicleDetailPagePro
     const rows = await db.select().from(currenciesTable).where(eq(currenciesTable.isActive, true));
     const exchangeRates: Record<string, number> = { USD: 1 };
     const list = rows.map((r) => {
-      exchangeRates[r.code] = r.exchangeRate ?? 1;
-      return { code: r.code, symbol: r.symbol, name: r.name, exchangeRate: r.exchangeRate ?? 1 };
+      exchangeRates[r.code] = Number(r.exchangeRate) || 1;
+      return { code: r.code, symbol: r.symbol ?? r.code, name: r.name };
     });
     currencyData = { currencies: list, exchangeRates };
   } catch { /* fallback */ }
