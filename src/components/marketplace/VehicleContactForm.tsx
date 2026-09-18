@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import React, { useState } from 'react';
-import { Send, Phone, Mail, MessageSquare, MapPin } from 'lucide-react';
+import { Send, Phone, Mail, MessageSquare, MapPin, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,19 +54,21 @@ export function VehicleContactForm({ vehicleId, vehicleTitle, className, onSubmi
 
   if (status === 'success') {
     return (
-      <div className={cn('rounded-[10px] border border-gray-200 bg-white p-6 text-center space-y-3', className)}>
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-900/30">
-          <Send className="h-5 w-5 text-emerald-400" />
+      <div className={cn('rounded-xl border border-gray-200 bg-white p-8 text-center space-y-4 shadow-sm', className)}>
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 ring-1 ring-emerald-200">
+          <CheckCircle2 className="h-7 w-7 text-emerald-500" />
         </div>
-        <h3 className="font-[Oswald] font-bold uppercase tracking-wider text-base text-gray-900">Enquiry Sent!</h3>
-        <p className="text-sm text-gray-600 max-w-xs mx-auto">
-          Thank you for your interest in the <strong>{vehicleTitle}</strong>. We&apos;ll get back to you within 24 hours.
-        </p>
+        <div className="space-y-1.5">
+          <h3 className="font-[Oswald] text-lg font-bold uppercase tracking-wider text-gray-900">Enquiry Sent!</h3>
+          <p className="text-sm text-gray-500 max-w-xs mx-auto leading-relaxed">
+            Thank you for your interest in the <span className="font-medium text-gray-700">{vehicleTitle}</span>. We&apos;ll get back to you within 24 hours.
+          </p>
+        </div>
         <Button
           variant="outline"
           size="sm"
           onClick={() => { setStatus('idle'); setValues((v) => ({ ...v, name: '', email: '', phone: '', country: '' })); }}
-          className="mt-2 border-gray-200 text-gray-900 hover:bg-gray-100"
+          className="mt-2 border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg"
         >
           Send Another Enquiry
         </Button>
@@ -75,19 +77,26 @@ export function VehicleContactForm({ vehicleId, vehicleTitle, className, onSubmi
   }
 
   return (
-    <section id="enquiry-form" className={cn('rounded-[10px] border border-gray-200 bg-white p-5 space-y-4', className)}>
-      <div className="space-y-1">
-        <h2 className="font-[Oswald] text-base font-bold uppercase tracking-wider text-gray-900 flex items-center gap-2">
-          <MessageSquare className="h-4 w-4 text-signal-red" />
-          Enquire About This Vehicle
-        </h2>
-        <p className="text-xs text-gray-600">Our team typically responds within a few hours.</p>
+    <section id="enquiry-form" className={cn('rounded-xl border border-gray-200 bg-white shadow-sm', className)}>
+      {/* Form Header */}
+      <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-signal-red/10">
+            <MessageSquare className="h-4 w-4 text-signal-red" />
+          </div>
+          <div>
+            <h2 className="font-[Oswald] text-[15px] font-bold uppercase tracking-wider text-gray-900">
+              Send an Enquiry
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5">Our team typically responds within a few hours.</p>
+          </div>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3" noValidate>
+      <form onSubmit={handleSubmit} className="p-6 space-y-4" noValidate>
         {/* Name */}
         <div className="space-y-1.5">
-          <Label htmlFor="enquiry-name" className="text-xs">Full Name *</Label>
+          <Label htmlFor="enquiry-name" className="text-xs font-medium text-gray-600">Full Name *</Label>
           <Input
             id="enquiry-name"
             type="text"
@@ -95,83 +104,88 @@ export function VehicleContactForm({ vehicleId, vehicleTitle, className, onSubmi
             value={values.name}
             onChange={set('name')}
             required
-            className="h-9 text-sm bg-gray-50 border-gray-200"
+            className="h-10 text-sm bg-gray-50/80 border-gray-200 rounded-lg focus:border-signal-red focus:ring-signal-red/20 placeholder:text-gray-400"
           />
         </div>
 
         {/* Email */}
         <div className="space-y-1.5">
-          <Label htmlFor="enquiry-email" className="text-xs flex items-center gap-1">
-            <Mail className="h-3 w-3" /> Email *
-          </Label>
-          <Input
-            id="enquiry-email"
-            type="email"
-            placeholder="your@email.com"
-            value={values.email}
-            onChange={set('email')}
-            required
-            className="h-9 text-sm bg-gray-50 border-gray-200"
-          />
-        </div>
-
-        {/* Phone + Country row */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="enquiry-phone" className="text-xs flex items-center gap-1">
-              <Phone className="h-3 w-3" /> Phone
-            </Label>
+          <Label htmlFor="enquiry-email" className="text-xs font-medium text-gray-600">Email *</Label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              id="enquiry-phone"
-              type="tel"
-              placeholder="+1 234 567 890"
-              value={values.phone}
-              onChange={set('phone')}
-              className="h-9 text-sm bg-gray-50 border-gray-200"
+              id="enquiry-email"
+              type="email"
+              placeholder="your@email.com"
+              value={values.email}
+              onChange={set('email')}
+              required
+              className="h-10 text-sm bg-gray-50/80 border-gray-200 rounded-lg pl-9 focus:border-signal-red focus:ring-signal-red/20 placeholder:text-gray-400"
             />
           </div>
+        </div>
+
+        {/* Phone + Country */}
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label htmlFor="enquiry-country" className="text-xs flex items-center gap-1">
-              <MapPin className="h-3 w-3" /> Country
-            </Label>
-            <Input
-              id="enquiry-country"
-              type="text"
-              placeholder="Your country"
-              value={values.country}
-              onChange={set('country')}
-              className="h-9 text-sm bg-gray-50 border-gray-200"
-            />
+            <Label htmlFor="enquiry-phone" className="text-xs font-medium text-gray-600">Phone</Label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                id="enquiry-phone"
+                type="tel"
+                placeholder="+1 234 567 890"
+                value={values.phone}
+                onChange={set('phone')}
+                className="h-10 text-sm bg-gray-50/80 border-gray-200 rounded-lg pl-9 focus:border-signal-red focus:ring-signal-red/20 placeholder:text-gray-400"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="enquiry-country" className="text-xs font-medium text-gray-600">Country</Label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                id="enquiry-country"
+                type="text"
+                placeholder="Your country"
+                value={values.country}
+                onChange={set('country')}
+                className="h-10 text-sm bg-gray-50/80 border-gray-200 rounded-lg pl-9 focus:border-signal-red focus:ring-signal-red/20 placeholder:text-gray-400"
+              />
+            </div>
           </div>
         </div>
 
         {/* Message */}
         <div className="space-y-1.5">
-          <Label htmlFor="enquiry-message" className="text-xs">Message *</Label>
+          <Label htmlFor="enquiry-message" className="text-xs font-medium text-gray-600">Message *</Label>
           <textarea
             id="enquiry-message"
             rows={4}
-            placeholder="Tell us what you are looking for…"
+            placeholder="Tell us what you're looking for..."
             value={values.message}
             onChange={set('message')}
             required
-            className="w-full rounded-[6px] border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 resize-none"
+            className="w-full rounded-lg border border-gray-200 bg-gray-50/80 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-signal-red focus:ring-2 focus:ring-signal-red/20 resize-none transition-colors"
           />
         </div>
 
         {status === 'error' && (
-          <p className="text-xs text-destructive">{errorMsg}</p>
+          <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3">
+            <p className="text-xs text-red-600 font-medium">{errorMsg}</p>
+          </div>
         )}
 
         <Button
           type="submit"
-          className="w-full bg-signal-red hover:bg-deep-red text-gray-900 font-[Oswald] uppercase tracking-wider"
+          className="w-full h-11 bg-signal-red hover:bg-deep-red text-white rounded-lg font-[Oswald] text-sm font-semibold uppercase tracking-wider transition-all duration-200 shadow-sm shadow-signal-red/20 hover:shadow-md hover:shadow-signal-red/30"
           disabled={status === 'loading'}
         >
           {status === 'loading' ? (
             <span className="flex items-center gap-2">
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              Sending…
+              Sending...
             </span>
           ) : (
             <span className="flex items-center gap-2">
@@ -179,6 +193,8 @@ export function VehicleContactForm({ vehicleId, vehicleTitle, className, onSubmi
             </span>
           )}
         </Button>
+
+        <p className="text-center text-[11px] text-gray-400">We respect your privacy. No spam, ever.</p>
       </form>
     </section>
   );
