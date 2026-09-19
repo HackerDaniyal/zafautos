@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Globe } from 'lucide-react';
 import {
@@ -31,6 +32,8 @@ interface ContinentFilterProps {
   onCountrySelect?: (countryCode: string) => void;
   className?: string;
   variant?: 'default' | 'sidebar';
+  /** When true, clicking a country navigates to /vehicles/destination/[slug] instead of filtering */
+  navigationMode?: boolean;
 }
 
 function CountryFlag({ src, name, slug, size = 40 }: { src: string; name?: string; slug?: string; size?: number }) {
@@ -62,6 +65,7 @@ export function ContinentFilter({
   onCountrySelect,
   className,
   variant = 'default',
+  navigationMode = false,
 }: ContinentFilterProps) {
   const [activeCountry, setActiveCountry] = useState<string | undefined>(selectedCountry);
 
@@ -147,18 +151,8 @@ export function ContinentFilter({
                 >
                   {continent.countries.map((country) => {
                     const isActive = activeCountry === country.code;
-                    return (
-                      <button
-                        key={country.code}
-                        onClick={() => handleSelect(country.code)}
-                        className={cn(
-                          'flex flex-col items-center justify-center rounded-xl border-2 p-3 text-center transition-all duration-200',
-                          isSidebar ? '' : '',
-                          isActive
-                            ? 'border-[#E5231B] bg-[#E5231B]/5 shadow-md'
-                            : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
-                        )}
-                      >
+                    const countryContent = (
+                      <>
                         {country.flag ? (
                           <CountryFlag src={country.flag} name={country.name} slug={country.code} size={44} />
                         ) : (
@@ -182,6 +176,36 @@ export function ContinentFilter({
                         >
                           {country.count} {country.count === 1 ? 'Car' : 'Cars'}
                         </span>
+                      </>
+                    );
+
+                    if (navigationMode) {
+                      return (
+                        <Link
+                          key={country.code}
+                          href={`/vehicles/destination/${country.code}`}
+                          className={cn(
+                            'flex flex-col items-center justify-center rounded-xl border-2 p-3 text-center transition-all duration-200',
+                            'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm'
+                          )}
+                        >
+                          {countryContent}
+                        </Link>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={country.code}
+                        onClick={() => handleSelect(country.code)}
+                        className={cn(
+                          'flex flex-col items-center justify-center rounded-xl border-2 p-3 text-center transition-all duration-200',
+                          isActive
+                            ? 'border-[#E5231B] bg-[#E5231B]/5 shadow-md'
+                            : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                        )}
+                      >
+                        {countryContent}
                       </button>
                     );
                   })}

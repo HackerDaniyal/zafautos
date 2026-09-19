@@ -7,6 +7,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { NavbarCurrencySwitcher } from '@/components/marketplace/NavbarCurrencySwitcher';
 
 interface MenuItem {
   id: string;
@@ -91,6 +92,9 @@ export function PublicNavbar({ menuItems = [] }: PublicNavbarProps) {
 
         {/* CTA & Mobile Nav */}
         <div className="flex items-center gap-3">
+          <div className="hidden md:block">
+            <NavbarCurrencySwitcher />
+          </div>
           <Link href="/login" className="hidden md:block">
             <Button variant="ghost" className="text-gray-300 hover:text-white hover:bg-white/10">
               Login
@@ -137,6 +141,9 @@ export function PublicNavbar({ menuItems = [] }: PublicNavbarProps) {
                   )
                 ))}
                 <div className="h-4" />
+                <div className="px-1">
+                  <NavbarCurrencySwitcher />
+                </div>
                 <Link href="/login" className="w-full">
                   <Button variant="outline" className="w-full justify-start border-white/20 text-white hover:bg-white/10 rounded-[6px]">
                     Login

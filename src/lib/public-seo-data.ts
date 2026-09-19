@@ -8,6 +8,7 @@ import {
   transmissions,
   countries,
   vehicleImages,
+  vehicleDestinationCountries,
 } from '@/server/db/schema';
 import { eq, and, isNull, desc, sql, inArray } from 'drizzle-orm';
 import { resolveVehicleImageUrl } from '@/lib/utils/vehicle-images';
@@ -453,11 +454,20 @@ export async function getDestinationSeoData(slug: string): Promise<SeoLandingPag
 
   if (!country) return null;
 
+  // Get vehicle IDs available for this destination via junction table
+  const destVehicleRows = await db
+    .select({ vehicleId: vehicleDestinationCountries.vehicleId })
+    .from(vehicleDestinationCountries)
+    .where(eq(vehicleDestinationCountries.countryId, country.id));
+  const destVehicleIds = [...new Set(destVehicleRows.map((r) => r.vehicleId))];
+
+  if (destVehicleIds.length === 0) return null;
+
   const [{ cnt }] = await db
     .select({ cnt: sql<number>`count(*)::int` })
     .from(vehicles)
     .where(and(
-      eq(vehicles.countryId, country.id),
+      inArray(vehicles.id, destVehicleIds),
       eq(vehicles.status, 'active'),
       isNull(vehicles.deletedAt),
     ));
@@ -482,7 +492,7 @@ export async function getDestinationSeoData(slug: string): Promise<SeoLandingPag
     })
     .from(vehicles)
     .where(and(
-      eq(vehicles.countryId, country.id),
+      inArray(vehicles.id, destVehicleIds),
       eq(vehicles.status, 'active'),
       isNull(vehicles.deletedAt),
     ))
@@ -542,8 +552,8 @@ export async function getDestinationSeoData(slug: string): Promise<SeoLandingPag
   }));
 
   return {
-    title: `Vehicles in ${country.name} for Sale | ZafAutos`,
-    description: `Browse our inventory of vehicles available in ${country.name}. ${cnt} vehicles available for export with detailed specifications.`,
+    title: `Japanese Cars for ${country.name} | ZafAutos`,
+    description: `Browse Japanese vehicles available for export to ${country.name}. ${cnt} vehicles available with detailed specifications and photos.`,
     canonicalUrl: `${SITE_URL}/vehicles/destination/${slug}`,
     entity: {
       name: country.name,

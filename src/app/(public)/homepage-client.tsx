@@ -18,7 +18,7 @@ import { ContinentFilter } from '@/components/marketplace/ContinentFilter';
 import { WidgetVehicleCard } from '@/components/marketplace/WidgetVehicleCard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CurrencyProvider } from '@/contexts/CurrencyContext';
+
 import type { VehicleCardData } from '@/components/marketplace/VehicleCard';
 import type { HomepageCurrency, HomepageMake, HomepageContinent, HomepageLookupItem } from '@/lib/homepage-data';
 import type { PublicBanner, PublicTestimonial, PublicFaq, PublicBlogPost } from '@/lib/public-cms-data';
@@ -87,27 +87,22 @@ export function HomepageClient({
   const testimonialsSection = getSectionByType(sections, 'testimonials');
 
   // ── Admin CMS visibility filtering ──────────────────────────────────────────
-  // Read extraData from browse_make / browse_currency / browse_continent sections
+  // Read extraData from browse_make / browse_continent sections
   // to filter which items appear in homepage widgets.
 
   const browseMakeSection = getSectionByType(sections, 'browse_make');
-  const browseCurrencySection = getSectionByType(sections, 'browse_currency');
   const browseContinentSection = getSectionByType(sections, 'browse_continent');
 
   // Distinguish "not configured" (show all) from "explicitly empty" (show none).
   // If the key exists in extraData → explicitly configured (even if empty array).
   // If the key is absent → legacy/unconfigured → show all.
   const browseMakeExtra = browseMakeSection?.extraData as Record<string, unknown> | undefined;
-  const browseCurrencyExtra = browseCurrencySection?.extraData as Record<string, unknown> | undefined;
   const browseContinentExtra = browseContinentSection?.extraData as Record<string, unknown> | undefined;
 
   const hasMakeConfig = browseMakeExtra != null && 'visibleMakeIds' in browseMakeExtra;
-  const hasCurrencyConfig = browseCurrencyExtra != null && 'visibleCurrencyIds' in browseCurrencyExtra;
   const hasCountryConfig = browseContinentExtra != null && 'visibleCountryIds' in browseContinentExtra;
 
   const visibleMakeIds = browseMakeExtra && 'visibleMakeIds' in browseMakeExtra ? (browseMakeExtra.visibleMakeIds as string[] | undefined) : undefined;
-  const visibleCurrencyIds = browseCurrencyExtra && 'visibleCurrencyIds' in browseCurrencyExtra ? (browseCurrencyExtra.visibleCurrencyIds as string[] | undefined) : undefined;
-  const defaultCurrencyId = browseCurrencyExtra && 'defaultCurrencyId' in browseCurrencyExtra ? (browseCurrencyExtra.defaultCurrencyId as string | undefined) : undefined;
   const visibleCountryIds = browseContinentExtra && 'visibleCountryIds' in browseContinentExtra ? (browseContinentExtra.visibleCountryIds as string[] | undefined) : undefined;
 
   // Filter makes: unconfigured → show all; configured empty → show none
@@ -117,21 +112,6 @@ export function HomepageClient({
     const idSet = new Set(visibleMakeIds);
     return makes.filter((m) => idSet.has(m.id));
   }, [makes, visibleMakeIds, hasMakeConfig]);
-
-  // Filter currencies: unconfigured → show all; configured empty → show none
-  const filteredCurrencies = useMemo(() => {
-    if (!hasCurrencyConfig) return currencies;
-    if (!visibleCurrencyIds || visibleCurrencyIds.length === 0) return [];
-    const idSet = new Set(visibleCurrencyIds);
-    return currencies.filter((c) => c.id && idSet.has(c.id));
-  }, [currencies, visibleCurrencyIds, hasCurrencyConfig]);
-
-  // Resolve defaultCurrencyId (UUID) to currency code for CurrencyProvider
-  const defaultCurrencyCode = useMemo(() => {
-    if (!defaultCurrencyId || filteredCurrencies.length === 0) return 'USD';
-    const match = filteredCurrencies.find((c) => c.id === defaultCurrencyId);
-    return match?.code ?? 'USD';
-  }, [defaultCurrencyId, filteredCurrencies]);
 
   // Filter continents and their nested countries
   const filteredContinents = useMemo(() => {
@@ -176,7 +156,6 @@ export function HomepageClient({
         if (filters.transmissions.length > 0 && !filters.transmissions.includes(v.transmission)) return false;
         if (v.price < filters.priceRange[0] || v.price > filters.priceRange[1]) return false;
         if (v.year < filters.yearRange[0] || v.year > filters.yearRange[1]) return false;
-        if (filters.destinationCountry && !(v.destinationCountryIds ?? []).includes(filters.destinationCountry)) return false;
         return true;
       });
     };
@@ -206,7 +185,6 @@ export function HomepageClient({
   }, [faqs, faqSection]);
 
   return (
-    <CurrencyProvider currencies={filteredCurrencies} rates={exchangeRates} defaultCurrency={defaultCurrencyCode}>
       <div className="bg-white">
         {/* Hero Section */}
         <HeroSection
@@ -268,23 +246,10 @@ export function HomepageClient({
             <aside className="hidden lg:flex flex-col gap-4">
               <CurrencySwitcher variant="sidebar" />
               <div className="rounded-xl bg-white p-4 shadow-sm border border-gray-200">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-gray-900">Destination Country</h3>
-                  {filters.destinationCountry && (
-                    <button
-                      onClick={() => setFilters({ ...filters, destinationCountry: '' })}
-                      className="text-[11px] text-[#E5231B] hover:underline"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Destination Country</h3>
                 <ContinentFilter
                   variant="sidebar"
-                  selectedCountry={filters.destinationCountry}
-                  onCountrySelect={(code) =>
-                    setFilters({ ...filters, destinationCountry: filters.destinationCountry === code ? '' : code })
-                  }
+                  navigationMode
                   continents={filteredContinents}
                 />
               </div>
@@ -443,6 +408,5 @@ export function HomepageClient({
           />
         </MainContainer>
       </div>
-    </CurrencyProvider>
   );
 }

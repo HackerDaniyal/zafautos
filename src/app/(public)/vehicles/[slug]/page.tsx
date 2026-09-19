@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { VehicleDetailClient } from './VehicleDetailClient';
 import { getPublicVehicleBySlug, getSimilarPublicVehicles } from '@/server/actions/publicVehicleActions';
-import { CurrencyProvider } from '@/contexts/CurrencyContext';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://zafautos.com';
 
@@ -68,20 +67,6 @@ export default async function VehicleDetailPage({ params }: VehicleDetailPagePro
     },
   );
 
-  let currencyData: { currencies: Array<{ code: string; symbol: string; name: string }>; exchangeRates: Record<string, number> } = { currencies: [], exchangeRates: { USD: 1 } };
-  try {
-    const { currencies: currenciesTable } = await import('@/server/db/schema');
-    const { db } = await import('@/server/db/client');
-    const { eq } = await import('drizzle-orm');
-    const rows = await db.select().from(currenciesTable).where(eq(currenciesTable.isActive, true));
-    const exchangeRates: Record<string, number> = { USD: 1 };
-    const list = rows.map((r) => {
-      exchangeRates[r.code] = Number(r.exchangeRate) || 1;
-      return { code: r.code, symbol: r.symbol ?? r.code, name: r.name };
-    });
-    currencyData = { currencies: list, exchangeRates };
-  } catch { /* fallback */ }
-
   // Build JSON-LD structured data
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -124,14 +109,12 @@ export default async function VehicleDetailPage({ params }: VehicleDetailPagePro
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <CurrencyProvider currencies={currencyData.currencies} rates={currencyData.exchangeRates}>
-        <VehicleDetailClient
-          vehicle={data.vehicle}
-          images={data.images}
-          features={data.features}
-          similar={similar}
-        />
-      </CurrencyProvider>
+      <VehicleDetailClient
+        vehicle={data.vehicle}
+        images={data.images}
+        features={data.features}
+        similar={similar}
+      />
     </>
   );
 }

@@ -1,7 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import type { HomepageCurrency } from '@/lib/homepage-data';
+
+const STORAGE_KEY = 'zaf_selected_currency';
 
 interface CurrencyState {
   selectedCurrency: string;
@@ -34,6 +36,24 @@ export function useCurrency() {
   return ctx ?? fallbackValue;
 }
 
+function readPersistedCurrency(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function persistCurrency(code: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY, code);
+  } catch {
+    // ignore
+  }
+}
+
 interface CurrencyProviderProps {
   children: React.ReactNode;
   currencies: HomepageCurrency[];
@@ -47,7 +67,25 @@ export function CurrencyProvider({
   rates,
   defaultCurrency = 'USD',
 }: CurrencyProviderProps) {
-  const [selectedCurrency, setSelectedCurrency] = useState(defaultCurrency);
+  const [selectedCurrency, setSelectedCurrencyState] = useState(defaultCurrency);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Hydrate from localStorage after mount
+  useEffect(() => {
+    const persisted = readPersistedCurrency();
+    if (persisted && persisted !== defaultCurrency) {
+      // Verify the persisted currency exists in available currencies
+      if (currencies.some((c) => c.code === persisted)) {
+        setSelectedCurrencyState(persisted);
+      }
+    }
+    setHydrated(true);
+  }, [currencies, defaultCurrency]);
+
+  const setSelectedCurrency = useCallback((code: string) => {
+    setSelectedCurrencyState(code);
+    persistCurrency(code);
+  }, []);
 
   const convertPrice = useCallback(
     (basePrice: number, baseCurrency: string = 'USD'): number => {
@@ -55,7 +93,6 @@ export function CurrencyProvider({
       const fromRate = rates[baseCurrency];
       const toRate = rates[selectedCurrency];
       if (!fromRate || !toRate || fromRate === 0) return basePrice;
-      // Convert: basePrice / fromRate gives USD value, * toRate gives target
       return Math.round((basePrice / fromRate) * toRate);
     },
     [selectedCurrency, rates],
@@ -80,7 +117,7 @@ export function CurrencyProvider({
       convertPrice,
       formatConvertedPrice,
     }),
-    [selectedCurrency, currencies, rates, convertPrice, formatConvertedPrice],
+    [selectedCurrency, currencies, rates, setSelectedCurrency, convertPrice, formatConvertedPrice],
   );
 
   return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
