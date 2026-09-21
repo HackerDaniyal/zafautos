@@ -1,8 +1,8 @@
 'use server';
 
 import { db } from '@/server/db/client';
-import { vehicleEnquiries, vehicleWishlist, vehicleViews, vehicles, whatsappClicks } from '@/server/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { vehicleEnquiries, vehicleWishlist, vehicleViews, vehicles, vehicleImages, manufacturers, models, bodyTypes, fuelTypes, transmissions, countries, whatsappClicks } from '@/server/db/schema';
+import { eq, and, sql, inArray } from 'drizzle-orm';
 import { requireAuth } from '@/lib/auth/session';
 import { z } from 'zod';
 import { VehicleRepository } from '@/server/repositories/vehicleRepository';
@@ -216,6 +216,64 @@ export async function trackVehicleView(vehicleId: string) {
 }
 
 // ── Compare: Search Vehicles ──────────────────────────
+
+export async function getVehiclesByIds(ids: string[]) {
+  const safeIds = ids.filter((id) => z.string().uuid().safeParse(id).success).slice(0, 50);
+  if (safeIds.length === 0) return [];
+
+  const vehicleRows = await db.select().from(vehicles).where(inArray(vehicles.id, safeIds));
+  if (vehicleRows.length === 0) return [];
+
+  const vIds = vehicleRows.map((v) => v.id);
+
+  const [allImages, manufacturersData, modelsData, bodyTypesData, fuelTypesData, transmissionsData, countriesData] = await Promise.all([
+    db.select().from(vehicleImages).where(inArray(vehicleImages.vehicleId, vIds)),
+    db.select().from(manufacturers),
+    db.select().from(models),
+    db.select().from(bodyTypes),
+    db.select().from(fuelTypes),
+    db.select().from(transmissions),
+    db.select().from(countries),
+  ]);
+
+  const mfgMap = new Map(manufacturersData.map((m) => [m.id, m.name]));
+  const modelMap = new Map(modelsData.map((m) => [m.id, m.name]));
+  const btMap = new Map(bodyTypesData.map((b) => [b.id, b.name]));
+  const ftMap = new Map(fuelTypesData.map((f) => [f.id, f.name]));
+  const trMap = new Map(transmissionsData.map((t) => [t.id, t.name]));
+  const cMap = new Map(countriesData.map((c) => [c.id, c.name]));
+
+  const primaryImageMap = new Map<string, string>();
+  const imageCountMap = new Map<string, number>();
+  for (const img of allImages) {
+    imageCountMap.set(img.vehicleId, (imageCountMap.get(img.vehicleId) ?? 0) + 1);
+    if (img.isPrimary) primaryImageMap.set(img.vehicleId, img.imageUrl);
+  }
+  for (const img of allImages) {
+    if (!primaryImageMap.has(img.vehicleId)) primaryImageMap.set(img.vehicleId, img.imageUrl);
+  }
+
+  return vehicleRows.map((v) => ({
+    id: v.id,
+    slug: v.slug ?? '',
+    make: v.manufacturerId ? (mfgMap.get(v.manufacturerId) ?? 'Unknown') : 'Unknown',
+    model: v.modelId ? (modelMap.get(v.modelId) ?? 'Unknown') : 'Unknown',
+    year: v.year ?? 0,
+    price: v.price ?? 0,
+    currency: 'USD',
+    mileage: v.mileage ?? 0,
+    fuelType: v.fuelTypeId ? (ftMap.get(v.fuelTypeId) ?? 'Unknown') : 'Unknown',
+    transmission: v.transmissionId ? (trMap.get(v.transmissionId) ?? 'Unknown') : 'Unknown',
+    bodyType: v.bodyTypeId ? (btMap.get(v.bodyTypeId) ?? 'Unknown') : 'Unknown',
+    location: v.countryId ? (cMap.get(v.countryId) ?? '') : '',
+    condition: v.condition ?? '',
+    isFeatured: v.isFeatured ?? false,
+    imageUrl: primaryImageMap.get(v.id) ?? null,
+    imageCount: imageCountMap.get(v.id) ?? 0,
+    stockId: v.stockNumber ?? null,
+    recentlyAdded: false,
+  }));
+}
 
 export async function searchVehiclesForCompare(query: string, excludeIds: string[] = []) {
   // Sanitize inputs

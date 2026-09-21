@@ -73,10 +73,14 @@ export function CurrencyProvider({
   // Hydrate from localStorage after mount
   useEffect(() => {
     const persisted = readPersistedCurrency();
-    if (persisted && persisted !== defaultCurrency) {
-      // Verify the persisted currency exists in available currencies
+    if (persisted) {
+      // Check if the persisted currency is still in the enabled list
       if (currencies.some((c) => c.code === persisted)) {
         setSelectedCurrencyState(persisted);
+      } else {
+        // Persisted currency was disabled by admin — fall back to admin default
+        setSelectedCurrencyState(defaultCurrency);
+        persistCurrency(defaultCurrency);
       }
     }
     setHydrated(true);

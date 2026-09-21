@@ -28,6 +28,7 @@ export function HeroSection({
 
   return (
     <HeroContainer
+      hasBackground
       title={heading.includes('\n') ? (
         <>
           {heading.split('\n').map((line, i) => (
@@ -80,24 +81,11 @@ export function HeroSection({
         </>
       }
       backgroundSlot={
-        imageUrl ? (
-          <div className="absolute inset-0 bg-race-black">
-            <div
-              className="absolute inset-0 bg-cover bg-center opacity-30"
-              style={{ backgroundImage: `url(${imageUrl})` }}
-            />
-          </div>
-        ) : (
-          <div className="absolute inset-0 bg-race-black">
-            <div className="absolute inset-0 opacity-[0.03]" style={{
-              backgroundImage: 'radial-gradient(circle, #FFFFFF 1px, transparent 1px)',
-              backgroundSize: '24px 24px'
-            }} />
-            <div className="absolute inset-0 opacity-[0.02]" style={{
-              backgroundImage: 'repeating-linear-gradient(135deg, transparent, transparent 40px, #FFFFFF 40px, #FFFFFF 41px)',
-            }} />
-          </div>
-        )
+        <img
+          src="/hero section bg.png"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+        />
       }
     />
   );

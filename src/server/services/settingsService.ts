@@ -258,6 +258,13 @@ export class SettingsService {
         currencyByCode.set(c.code, { id: c.id, code: c.code });
       }
 
+      // Approximate exchange rates vs USD for the 12 supported public currencies
+      const supportedRates: Record<string, string> = {
+        USD: '1', JPY: '149.5', EUR: '0.92', GBP: '0.79', AUD: '1.53',
+        CAD: '1.36', CHF: '0.88', CNY: '7.24', KRW: '1330', AED: '3.67',
+        INR: '83.1', SGD: '1.34',
+      };
+
       for (const rc of currenciesData) {
         if (!currencyByCode.has(rc.code)) {
           const insertValues = {
@@ -267,7 +274,7 @@ export class SettingsService {
             decimalPlaces: rc.decimalPlaces,
             symbolPosition: rc.symbolPosition as 'before' | 'after',
             isDefault: false,
-            exchangeRate: '1',
+            exchangeRate: supportedRates[rc.code] ?? '1',
             isActive: true,
             displayOrder: 0,
           } as const;

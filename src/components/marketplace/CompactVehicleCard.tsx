@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { VehicleCardData } from '@/components/marketplace/VehicleCard';
 import { formatMileage, vehiclePlaceholderImage } from '@/lib/utils';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { useWishlistCompare } from '@/contexts/WishlistCompareContext';
 import { Camera, MapPin, Gauge, Fuel, Cog, Heart, Scale } from 'lucide-react';
 
 interface CompactVehicleCardProps {
@@ -31,9 +32,12 @@ function StatusBadge({ vehicle }: { vehicle: VehicleCardData }) {
 
 export function CompactVehicleCard({ vehicle, className }: CompactVehicleCardProps) {
   const [imgError, setImgError] = useState(false);
+  const { isWishlisted, isCompared, toggleWishlist, toggleCompare } = useWishlistCompare();
   const hasImage = vehicle.imageUrl && !imgError;
   const placeholder = vehiclePlaceholderImage(vehicle.make, vehicle.model, vehicle.year);
   const { formatConvertedPrice } = useCurrency();
+  const wishlisted = isWishlisted(vehicle.id);
+  const compared = isCompared(vehicle.id);
 
   return (
     <Link href={`/vehicles/${vehicle.slug}`} className="group block h-full">
@@ -125,18 +129,24 @@ export function CompactVehicleCard({ vehicle, className }: CompactVehicleCardPro
             </span>
             <div className="flex items-center gap-1.5">
               <button
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                className="flex items-center justify-center rounded bg-gray-100 p-1.5 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-600"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(vehicle.id); }}
+                className={cn(
+                  'flex items-center justify-center rounded p-1.5 transition-colors',
+                  wishlisted ? 'bg-red-50 text-[#E5231B]' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600'
+                )}
                 aria-label="Add to wishlist"
               >
-                <Heart className="h-3 w-3" />
+                <Heart className={cn('h-3 w-3', wishlisted && 'fill-current')} />
               </button>
               <button
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                className="flex items-center justify-center rounded bg-gray-100 p-1.5 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-600"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCompare(vehicle.id); }}
+                className={cn(
+                  'flex items-center justify-center rounded p-1.5 transition-colors',
+                  compared ? 'bg-red-50 text-[#E5231B]' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600'
+                )}
                 aria-label="Compare"
               >
-                <Scale className="h-3 w-3" />
+                <Scale className={cn('h-3 w-3', compared && 'fill-current')} />
               </button>
               <span className="rounded-[3px] border border-gray-200 bg-white px-2.5 py-[3px] text-[8px] font-bold uppercase tracking-[0.1em] text-gray-500 transition-all duration-150 group-hover:border-[#E5231B]/50 group-hover:bg-[#E5231B]/5 group-hover:text-[#E5231B]">
                 Details

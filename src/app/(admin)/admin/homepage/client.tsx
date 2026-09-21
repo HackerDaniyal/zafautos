@@ -360,6 +360,8 @@ function CurrencyConfig({ section, onExtraDataChange }: { section: SectionRow; o
     const next = new Set(selectedIds);
     let newDef = defaultCurrencyId;
     if (next.has(id)) {
+      // Prevent deselecting the last currency
+      if (next.size <= 1) return;
       next.delete(id);
       if (defaultCurrencyId === id) {
         const remaining = currencies.filter((c) => next.has(c.id));
@@ -380,9 +382,12 @@ function CurrencyConfig({ section, onExtraDataChange }: { section: SectionRow; o
   }
 
   function deselectAll() {
-    const empty = new Set<string>();
-    setSelectedIds(empty);
-    emitChange(empty, defaultCurrencyId);
+    // Keep at least one currency selected
+    const first = currencies[0];
+    if (!first) return;
+    const keepOne = new Set([first.id]);
+    setSelectedIds(keepOne);
+    emitChange(keepOne, first.id);
   }
 
   function handleDefaultChange(newId: string) {
@@ -394,7 +399,7 @@ function CurrencyConfig({ section, onExtraDataChange }: { section: SectionRow; o
 
   return (
     <div className="flex flex-col h-full">
-      <ConfigSectionHeader label="Currency Selector" description="Choose which currencies customers can use on the homepage." count={selectedIds.size} totalCount={currencies.length} onSelectAll={selectAll} onDeselectAll={deselectAll} />
+      <ConfigSectionHeader label="Currency Selector" description="Choose which currencies customers can use across the website." count={selectedIds.size} totalCount={currencies.length} onSelectAll={selectAll} onDeselectAll={deselectAll} />
       <ConfigSearchInput value={search} onChange={setSearch} placeholder="Search currencies..." />
       <div className="grid grid-cols-2 gap-1.5 mt-3">
         {filteredCurrencies.map((currency) => {

@@ -16,6 +16,7 @@ import { ChequeredDivider } from '@/components/ui/ChequeredDivider';
 import { MainContainer } from '@/components/layout/MainContainer';
 import { ContinentFilter } from '@/components/marketplace/ContinentFilter';
 import { WidgetVehicleCard } from '@/components/marketplace/WidgetVehicleCard';
+import { BodyTypeWidget } from '@/components/marketplace/BodyTypeWidget';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
@@ -242,7 +243,7 @@ export function HomepageClient({
               )}
             </div>
 
-            {/* Right Sidebar - Currency + Destination Country */}
+            {/* Right Sidebar - Currency + Destination Country + Body Type */}
             <aside className="hidden lg:flex flex-col gap-4">
               <CurrencySwitcher variant="sidebar" />
               <div className="rounded-xl bg-white p-4 shadow-sm border border-gray-200">
@@ -253,6 +254,10 @@ export function HomepageClient({
                   continents={filteredContinents}
                 />
               </div>
+              <BodyTypeWidget
+                bodyTypes={bodyTypes}
+                counts={Object.fromEntries(bodyTypes.map((bt) => [bt.name, bt.count ?? 0]))}
+              />
             </aside>
           </div>
         </MainContainer>

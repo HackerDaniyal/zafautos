@@ -3,7 +3,7 @@ import {
   vehicles, vehicleImages, vehicleDestinationCountries, manufacturers, bodyTypes, fuelTypes, transmissions, driveTypes,
   countries, currencies, continents,
 } from '@/server/db/schema';
-import { eq, and, desc, asc, sql, inArray, isNull, or, gte, lte } from 'drizzle-orm';
+import { eq, and, desc, asc, sql, inArray, isNull, isNotNull, or, gte, lte } from 'drizzle-orm';
 import { banners, testimonials, faqs, blogPosts, homepageSections } from '@/server/db/schema/cms';
 import type { VehicleCardData } from '@/components/marketplace/VehicleCard';
 import type { PublicBanner, PublicTestimonial, PublicFaq, PublicBlogPost } from '@/lib/public-cms-data';
@@ -58,6 +58,7 @@ export interface HomepageContinent {
 export interface HomepageLookupItem {
   id: string;
   name: string;
+  count?: number;
 }
 
 export interface HomepageData {
@@ -347,12 +348,19 @@ export async function fetchHomepageContinents(): Promise<HomepageContinent[]> {
 }
 
 async function fetchActiveBodyTypes(): Promise<HomepageLookupItem[]> {
+  const btCounts = await db
+    .select({ id: vehicles.bodyTypeId, count: sql<number>`count(*)::int` })
+    .from(vehicles)
+    .where(and(isNull(vehicles.deletedAt), eq(vehicles.status, 'active'), isNotNull(vehicles.bodyTypeId)))
+    .groupBy(vehicles.bodyTypeId);
+  const countMap = new Map(btCounts.map((c) => [c.id, c.count]));
+
   const rows = await db
     .select({ id: bodyTypes.id, name: bodyTypes.name })
     .from(bodyTypes)
     .where(and(eq(bodyTypes.isActive, true), isNull(bodyTypes.deletedAt)))
     .orderBy(bodyTypes.displayOrder, bodyTypes.name);
-  return rows.map((r) => ({ id: r.id, name: r.name }));
+  return rows.map((r) => ({ id: r.id, name: r.name, count: countMap.get(r.id) ?? 0 }));
 }
 
 async function fetchActiveFuelTypes(): Promise<HomepageLookupItem[]> {

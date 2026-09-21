@@ -44,6 +44,8 @@ const defaultForm = {
   exchangeRate: 1, displayOrder: 0, isActive: true,
 };
 
+const selectClass = 'w-full rounded-[6px] border border-iron/30 bg-deep-carbon px-3 py-2 text-sm text-pure-white appearance-none cursor-pointer focus:outline-none focus:border-signal-red/50';
+
 function CurrenciesClient() {
   const [items, setItems] = useState<Currency[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,7 +79,7 @@ function CurrenciesClient() {
 
   useEffect(() => {
     if (feedback) {
-      const t = setTimeout(() => setFeedback(null), 3000);
+      const t = setTimeout(() => setFeedback(null), 4000);
       return () => clearTimeout(t);
     }
   }, [feedback]);
@@ -97,7 +99,7 @@ function CurrenciesClient() {
       decimalPlaces: item.decimalPlaces ?? 2,
       symbolPosition: item.symbolPosition ?? 'before',
       isDefault: item.isDefault ?? false,
-      exchangeRate: item.exchangeRate ?? 1,
+      exchangeRate: Number(item.exchangeRate) || 1,
       displayOrder: item.displayOrder ?? 0,
       isActive: item.isActive ?? true,
     });
@@ -115,11 +117,11 @@ function CurrenciesClient() {
         name: form.name.trim(),
         code: form.code.trim().toUpperCase(),
         symbol: form.symbol.trim() || undefined,
-        decimalPlaces: form.decimalPlaces,
+        decimalPlaces: Number(form.decimalPlaces) || 0,
         symbolPosition: form.symbolPosition,
         isDefault: form.isDefault,
-        exchangeRate: form.exchangeRate,
-        displayOrder: form.displayOrder,
+        exchangeRate: Number(form.exchangeRate) || 1,
+        displayOrder: Number(form.displayOrder) || 0,
         isActive: form.isActive,
       };
       const result = editing
@@ -176,7 +178,7 @@ function CurrenciesClient() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Currencies" description="Manage currencies for the marketplace">
+      <PageHeader title="Currencies" description="Master currency list. Active currencies are available in the Homepage Builder for public selection.">
         <Button size="sm" onClick={openCreate}>
           <Plus className="mr-1 size-4" />
           Add Currency
@@ -212,46 +214,40 @@ function CurrenciesClient() {
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-0">
               <thead>
                 <tr className="border-b border-iron/30 text-left text-xs font-medium uppercase tracking-wider text-steel">
-                  <th className="px-4 py-3">Code</th>
-                  <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3">Symbol</th>
-                  <th className="px-4 py-3">Decimals</th>
-                  <th className="px-4 py-3">Position</th>
-                  <th className="px-4 py-3">Rate</th>
-                  <th className="px-4 py-3">Default</th>
-                  <th className="px-4 py-3">Active</th>
-                  <th className="px-4 py-3">Order</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
+                  <th className="px-3 py-2.5 w-16">Code</th>
+                  <th className="px-3 py-2.5">Name</th>
+                  <th className="px-3 py-2.5 w-16">Symbol</th>
+                  <th className="px-3 py-2.5 w-20">Rate</th>
+                  <th className="px-3 py-2.5 w-16 text-center">Default</th>
+                  <th className="px-3 py-2.5 w-20 text-center">Active</th>
+                  <th className="px-3 py-2.5 w-24 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-iron/30">
                 {filtered.map((item) => (
                   <tr key={item.id} className="hover:bg-deep-carbon/50 transition-colors">
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5">
                       <span className="text-sm font-mono font-medium text-pure-white">{item.code}</span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-pure-white">{item.name}</td>
-                    <td className="px-4 py-3 text-sm text-steel">{item.symbol ?? '—'}</td>
-                    <td className="px-4 py-3 text-xs text-steel">{item.decimalPlaces}</td>
-                    <td className="px-4 py-3 text-xs text-steel">{item.symbolPosition}</td>
-                    <td className="px-4 py-3 text-xs font-mono text-steel">{item.exchangeRate}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5 text-sm text-pure-white truncate max-w-[200px]">{item.name}</td>
+                    <td className="px-3 py-2.5 text-sm text-steel">{item.symbol ?? '—'}</td>
+                    <td className="px-3 py-2.5 text-xs font-mono text-steel">{item.exchangeRate}</td>
+                    <td className="px-3 py-2.5 text-center">
                       {item.isDefault ? (
                         <span className="inline-flex items-center rounded-full bg-signal-red/10 px-2 py-0.5 text-xs font-medium text-signal-red">Default</span>
                       ) : (
                         <span className="text-xs text-steel">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5 text-center">
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${item.isActive ? 'bg-green-500/10 text-green-400' : 'bg-iron/30 text-steel'}`}>
                         {item.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-steel">{item.displayOrder ?? 0}</td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-3 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="ghost" size="icon-xs" onClick={() => openEdit(item)}>
                           <Pencil className="size-3.5" />
@@ -273,7 +269,21 @@ function CurrenciesClient() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-carbon border-iron max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent
+          className="max-w-lg max-h-[85vh] overflow-y-auto"
+          style={{ backgroundColor: '#1A1A1A', borderColor: '#2A2A2A', color: '#F5F5F5' }}
+        >
+          <div style={{
+            '--color-carbon': '#1A1A1A',
+            '--color-deep-carbon': '#141414',
+            '--color-iron': '#2A2A2A',
+            '--color-ash': '#9A9A9A',
+            '--color-steel': '#6E6E6E',
+            '--color-pure-white': '#FFFFFF',
+            '--color-foreground': '#F5F5F5',
+            '--color-background': '#0A0A0A',
+            '--color-chrome-silver': '#AAAAAA',
+          } as React.CSSProperties}>
           <DialogHeader>
             <DialogTitle className="text-pure-white">
               {editing ? 'Edit Currency' : 'New Currency'}
@@ -307,7 +317,7 @@ function CurrenciesClient() {
               />
             </FormField>
             <div className="grid grid-cols-3 gap-4">
-              <FormField name="decimalPlaces" label="Decimal Places">
+              <FormField name="decimalPlaces" label="Decimals">
                 <Input
                   type="number"
                   min={0}
@@ -321,13 +331,13 @@ function CurrenciesClient() {
                 <select
                   value={form.symbolPosition}
                   onChange={(e) => setForm((f) => ({ ...f, symbolPosition: e.target.value as 'before' | 'after' }))}
-                  className="w-full rounded-[6px] border border-iron/30 bg-deep-carbon px-3 py-2 text-sm text-pure-white"
+                  className={selectClass}
                 >
-                  <option value="before">$100</option>
-                  <option value="after">100$</option>
+                  <option value="before">Before amount ($100)</option>
+                  <option value="after">After amount (100$)</option>
                 </select>
               </FormField>
-              <FormField name="displayOrder" label="Display Order">
+              <FormField name="displayOrder" label="Order">
                 <Input
                   type="number"
                   value={form.displayOrder}
@@ -373,6 +383,7 @@ function CurrenciesClient() {
                 </div>
               </FormField>
             </div>
+          </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Cancel</Button>

@@ -7,6 +7,7 @@ interface HeroContainerProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 
   subtitle?: React.ReactNode;
   actions?: React.ReactNode;
   backgroundSlot?: React.ReactNode;
+  hasBackground?: boolean;
 }
 
 export function HeroContainer({
@@ -14,6 +15,7 @@ export function HeroContainer({
   subtitle,
   actions,
   backgroundSlot,
+  hasBackground,
   className,
   ...props
 }: HeroContainerProps) {
@@ -24,20 +26,30 @@ export function HeroContainer({
           {backgroundSlot}
         </div>
       )}
-      {/* Light vignette overlay */}
-      <div className="absolute inset-0 z-[1] bg-gradient-to-t from-white via-white/60 to-white/30" />
-      <MainContainer className="relative z-10">
-        <div className="flex max-w-[800px] flex-col items-start gap-6">
-          <h1 className="font-[Oswald] text-5xl font-bold uppercase leading-[0.95] tracking-[0.5px] text-gray-900 sm:text-6xl md:text-7xl lg:text-[72px]">
+      {hasBackground && (
+        <div className="absolute inset-0 z-[1] bg-black/70" />
+      )}
+      {!hasBackground && (
+        <div className="absolute inset-0 z-[1] bg-gradient-to-t from-white via-white/60 to-white/30" />
+      )}
+      <MainContainer className="relative z-10 flex justify-center">
+        <div className="flex max-w-[800px] flex-col items-center text-center gap-6">
+          <h1 className={cn(
+            "font-[Oswald] text-5xl font-bold uppercase leading-[0.95] tracking-[0.5px] sm:text-6xl md:text-7xl lg:text-[72px]",
+            hasBackground ? "text-white" : "text-gray-900"
+          )}>
             {title}
           </h1>
           {subtitle && (
-            <p className="max-w-[600px] text-lg leading-relaxed text-gray-600 sm:text-xl">
+            <p className={cn(
+              "max-w-[600px] text-lg leading-relaxed sm:text-xl",
+              hasBackground ? "text-white/80" : "text-gray-600"
+            )}>
               {subtitle}
             </p>
           )}
           {actions && (
-            <div className="mt-4 flex w-full flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="mt-4 flex w-full max-w-[500px] flex-col gap-4 sm:flex-row sm:items-center sm:justify-center">
               {actions}
             </div>
           )}

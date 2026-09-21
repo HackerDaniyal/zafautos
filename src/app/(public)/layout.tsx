@@ -2,6 +2,7 @@
 import { PublicNavbar } from '@/components/layout/PublicNavbar';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import { PublicCurrencyLayout } from '@/components/layout/PublicCurrencyLayout';
+import { WishlistCompareProvider } from '@/contexts/WishlistCompareContext';
 import { CmsRepository } from '@/server/repositories';
 import { SettingsService } from '@/server/services';
 
@@ -50,18 +51,59 @@ async function getCompanySettings(): Promise<CompanySettings | null> {
 
 async function getCurrencyData() {
   try {
-    const { currencies: currenciesTable } = await import('@/server/db/schema');
+    const { currencies: currenciesTable, homepageSections } = await import('@/server/db/schema');
     const { db } = await import('@/server/db/client');
-    const { eq } = await import('drizzle-orm');
+    const { eq, and, isNull } = await import('drizzle-orm');
+
+    // Read the browse_currency section config (admin-configured enabled currencies)
+    const [currencySection] = await db
+      .select()
+      .from(homepageSections)
+      .where(and(
+        eq(homepageSections.type, 'browse_currency'),
+        isNull(homepageSections.deletedAt),
+      ))
+      .limit(1);
+
+    const extraData = (currencySection?.extraData ?? {}) as {
+      visibleCurrencyIds?: string[];
+      defaultCurrencyId?: string;
+    };
+
+    // Build base query for active currencies
     const rows = await db.select().from(currenciesTable).where(eq(currenciesTable.isActive, true));
+
+    // If admin has configured visibleCurrencyIds, filter to only those currencies
+    let filteredRows = rows;
+    if (extraData.visibleCurrencyIds && extraData.visibleCurrencyIds.length > 0) {
+      const allowedIds = new Set(extraData.visibleCurrencyIds);
+      filteredRows = rows.filter((r) => allowedIds.has(r.id));
+    }
+
+    // Resolve the default currency code from the admin-configured defaultCurrencyId
+    let defaultCurrencyCode = 'USD';
+    if (extraData.defaultCurrencyId) {
+      const defaultRow = rows.find((r) => r.id === extraData.defaultCurrencyId);
+      if (defaultRow) {
+        defaultCurrencyCode = defaultRow.code;
+      }
+    }
+
+    // Always include the default currency in exchange rates for conversion
     const exchangeRates: Record<string, number> = { USD: 1 };
-    const list = rows.map((r) => {
+    for (const r of rows) {
       exchangeRates[r.code] = Number(r.exchangeRate) || 1;
-      return { code: r.code, symbol: r.symbol ?? r.code, name: r.name };
-    });
-    return { currencies: list, exchangeRates };
+    }
+
+    const list = filteredRows.map((r) => ({
+      code: r.code,
+      symbol: r.symbol ?? r.code,
+      name: r.name,
+    }));
+
+    return { currencies: list, exchangeRates, defaultCurrency: defaultCurrencyCode };
   } catch {
-    return { currencies: [], exchangeRates: { USD: 1 } };
+    return { currencies: [], exchangeRates: { USD: 1 }, defaultCurrency: 'USD' };
   }
 }
 
@@ -81,14 +123,17 @@ export default async function PublicLayout({
     <PublicCurrencyLayout
       currencies={currencyData.currencies}
       rates={currencyData.exchangeRates}
+      defaultCurrency={currencyData.defaultCurrency}
     >
-      <div className="relative flex min-h-screen flex-col bg-background">
-        <PublicNavbar menuItems={headerMenu} />
-        <main className="flex-1">
-          {children}
-        </main>
-        <PublicFooter menuItems={footerMenu} company={companySettings} />
-      </div>
+      <WishlistCompareProvider>
+        <div className="relative flex min-h-screen flex-col bg-background">
+          <PublicNavbar menuItems={headerMenu} />
+          <main className="flex-1">
+            {children}
+          </main>
+          <PublicFooter menuItems={footerMenu} company={companySettings} />
+        </div>
+      </WishlistCompareProvider>
     </PublicCurrencyLayout>
   );
 }

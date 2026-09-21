@@ -7,6 +7,7 @@ import { Heart, Scale, Fuel, Gauge, Calendar, MapPin, Camera, Ship, MapPinned, G
 import { Button } from '@/components/ui/button';
 import { cn, formatMileage } from '@/lib/utils';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { useWishlistCompare } from '@/contexts/WishlistCompareContext';
 
 export interface VehicleCardData {
   id: string;
@@ -113,27 +114,22 @@ function SpecItem({ icon: Icon, label, value }: { icon: React.ElementType; label
 export function VehicleCard({
   vehicle,
   variant = 'grid',
-  isWishlisted = false,
-  isCompared = false,
-  onWishlistToggle,
-  onCompareToggle,
 }: VehicleCardProps) {
-  const [wishlisted, setWishlisted] = useState(isWishlisted);
-  const [compared, setCompared] = useState(isCompared);
+  const { isWishlisted, isCompared, toggleWishlist, toggleCompare } = useWishlistCompare();
   const { formatConvertedPrice } = useCurrency();
+  const wishlisted = isWishlisted(vehicle.id);
+  const compared = isCompared(vehicle.id);
 
   const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setWishlisted((p) => !p);
-    onWishlistToggle?.(vehicle.id);
+    toggleWishlist(vehicle.id);
   };
 
   const handleCompare = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setCompared((p) => !p);
-    onCompareToggle?.(vehicle.id);
+    toggleCompare(vehicle.id);
   };
 
   const priceFormatted = formatConvertedPrice(vehicle.price, vehicle.currency);

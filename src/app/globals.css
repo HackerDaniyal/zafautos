@@ -136,27 +136,33 @@ body:has(.admin-theme) {
 
 /* Admin portal components (dialogs, sheets, dropdowns) escape the .admin-theme wrapper */
 body:has(.admin-theme) [data-radix-portal] {
-  --color-carbon: #1A1A1A;
-  --color-deep-carbon: #141414;
-  --color-iron: #2A2A2A;
-  --color-mist: #252525;
-  --color-smoke: #222222;
-  --color-graphite: #333333;
-  --color-background: #0A0A0A;
-  --color-foreground: #F5F5F5;
-  --color-ash: #9A9A9A;
-  --color-steel: #6E6E6E;
-  --color-chrome-silver: #AAAAAA;
+  --color-carbon: #1A1A1A !important;
+  --color-deep-carbon: #141414 !important;
+  --color-iron: #2A2A2A !important;
+  --color-mist: #252525 !important;
+  --color-smoke: #222222 !important;
+  --color-graphite: #333333 !important;
+  --color-background: #0A0A0A !important;
+  --color-foreground: #F5F5F5 !important;
+  --color-ash: #9A9A9A !important;
+  --color-steel: #6E6E6E !important;
+  --color-chrome-silver: #AAAAAA !important;
+  --color-pure-white: #FFFFFF !important;
 
-  --background: 10 10 10;
-  --foreground: 245 245 245;
-  --card: 26 26 26;
-  --card-foreground: 245 245 245;
-  --popover: 26 26 26;
-  --popover-foreground: 245 245 245;
-  --border: 38 38 38;
-  --input: 38 38 38;
-  --ring: 229 35 27;
+  --background: 10 10 10 !important;
+  --foreground: 245 245 245 !important;
+  --card: 26 26 26 !important;
+  --card-foreground: 245 245 245 !important;
+  --popover: 26 26 26 !important;
+  --popover-foreground: 245 245 245 !important;
+  --border: 38 38 38 !important;
+  --input: 38 38 38 !important;
+  --ring: 229 35 27 !important;
+}
+
+/* Also override body background for admin portals overlay */
+body:has(.admin-theme) [data-radix-portal] [data-slot="dialog-overlay"] {
+  background-color: rgba(0, 0, 0, 0.6) !important;
 }
 
 /* Admin scrollbar overrides */
@@ -168,6 +174,29 @@ body:has(.admin-theme) .scrollbar-thin::-webkit-scrollbar-thumb:hover {
 }
 body:has(.admin-theme) .scrollbar-thin {
   scrollbar-color: #333 transparent;
+}
+
+/* Admin native select elements — dark dropdown */
+body:has(.admin-theme) select,
+body:has(.admin-theme) [data-radix-portal] select {
+  background-color: #141414 !important;
+  color: #F5F5F5 !important;
+  border-color: rgba(42, 42, 42, 0.3) !important;
+}
+body:has(.admin-theme) select option,
+body:has(.admin-theme) [data-radix-portal] select option {
+  background-color: #1A1A1A !important;
+  color: #F5F5F5 !important;
+  padding: 6px 12px !important;
+}
+body:has(.admin-theme) select option:hover,
+body:has(.admin-theme) [data-radix-portal] select option:hover {
+  background-color: #333333 !important;
+}
+body:has(.admin-theme) select option:checked,
+body:has(.admin-theme) [data-radix-portal] select option:checked {
+  background-color: rgba(229, 35, 27, 0.2) !important;
+  color: #F5F5F5 !important;
 }
 
 /* Chequered hairline divider */

@@ -1,189 +1,212 @@
 ﻿'use client';
 
-import React, { useState } from 'react';
-import { Heart, Trash2, ShoppingBag, SlidersHorizontal, AlertCircle } from 'lucide-react';
-import { VehicleCard, type VehicleCardData } from '@/components/marketplace/VehicleCard';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Heart, Trash2, ArrowLeft, Scale, MapPin, Gauge, Fuel, Cog } from 'lucide-react';
+import { VehicleCardData } from '@/components/marketplace/VehicleCard';
 import { SortSelect } from '@/components/marketplace/SortSelect';
 import { Button } from '@/components/ui/button';
-import { SectionWrapper, PageHeader } from '@/components/layout/ResponsiveLayout';
+import { SectionWrapper } from '@/components/layout/ResponsiveLayout';
+import { useWishlistCompare } from '@/contexts/WishlistCompareContext';
+import { getVehiclesByIds } from '@/server/actions/publicConversionActions';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import Link from 'next/link';
-
-// â”€â”€â”€ Empty State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+import Image from 'next/image';
 
 function WishlistEmpty() {
   return (
-    <div className="flex flex-col items-center justify-center gap-5 py-24 px-4 text-center rounded-2xl border border-dashed border-border bg-muted/10">
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-background border shadow-sm">
-        <Heart className="h-10 w-10 text-muted-foreground opacity-50" />
-      </div>
-      <div className="space-y-2 max-w-md">
-        <h2 className="text-2xl font-bold tracking-tight">Your wishlist is empty</h2>
-        <p className="text-muted-foreground">
-          Save vehicles you love by clicking the heart icon on any vehicle card. Revisit them here anytime to compare or enquire.
-        </p>
-      </div>
-      <Button asChild size="lg" className="mt-4 font-bold shadow-sm">
-        <Link href="/vehicles">Browse Marketplace</Link>
-      </Button>
+    <div className="text-center py-20">
+      <Heart className="h-10 w-10 text-gray-300 mx-auto mb-3" strokeWidth={1.5} />
+      <h2 className="text-lg font-bold text-gray-900 mb-1">No saved vehicles</h2>
+      <p className="text-sm text-gray-500 mb-5 max-w-xs mx-auto">
+        Tap the heart icon on any vehicle to save it here.
+      </p>
+      <Link href="/vehicles" className="inline-flex items-center gap-2 text-sm font-medium text-[#E5231B] hover:underline">
+        <ArrowLeft className="h-3.5 w-3.5" /> Browse vehicles
+      </Link>
     </div>
   );
 }
 
-// â”€â”€â”€ Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-const INITIAL_WISHLIST_IDS: string[] = [];
-
-export default function WishlistPage() {
-  const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set(INITIAL_WISHLIST_IDS));
-  const [sort, setSort] = useState('price-asc');
-  const [compareIds, setCompareIds] = useState<string[]>([]);
-
-  const wishlistedVehicles: VehicleCardData[] = [];
-
-  const removeFromWishlist = (id: string) => {
-    setWishlistIds((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-    // Also remove from compare if it was there
-    setCompareIds((prev) => prev.filter(x => x !== id));
-  };
-
-  const clearAll = () => {
-    if (window.confirm('Are you sure you want to clear your entire wishlist?')) {
-      setWishlistIds(new Set());
-      setCompareIds([]);
-    }
-  };
-
-  const moveToCompare = (id: string) => {
-    if (!compareIds.includes(id) && compareIds.length < 4) {
-      setCompareIds([...compareIds, id]);
-    }
-    // Don't remove from wishlist automatically to keep it available
-  };
-
-  const isComparing = (id: string) => compareIds.includes(id);
+function VehicleCard({ vehicle, onRemove }: { vehicle: VehicleCardData; onRemove: () => void }) {
+  const { formatConvertedPrice } = useCurrency();
 
   return (
-    <SectionWrapper className="space-y-6 pb-20 pt-6 md:pt-10">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-4">
-        <PageHeader
-          title="My Wishlist"
-          description={
-            wishlistedVehicles.length > 0
-              ? `You have ${wishlistedVehicles.length} saved vehicle${wishlistedVehicles.length !== 1 ? 's' : ''} ready to compare or purchase.`
-              : "Vehicles you've saved will appear here."
-          }
-        />
-        {wishlistedVehicles.length > 0 && (
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <SortSelect onChange={setSort} className="w-[180px] sm:w-[220px]" />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={clearAll}
-              className="flex items-center gap-1.5 h-10 text-destructive border-destructive/30 hover:bg-destructive hover:text-destructive-foreground font-semibold"
-            >
-              <Trash2 className="h-4 w-4" /> Clear All
-            </Button>
-          </div>
+    <div className="flex flex-col rounded-lg border border-gray-200 bg-white overflow-hidden">
+      <div className="relative aspect-[16/10] bg-gray-100">
+        {vehicle.imageUrl ? (
+          <Image
+            src={vehicle.imageUrl}
+            alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-gray-400">No photo</div>
+        )}
+        <button
+          onClick={onRemove}
+          className="absolute top-2 right-2 rounded-md bg-black/50 p-1.5 text-white/80 hover:bg-[#E5231B] hover:text-white transition-colors z-10"
+          title="Remove from wishlist"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+        {vehicle.stockId && (
+          <span className="absolute top-2 left-2 rounded bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white">
+            {vehicle.stockId}
+          </span>
         )}
       </div>
+      <div className="p-4 flex flex-col flex-1">
+        {vehicle.bodyType && (
+          <span className="inline-block w-fit rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">
+            {vehicle.bodyType}
+          </span>
+        )}
+        <Link href={`/vehicles/${vehicle.slug}`} className="hover:text-[#E5231B] transition-colors">
+          <h3 className="font-[Oswald] font-bold text-sm uppercase tracking-wide text-gray-900 line-clamp-1">
+            {vehicle.year} {vehicle.make} {vehicle.model}
+          </h3>
+        </Link>
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-500">
+          {vehicle.mileage > 0 && <span>{vehicle.mileage.toLocaleString()} km</span>}
+          {vehicle.fuelType && <span>{vehicle.fuelType}</span>}
+          {vehicle.transmission && <span>{vehicle.transmission}</span>}
+          {vehicle.location && <span>{vehicle.location}</span>}
+        </div>
+        <div className="mt-auto pt-3 border-t border-gray-100 mt-3 flex items-center justify-between">
+          <p className="font-[Oswald] text-lg font-bold text-gray-900">{formatConvertedPrice(vehicle.price, vehicle.currency)}</p>
+          <Link
+            href={`/vehicles/${vehicle.slug}`}
+            className="text-[10px] font-semibold uppercase tracking-wider text-[#E5231B] hover:underline"
+          >
+            Details
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-      {/* Content */}
-      {wishlistedVehicles.length === 0 ? (
-        <WishlistEmpty />
-      ) : (
-        <>
-          {/* Stats bar */}
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card shadow-sm px-6 py-4">
-            <div className="flex flex-wrap items-center gap-6">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-full bg-rose-100 flex items-center justify-center">
-                  <Heart className="h-4 w-4 text-rose-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Saved</p>
-                  <p className="text-sm font-bold">{wishlistedVehicles.length} Vehicles</p>
-                </div>
-              </div>
-              <div className="hidden sm:block w-px h-8 bg-border" />
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <ShoppingBag className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Avg. Price</p>
-                  <p className="text-sm font-bold">
-                    ${Math.round(
-                      wishlistedVehicles.reduce((s, v) => s + v.price, 0) / wishlistedVehicles.length,
-                    ).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <div className="hidden md:block w-px h-8 bg-border" />
-              <div className="hidden md:flex items-center gap-2">
-                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                  <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Price Range</p>
-                  <p className="text-sm font-bold">
-                    ${Math.min(...wishlistedVehicles.map((v) => v.price)).toLocaleString()}
-                    {' â€“ '}
-                    ${Math.max(...wishlistedVehicles.map((v) => v.price)).toLocaleString()}
-                  </p>
-                </div>
-              </div>
+export default function WishlistPage() {
+  const { wishlistIds, compareIds, removeFromWishlist, clearWishlist } = useWishlistCompare();
+  const [sort, setSort] = useState('price-asc');
+  const [vehicles, setVehicles] = useState<VehicleCardData[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const ids = React.useMemo(() => Array.from(wishlistIds), [wishlistIds]);
+
+  const fetchVehicles = useCallback(async () => {
+    if (ids.length === 0) { setVehicles([]); return; }
+    setLoading(true);
+    try {
+      const data = await getVehiclesByIds(ids);
+      setVehicles(data as VehicleCardData[]);
+    } catch { setVehicles([]); } finally { setLoading(false); }
+  }, [ids]);
+
+  useEffect(() => { fetchVehicles(); }, [fetchVehicles]);
+
+  useEffect(() => {
+    const handle = () => { if (document.visibilityState === 'visible') fetchVehicles(); };
+    document.addEventListener('visibilitychange', handle);
+    return () => document.removeEventListener('visibilitychange', handle);
+  }, [fetchVehicles]);
+
+  const sortedVehicles = React.useMemo(() => {
+    const list = [...vehicles];
+    if (sort === 'price-asc') list.sort((a, b) => a.price - b.price);
+    else if (sort === 'price-desc') list.sort((a, b) => b.price - a.price);
+    else if (sort === 'newest') list.sort((a, b) => b.year - a.year);
+    return list;
+  }, [vehicles, sort]);
+
+  const avgPrice = vehicles.length > 0 ? Math.round(vehicles.reduce((s, v) => s + v.price, 0) / vehicles.length) : 0;
+  const minPrice = vehicles.length > 0 ? Math.min(...vehicles.map((v) => v.price)) : 0;
+  const maxPrice = vehicles.length > 0 ? Math.max(...vehicles.map((v) => v.price)) : 0;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <SectionWrapper className="py-10">
+        {/* Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Link href="/vehicles" className="flex h-9 w-9 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-500 hover:text-gray-900 transition-colors">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">My Wishlist</h1>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {vehicles.length > 0
+                  ? `${vehicles.length} vehicle${vehicles.length !== 1 ? 's' : ''} saved`
+                  : 'No saved vehicles'}
+              </p>
             </div>
-            
-            {compareIds.length > 0 && (
-              <Button asChild className="font-bold shadow-sm">
-                <Link href={`/compare?ids=${compareIds.join(',')}`}>
-                  Compare Selected ({compareIds.length})
-                </Link>
-              </Button>
-            )}
           </div>
-
-          {compareIds.length === 4 && (
-            <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <p>You can compare up to 4 vehicles at a time. Remove one to add another.</p>
+          {vehicles.length > 0 && (
+            <div className="flex items-center gap-2">
+              <SortSelect onChange={setSort} className="w-[160px] sm:w-[180px]" />
+              <button
+                onClick={() => { if (window.confirm('Clear your entire wishlist?')) clearWishlist(); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-gray-200 bg-white text-gray-500 hover:text-[#E5231B] hover:border-[#E5231B]/30 transition-colors"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Clear
+              </button>
             </div>
           )}
+        </div>
 
-          {/* Grid */}
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {wishlistedVehicles.map((vehicle) => (
-              <div key={vehicle.id} className="relative group flex flex-col h-full">
-                <VehicleCard
-                  vehicle={vehicle}
-                  variant="grid"
-                  isWishlisted={true}
-                  onWishlistToggle={() => removeFromWishlist(vehicle.id)}
-                  isCompared={isComparing(vehicle.id)}
-                  onCompareToggle={() => moveToCompare(vehicle.id)}
-                />
-                
-                {/* Remove Overlay Action */}
-                <button
-                  type="button"
-                  onClick={() => removeFromWishlist(vehicle.id)}
-                  aria-label="Remove from wishlist"
-                  className="absolute top-3 right-14 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow transition-all hover:bg-destructive hover:text-destructive-foreground text-muted-foreground opacity-0 group-hover:opacity-100 -translate-y-2 group-hover:translate-y-0"
-                  title="Remove from wishlist"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+        {vehicles.length === 0 && !loading ? (
+          <WishlistEmpty />
+        ) : (
+          <>
+            {/* Stats */}
+            {vehicles.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-8">
+                <div>
+                  <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">Saved</p>
+                  <p className="text-xl font-bold text-gray-900 mt-0.5">{vehicles.length}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">Avg Price</p>
+                  <p className="text-xl font-bold text-gray-900 mt-0.5">${avgPrice.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">Lowest</p>
+                  <p className="text-xl font-bold text-gray-900 mt-0.5">${minPrice.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">Highest</p>
+                  <p className="text-xl font-bold text-gray-900 mt-0.5">${maxPrice.toLocaleString()}</p>
+                </div>
               </div>
-            ))}
-          </div>
-        </>
-      )}
-    </SectionWrapper>
+            )}
+
+            {/* Compare link */}
+            {compareIds.length > 0 && (
+              <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 mb-8">
+                <span className="text-sm text-gray-600">
+                  {compareIds.length} vehicle{compareIds.length !== 1 ? 's' : ''} for comparison
+                </span>
+                <Link href={`/compare?ids=${compareIds.join(',')}`} className="text-sm font-medium text-[#E5231B] hover:underline">
+                  Compare
+                </Link>
+              </div>
+            )}
+
+            {/* Grid */}
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {sortedVehicles.map((vehicle) => (
+                <VehicleCard
+                  key={vehicle.id}
+                  vehicle={vehicle}
+                  onRemove={() => removeFromWishlist(vehicle.id)}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </SectionWrapper>
+    </div>
   );
 }
