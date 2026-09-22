@@ -5,7 +5,7 @@ import { requirePermission } from '@/lib/auth/rbac';
 import { DocumentService } from '@/server/services';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { AuditService } from '@/server/services/auditService';
-import { uploadFile, getPublicUrl, STORAGE_BUCKETS } from '@/lib/supabase/storage';
+import { uploadFile, getSignedUrl, STORAGE_BUCKETS } from '@/lib/supabase/storage';
 import { validateFileType, validateFileSize } from '@/lib/supabase/storage-helpers';
 import { z } from 'zod';
 
@@ -45,7 +45,7 @@ export async function uploadDocumentFile(formData: FormData): Promise<ActionResu
     const buffer = Buffer.from(await file.arrayBuffer());
     const result = await uploadFile(DOCUMENT_BUCKET_CONFIG.name, path, buffer, { contentType: file.type });
 
-    const url = getPublicUrl(DOCUMENT_BUCKET_CONFIG.name, result.path);
+    const url = await getSignedUrl(DOCUMENT_BUCKET_CONFIG.name, result.path);
 
     await auditService.logAction({
       action: 'document.file_uploaded',

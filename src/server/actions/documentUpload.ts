@@ -2,7 +2,7 @@
 
 import { requireAuth } from '@/lib/auth';
 import { requirePermission } from '@/lib/auth/rbac';
-import { uploadFile, getPublicUrl, STORAGE_BUCKETS } from '@/lib/supabase/storage';
+import { uploadFile, getSignedUrl, STORAGE_BUCKETS } from '@/lib/supabase/storage';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { randomUUID } from 'crypto';
 
@@ -49,7 +49,7 @@ export async function uploadOrderDocument(
       contentType: file.type,
     });
 
-    const url = getPublicUrl(STORAGE_BUCKETS.documents, path);
+    const url = await getSignedUrl(STORAGE_BUCKETS.documents, path);
 
     return { success: true, data: { url, path } };
   } catch (error) {

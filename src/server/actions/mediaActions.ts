@@ -7,33 +7,24 @@ import {
   deleteFile,
   uploadFile,
   getSignedUrl,
-  getPublicUrl,
   STORAGE_BUCKETS,
   type StorageFile,
-  type StorageBucket,
 } from '@/lib/supabase/storage';
 import { validateFileType, validateFileSize, getFileExtension } from '@/lib/supabase/storage-helpers';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { AuditService } from '@/server/services/auditService';
+import { db } from '@/server/db/client';
+import { vehicleImages } from '@/server/db/schema';
+import { eq } from 'drizzle-orm';
 
 const auditService = new AuditService();
+
+const CMS_BUCKET = STORAGE_BUCKETS.media;
+const VEHICLE_BUCKET = STORAGE_BUCKETS.vehicles;
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-interface ListMediaParams {
-  bucket: string;
-  prefix?: string;
-  search?: string;
-  limit?: number;
-  offset?: number;
-}
-
-interface UploadMediaParams {
-  bucket: string;
-  prefix?: string;
-}
 
 interface MediaFileItem {
   id: string;
@@ -42,7 +33,7 @@ interface MediaFileItem {
   bucket: string;
   size: number;
   type: string;
-  url: string
+  url: string;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -59,42 +50,20 @@ export interface BucketConfig {
 // Bucket configuration
 // ---------------------------------------------------------------------------
 
-const BUCKET_CONFIGS: Record<string, BucketConfig> = {
-  [STORAGE_BUCKETS.vehicles]: {
-    name: STORAGE_BUCKETS.vehicles,
-    label: 'Vehicles',
-    allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
-    maxSizeMB: 10,
-    publicAccess: true,
-  },
-  [STORAGE_BUCKETS.documents]: {
-    name: STORAGE_BUCKETS.documents,
-    label: 'Documents',
-    allowedTypes: ['application/pdf', 'image/jpeg', 'image/png'],
-    maxSizeMB: 20,
-    publicAccess: false,
-  },
-  [STORAGE_BUCKETS.media]: {
-    name: STORAGE_BUCKETS.media,
-    label: 'Media',
-    allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml', 'video/mp4'],
-    maxSizeMB: 10,
-    publicAccess: true,
-  },
-  [STORAGE_BUCKETS.avatars]: {
-    name: STORAGE_BUCKETS.avatars,
-    label: 'Avatars',
-    allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
-    maxSizeMB: 5,
-    publicAccess: true,
-  },
-  [STORAGE_BUCKETS.flags]: {
-    name: STORAGE_BUCKETS.flags,
-    label: 'Flags',
-    allowedTypes: ['image/svg+xml', 'image/png', 'image/webp'],
-    maxSizeMB: 2,
-    publicAccess: true,
-  },
+const CMS_BUCKET_CONFIG: BucketConfig = {
+  name: CMS_BUCKET,
+  label: 'Media',
+  allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml', 'video/mp4'],
+  maxSizeMB: 10,
+  publicAccess: true,
+};
+
+const VEHICLE_BUCKET_CONFIG: BucketConfig = {
+  name: VEHICLE_BUCKET,
+  label: 'Vehicles',
+  allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+  maxSizeMB: 10,
+  publicAccess: true,
 };
 
 // ---------------------------------------------------------------------------
@@ -128,53 +97,71 @@ function getFileMimeType(filename: string): string {
 function mapStorageFileToMediaItem(
   file: StorageFile,
   bucket: string,
-  prefix?: string,
 ): MediaFileItem {
-  const path = prefix ? `${prefix}/${file.name}` : file.name;
   return {
-    id: file.id ?? path,
+    id: file.id ?? file.name,
     name: file.name,
-    path,
+    path: file.name,
     bucket,
     size: typeof file.metadata?.size === 'number' ? file.metadata.size : 0,
     type:
       typeof file.metadata?.mimetype === 'string'
         ? file.metadata.mimetype
         : getFileMimeType(file.name),
-    url: getPublicUrl(bucket, path),
+    url: getPublicUrl(bucket, file.name),
     created_at: file.created_at,
     updated_at: file.updated_at,
   };
+}
+
+function getPublicUrl(bucket: string, path: string): string {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
+}
+
+async function verifyVehicleImagePath(path: string): Promise<boolean> {
+  try {
+    const image = await db.select().from(vehicleImages).where(eq(vehicleImages.imageUrl, path)).limit(1);
+    if (image && image.length > 0) return true;
+    const fullPath = `vehicles/${path}`;
+    const imageByFullPath = await db.select().from(vehicleImages).where(eq(vehicleImages.imageUrl, fullPath)).limit(1);
+    return imageByFullPath && imageByFullPath.length > 0;
+  } catch {
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Actions
 // ---------------------------------------------------------------------------
 
-export async function listMedia(params: ListMediaParams): Promise<ActionResult<MediaFileItem[]>> {
+export async function listMedia(): Promise<ActionResult<MediaFileItem[]>> {
   try {
     const auth = await requireAuth();
     await requirePermission(auth, 'vehicles.read');
 
-    const { bucket, prefix, search, limit = 50, offset = 0 } = params;
-
-    if (!bucket) {
-      return { success: false, error: 'Bucket is required', code: 'VALIDATION_ERROR' };
-    }
-
-    let files = await listFiles(bucket, prefix, limit + 1, {
-      offset,
+    const files = await listFiles(CMS_BUCKET, undefined, 50, {
       sortBy: { column: 'created_at', order: 'desc' },
     });
 
-    if (search) {
-      const q = search.toLowerCase();
-      files = files.filter((f) => f.name.toLowerCase().includes(q));
-    }
+    const items = files.map((file) => mapStorageFileToMediaItem(file, CMS_BUCKET));
 
-    const items = files.map((file) =>
-      mapStorageFileToMediaItem(file, bucket, prefix),
-    );
+    return { success: true, data: items };
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+export async function listVehicleMedia(): Promise<ActionResult<MediaFileItem[]>> {
+  try {
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.read');
+
+    const files = await listFiles(VEHICLE_BUCKET, undefined, 50, {
+      sortBy: { column: 'created_at', order: 'desc' },
+    });
+
+    const items = files.map((file) => mapStorageFileToMediaItem(file, VEHICLE_BUCKET));
 
     return { success: true, data: items };
   } catch (error) {
@@ -186,35 +173,25 @@ export async function getBucketConfigs(): Promise<ActionResult<BucketConfig[]>> 
   try {
     const auth = await requireAuth();
     await requirePermission(auth, 'vehicles.read');
-    return { success: true, data: Object.values(BUCKET_CONFIGS) };
+    return { success: true, data: [CMS_BUCKET_CONFIG, VEHICLE_BUCKET_CONFIG] };
   } catch (error) {
     return handleError(error);
   }
 }
 
 export async function uploadMedia(
-  params: UploadMediaParams,
   formData: FormData,
 ): Promise<ActionResult<MediaFileItem[]>> {
   try {
     const auth = await requireAuth();
     await requirePermission(auth, 'vehicles.update');
 
-    const { bucket, prefix } = params;
-    if (!bucket) {
-      return { success: false, error: 'Bucket is required', code: 'VALIDATION_ERROR' };
-    }
-
-    const config = BUCKET_CONFIGS[bucket];
-    if (!config) {
-      return { success: false, error: `Unknown bucket: ${bucket}`, code: 'VALIDATION_ERROR' };
-    }
-
     const files = formData.getAll('files') as File[];
     if (!files || files.length === 0) {
       return { success: false, error: 'No files provided', code: 'VALIDATION_ERROR' };
     }
 
+    const config = CMS_BUCKET_CONFIG;
     const maxSizeBytes = config.maxSizeMB * 1024 * 1024;
     const uploaded: MediaFileItem[] = [];
     const errors: string[] = [];
@@ -235,12 +212,10 @@ export async function uploadMedia(
       }
 
       const ext = getFileExtension(file.name);
-      const filePath = prefix
-        ? `${prefix}/${crypto.randomUUID()}.${ext}`
-        : `${crypto.randomUUID()}.${ext}`;
+      const filePath = `${crypto.randomUUID()}.${ext}`;
 
       const buffer = Buffer.from(await file.arrayBuffer());
-      const result = await uploadFile(bucket, filePath, buffer, {
+      const result = await uploadFile(CMS_BUCKET, filePath, buffer, {
         contentType: file.type,
       });
 
@@ -248,10 +223,10 @@ export async function uploadMedia(
         id: result.id,
         name: file.name,
         path: result.path,
-        bucket,
+        bucket: CMS_BUCKET,
         size: file.size,
         type: file.type,
-        url: getPublicUrl(bucket, result.path),
+        url: getPublicUrl(CMS_BUCKET, result.path),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -263,8 +238,8 @@ export async function uploadMedia(
         action: 'media.uploaded',
         entityType: 'media',
         entityId: uploaded.map((f) => f.id).join(','),
-        entityLabel: `${uploaded.length} file(s) to ${bucket}`,
-        metadata: { bucket, fileCount: uploaded.length, fileNames: uploaded.map((f) => f.name) },
+        entityLabel: `${uploaded.length} file(s) to ${CMS_BUCKET}`,
+        metadata: { bucket: CMS_BUCKET, fileCount: uploaded.length, fileNames: uploaded.map((f) => f.name) },
       });
     }
 
@@ -278,30 +253,106 @@ export async function uploadMedia(
   }
 }
 
-export async function deleteMedia(
-  bucket: string,
-  path: string,
-): Promise<ActionResult<void>> {
+export async function uploadVehicleMedia(
+  formData: FormData,
+): Promise<ActionResult<MediaFileItem[]>> {
+  try {
+    const auth = await requireAuth();
+    await requirePermission(auth, 'vehicles.update');
+
+    const files = formData.getAll('files') as File[];
+    if (!files || files.length === 0) {
+      return { success: false, error: 'No files provided', code: 'VALIDATION_ERROR' };
+    }
+
+    const config = VEHICLE_BUCKET_CONFIG;
+    const maxSizeBytes = config.maxSizeMB * 1024 * 1024;
+    const uploaded: MediaFileItem[] = [];
+    const errors: string[] = [];
+
+    for (const file of files) {
+      if (!file || file.size === 0) continue;
+
+      const typeResult = validateFileType(file, config.allowedTypes);
+      if (!typeResult.valid) {
+        errors.push(`${file.name}: ${typeResult.reason}`);
+        continue;
+      }
+
+      const sizeResult = validateFileSize(file, config.maxSizeMB);
+      if (!sizeResult.valid) {
+        errors.push(`${file.name}: ${sizeResult.reason}`);
+        continue;
+      }
+
+      const ext = getFileExtension(file.name);
+      const filePath = `${crypto.randomUUID()}.${ext}`;
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const result = await uploadFile(VEHICLE_BUCKET, filePath, buffer, {
+        contentType: file.type,
+      });
+
+      const item: MediaFileItem = {
+        id: result.id,
+        name: file.name,
+        path: result.path,
+        bucket: VEHICLE_BUCKET,
+        size: file.size,
+        type: file.type,
+        url: getPublicUrl(VEHICLE_BUCKET, result.path),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      uploaded.push(item);
+    }
+
+    if (uploaded.length > 0) {
+      await auditService.logAction({
+        action: 'vehicle_media.uploaded',
+        entityType: 'vehicle_media',
+        entityId: uploaded.map((f) => f.id).join(','),
+        entityLabel: `${uploaded.length} file(s) to ${VEHICLE_BUCKET}`,
+        metadata: { bucket: VEHICLE_BUCKET, fileCount: uploaded.length, fileNames: uploaded.map((f) => f.name) },
+      });
+    }
+
+    if (errors.length > 0 && uploaded.length === 0) {
+      return { success: false, error: errors.join('; '), code: 'VALIDATION_ERROR' };
+    }
+
+    return { success: true, data: uploaded };
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+export async function deleteMedia(path: string): Promise<ActionResult<void>> {
   try {
     const auth = await requireAuth();
     await requirePermission(auth, 'vehicles.delete');
 
-    if (!bucket || !path) {
+    if (!path) {
       return {
         success: false,
-        error: 'Bucket and path are required',
+        error: 'Path is required',
         code: 'VALIDATION_ERROR',
       };
     }
 
-    await deleteFile(bucket, [path]);
+    const verified = await verifyVehicleImagePath(path);
+    if (!verified) {
+      return { success: false, error: 'Unauthorized: image not associated with a vehicle', code: 'UNAUTHORIZED' };
+    }
+
+    await deleteFile(VEHICLE_BUCKET, [path]);
 
     await auditService.logAction({
       action: 'media.deleted',
       entityType: 'media',
       entityId: path,
       entityLabel: path.split('/').pop() ?? path,
-      metadata: { bucket, path },
+      metadata: { bucket: VEHICLE_BUCKET, path },
     });
 
     return { success: true, data: undefined };
@@ -310,23 +361,61 @@ export async function deleteMedia(
   }
 }
 
-export async function getMediaUrl(
-  bucket: string,
-  path: string,
-): Promise<ActionResult<string>> {
+export async function getMediaUrl(path: string): Promise<ActionResult<string>> {
   try {
     const auth = await requireAuth();
     await requirePermission(auth, 'vehicles.read');
 
-    if (!bucket || !path) {
+    if (!path) {
       return {
         success: false,
-        error: 'Bucket and path are required',
+        error: 'Path is required',
         code: 'VALIDATION_ERROR',
       };
     }
 
-    const url = await getSignedUrl(bucket, path, 3600);
+    const verified = await verifyVehicleImagePath(path);
+    if (!verified) {
+      return { success: false, error: 'Unauthorized: image not associated with a vehicle', code: 'UNAUTHORIZED' };
+    }
+
+    const url = await getSignedUrl(VEHICLE_BUCKET, path, 3600);
+    return { success: true, data: url };
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+export async function getDocumentSignedUrl(documentId: string): Promise<ActionResult<string>> {
+  try {
+    const auth = await requireAuth();
+    await requirePermission(auth, 'documents.read');
+
+    if (!documentId) {
+      return {
+        success: false,
+        error: 'Document ID is required',
+        code: 'VALIDATION_ERROR',
+      };
+    }
+
+    const { DocumentService } = await import('@/server/services');
+    const service = new DocumentService();
+    const document = await service.getDocument(documentId);
+
+    if (!document || typeof document !== 'object' || !('documentUrl' in document)) {
+      return { success: false, error: 'Document not found', code: 'NOT_FOUND' };
+    }
+
+    const doc = document as { documentUrl: string };
+    const url = doc.documentUrl;
+
+    if (url.startsWith('/storage/v1/object/public/documents/')) {
+      const path = url.replace('/storage/v1/object/public/documents/', '');
+      const signedUrl = await getSignedUrl(STORAGE_BUCKETS.documents, path, 3600);
+      return { success: true, data: signedUrl };
+    }
+
     return { success: true, data: url };
   } catch (error) {
     return handleError(error);

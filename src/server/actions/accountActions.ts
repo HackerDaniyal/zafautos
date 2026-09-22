@@ -25,7 +25,7 @@ import {
   manufacturers,
   models,
 } from '@/server/db/schema';
-import { eq, and, desc, asc, count, type SQL } from 'drizzle-orm';
+import { eq, and, desc, asc, count, inArray, type SQL } from 'drizzle-orm';
 import { formatPrice } from '@/lib/utils';
 import { revalidatePath } from 'next/cache';
 
@@ -283,9 +283,10 @@ export async function getMyOrderDetail(orderId: string) {
       createdAt: shippingDocuments.createdAt,
     })
     .from(shippingDocuments)
-    .where(
-      eq(shippingDocuments.deletedAt, null as unknown as Date)
-    )
+    .where(and(
+      eq(shippingDocuments.deletedAt, null as unknown as Date),
+      inArray(shippingDocuments.shipmentId, await db.select({ id: shipments.id }).from(shipments).where(eq(shipments.orderId, orderId)).then((rows) => rows.map((r) => r.id))),
+    ))
     .orderBy(desc(shippingDocuments.createdAt));
 
   return {
@@ -341,7 +342,7 @@ export async function getMyDocuments(params?: { page?: number; pageSize?: number
   const [{ total }] = await db
     .select({ total: count() })
     .from(orderDocuments)
-    .where(eq(orderDocuments.deletedAt, null as unknown as Date));
+    .where(and(eq(orderDocuments.deletedAt, null as unknown as Date), inArray(orderDocuments.orderId, orderIds)));
 
   const orderDocs = await db
     .select({
@@ -351,11 +352,19 @@ export async function getMyDocuments(params?: { page?: number; pageSize?: number
       createdAt: orderDocuments.createdAt,
     })
     .from(orderDocuments)
-    .where(eq(orderDocuments.deletedAt, null as unknown as Date))
+    .where(and(eq(orderDocuments.deletedAt, null as unknown as Date), inArray(orderDocuments.orderId, orderIds)))
+    .limit(pageSize)
+    .offset(offset)
     .orderBy(desc(orderDocuments.createdAt));
 
-  // Also get shipping documents
-  const shipDocs = await db
+  // Also get shipping documents for customer's orders
+  const customerShipments = await db
+    .select({ id: shipments.id })
+    .from(shipments)
+    .where(inArray(shipments.orderId, orderIds));
+  const shipmentIds = customerShipments.map((s) => s.id);
+
+  const shipDocs = shipmentIds.length > 0 ? await db
     .select({
       id: shippingDocuments.id,
       shipmentId: shippingDocuments.shipmentId,
@@ -365,8 +374,10 @@ export async function getMyDocuments(params?: { page?: number; pageSize?: number
       createdAt: shippingDocuments.createdAt,
     })
     .from(shippingDocuments)
-    .where(eq(shippingDocuments.deletedAt, null as unknown as Date))
-    .orderBy(desc(shippingDocuments.createdAt));
+    .where(and(eq(shippingDocuments.deletedAt, null as unknown as Date), inArray(shippingDocuments.shipmentId, shipmentIds)))
+    .limit(pageSize)
+    .offset(offset)
+    .orderBy(desc(shippingDocuments.createdAt)) : [];
 
   return {
     orderDocuments: orderDocs,

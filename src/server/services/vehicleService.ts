@@ -4,7 +4,7 @@ import {
   ValidationError,
   VehicleNotFoundError,
 } from './errors';
-import { uploadFile, deleteFile, getPublicUrl, STORAGE_BUCKETS, StorageError } from '@/lib/supabase/storage';
+import { uploadFile, deleteFile, getPublicUrl, getSignedUrl, STORAGE_BUCKETS, StorageError } from '@/lib/supabase/storage';
 import { vehicleImages } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { db } from '@/server/db/client';
@@ -480,8 +480,8 @@ export class VehicleService {
     const ext = file.name.split('.').pop() ?? 'pdf';
     const filename = `${vehicleId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { path } = await uploadFile('documents', filename, buffer, { contentType: file.type });
-    const documentUrl = getPublicUrl('documents', path);
-    return this.vehicleRepo.addVehicleDocument(vehicleId, documentUrl);
+const documentUrl = await getSignedUrl('documents', path);
+     return this.vehicleRepo.addVehicleDocument(vehicleId, documentUrl);
   }
 
   async getVehicleStatusHistory(vehicleId: string) { return this.vehicleRepo.getVehicleStatusHistory(vehicleId); }

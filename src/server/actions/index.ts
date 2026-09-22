@@ -129,9 +129,12 @@ export {
 
 export {
   listMedia,
+  listVehicleMedia,
   uploadMedia,
+  uploadVehicleMedia,
   deleteMedia,
   getMediaUrl,
+  getDocumentSignedUrl,
   getBucketConfigs,
 } from './mediaActions';
 

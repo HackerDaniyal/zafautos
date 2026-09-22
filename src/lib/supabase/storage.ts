@@ -15,6 +15,46 @@ export const STORAGE_BUCKETS = {
 export type StorageBucket = keyof typeof STORAGE_BUCKETS;
 
 // ---------------------------------------------------------------------------
+// Bucket allowlists
+// ---------------------------------------------------------------------------
+
+export const PUBLIC_BUCKETS: Set<string> = new Set([
+  STORAGE_BUCKETS.vehicles,
+  STORAGE_BUCKETS.media,
+  STORAGE_BUCKETS.avatars,
+  STORAGE_BUCKETS.flags,
+]);
+
+export const PRIVATE_BUCKETS: Set<string> = new Set([
+  STORAGE_BUCKETS.documents,
+]);
+
+export const ALLOWED_BUCKETS: Set<string> = new Set([
+  ...PUBLIC_BUCKETS,
+  ...PRIVATE_BUCKETS,
+]);
+
+function assertAllowedBucket(bucket: string): void {
+  if (!ALLOWED_BUCKETS.has(bucket)) {
+    throw new StorageError(`Bucket "${bucket}" is not allowed`, 'DISALLOWED_BUCKET', { bucket });
+  }
+}
+
+function assertPublicBucket(bucket: string): void {
+  assertAllowedBucket(bucket);
+  if (!PUBLIC_BUCKETS.has(bucket)) {
+    throw new StorageError(`Bucket "${bucket}" is not a public bucket`, 'PRIVATE_BUCKET_PUBLIC_URL', { bucket });
+  }
+}
+
+function assertPrivateBucket(bucket: string): void {
+  assertAllowedBucket(bucket);
+  if (!PRIVATE_BUCKETS.has(bucket)) {
+    throw new StorageError(`Bucket "${bucket}" is not a private bucket`, 'PUBLIC_BUCKET_PRIVATE_URL', { bucket });
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Typed storage error
 // ---------------------------------------------------------------------------
 
@@ -40,12 +80,6 @@ export class StorageError extends Error {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function assertBucket(bucket: string): void {
-  if (!bucket || bucket.trim().length === 0) {
-    throw new StorageError('Bucket name is required', 'MISSING_BUCKET');
-  }
-}
-
 function assertPath(path: string): void {
   if (!path || path.trim().length === 0) {
     throw new StorageError('File path is required', 'MISSING_PATH');
@@ -62,15 +96,29 @@ export function getStorageUrl(bucket: string, path: string): string | null {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
   if (!supabaseUrl) return null;
 
+  assertAllowedBucket(bucket);
+
   return `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
 }
 
 export function getPublicUrl(bucket: string, path: string): string {
-  assertBucket(bucket);
+  assertPublicBucket(bucket);
   assertPath(path);
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
   return `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
+}
+
+export function getPrivateUrl(bucket: string, path: string): string {
+  assertPrivateBucket(bucket);
+  assertPath(path);
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  return `${supabaseUrl}/storage/v1/object/${bucket}/${path}`;
+}
+
+function assertBucketAndAllowed(bucket: string): void {
+  assertAllowedBucket(bucket);
 }
 
 // ---------------------------------------------------------------------------
@@ -109,7 +157,7 @@ export async function uploadFile(
   file: File | Buffer | ArrayBuffer,
   options?: UploadFileOptions,
 ): Promise<UploadFileResult> {
-  assertBucket(bucket);
+  assertAllowedBucket(bucket);
   assertPath(path);
 
   // Validate file size
@@ -162,7 +210,7 @@ export async function deleteFile(
   bucket: string,
   paths: string[],
 ): Promise<void> {
-  assertBucket(bucket);
+  assertAllowedBucket(bucket);
   if (paths.length === 0) return;
 
   const supabase = createServiceRoleClient();
@@ -182,7 +230,7 @@ export async function getSignedUrl(
   path: string,
   expiresIn: number = 3600,
 ): Promise<string> {
-  assertBucket(bucket);
+  assertAllowedBucket(bucket);
   assertPath(path);
 
   const supabase = createServiceRoleClient();
@@ -226,7 +274,7 @@ export async function listFiles(
   limit: number = 100,
   options?: Omit<ListFilesOptions, 'prefix' | 'limit'>,
 ): Promise<StorageFile[]> {
-  assertBucket(bucket);
+  assertAllowedBucket(bucket);
 
   const supabase = createServiceRoleClient();
   const { data, error } = await supabase.storage.from(bucket).list(prefix, {
@@ -251,7 +299,7 @@ export async function moveFile(
   fromPath: string,
   toPath: string,
 ): Promise<void> {
-  assertBucket(bucket);
+  assertAllowedBucket(bucket);
   assertPath(fromPath);
   assertPath(toPath);
 
@@ -282,7 +330,7 @@ export async function copyFile(
   fromPath: string,
   toPath: string,
 ): Promise<CopyFileResult> {
-  assertBucket(bucket);
+  assertAllowedBucket(bucket);
   assertPath(fromPath);
   assertPath(toPath);
 
@@ -316,7 +364,7 @@ export async function createSignedUrls(
   paths: string[],
   expiresIn: number = 3600,
 ): Promise<SignedUrlEntry[]> {
-  assertBucket(bucket);
+  assertAllowedBucket(bucket);
   if (paths.length === 0) return [];
 
   const supabase = createServiceRoleClient();
