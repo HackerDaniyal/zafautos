@@ -4,6 +4,7 @@ import { PublicNavbar } from '@/components/layout/PublicNavbar';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import { Badge } from '@/components/ui/badge';
 import { CmsService } from '@/server/services/cmsService';
+import { sanitizeCmsHtml } from '@/lib/utils/htmlSanitize';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -41,7 +42,7 @@ export default async function BlogPostPage({ params }: Props) {
             </div>
           )}
           {post.content && (
-            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: post.content }} />
+            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeCmsHtml(post.content) }} />
           )}
           {post.tags && (
             <div className="mt-8 pt-4 border-t border-gray-200/30">

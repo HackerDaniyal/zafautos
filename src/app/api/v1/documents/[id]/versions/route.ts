@@ -1,6 +1,6 @@
 ﻿import { NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/apiAuth';
 
-export async function GET(_req: Request, _ctx: { params: Promise<{ id: string }> }) {
-  // TODO: Implement document versioning. Currently a copy-paste placeholder.
+export const GET = withAuth(async () => {
   return NextResponse.json({ error: 'Not implemented' }, { status: 501 });
-}
+});

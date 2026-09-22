@@ -1,11 +1,6 @@
-﻿import { ShippingService } from '@/server/services';
-import { withErrorHandler } from '@/lib/api/errorHandler';
-import { apiSuccess } from '@/lib/api/response';
+﻿import { NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/apiAuth';
 
-const shippingService = new ShippingService();
-
-export const POST = withErrorHandler(async (req: Request) => {
-  const body = await req.json();
-  const shipment = await shippingService.createShipment(body);
-  return apiSuccess(shipment, undefined, 'Shipment created successfully', 201);
+export const POST = withAuth(async () => {
+  return NextResponse.json({ error: 'Not implemented' }, { status: 501 });
 });

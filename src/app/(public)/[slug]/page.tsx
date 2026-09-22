@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { CmsRepository } from '@/server/repositories';
 import { SettingsService } from '@/server/services';
 import { MainContainer } from '@/components/layout/MainContainer';
+import { sanitizeCmsHtml } from '@/lib/utils/htmlSanitize';
 
 const cmsRepo = new CmsRepository();
 const settingsService = new SettingsService();
@@ -89,7 +90,7 @@ export default async function CmsPage({ params }: CmsPageProps) {
               prose-code:text-signal-red prose-code:before:content-none prose-code:after:content-none
               prose-pre:bg-white prose-pre:border prose-pre:border-gray-200
               [&>*:first-child]:mt-0"
-            dangerouslySetInnerHTML={{ __html: page.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizeCmsHtml(page.content) }}
           />
         )}
       </article>

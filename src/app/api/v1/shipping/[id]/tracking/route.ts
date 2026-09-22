@@ -1,6 +1,6 @@
 ﻿import { NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/apiAuth';
 
-export async function PATCH(_req: Request, _ctx: { params: Promise<{ id: string }> }) {
-  // TODO: Implement shipment tracking events. Currently a copy-paste placeholder.
+export const PATCH = withAuth(async () => {
   return NextResponse.json({ error: 'Not implemented' }, { status: 501 });
-}
+});

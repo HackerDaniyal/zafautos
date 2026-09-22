@@ -1,16 +1,14 @@
 ﻿import { NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/apiAuth';
 
-export async function GET(_req: Request, _ctx: { params: Promise<{ id: string }> }) {
-  // TODO: Implement order item management. Currently a copy-paste placeholder.
+export const GET = withAuth(async () => {
   return NextResponse.json({ error: 'Not implemented' }, { status: 501 });
-}
+});
 
-export async function POST(_req: Request, _ctx: { params: Promise<{ id: string }> }) {
-  // TODO: Implement order item management. Currently a copy-paste placeholder.
+export const POST = withAuth(async () => {
   return NextResponse.json({ error: 'Not implemented' }, { status: 501 });
-}
+});
 
-export async function DELETE(_req: Request, _ctx: { params: Promise<{ id: string }> }) {
-  // TODO: Implement order item management. Currently a copy-paste placeholder.
+export const DELETE = withAuth(async () => {
   return NextResponse.json({ error: 'Not implemented' }, { status: 501 });
-}
+});
