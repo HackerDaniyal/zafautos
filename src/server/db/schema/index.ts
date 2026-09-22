@@ -10,6 +10,7 @@ export * from './marketplace';
 export * from './messages';
 export * from './orders';
 export * from './payments';
+export * from './rateLimit';
 export * from './relations';
 export * from './settings';
 export * from './shipping';

@@ -8,27 +8,16 @@ import { users } from '@/server/db/schema/auth';
 import { eq, and, desc } from 'drizzle-orm';
 import { withErrorHandler } from '@/lib/api/errorHandler';
 import { apiSuccess, apiError } from '@/lib/api/response';
+import { enforceRateLimit, getRateLimitIdentifier } from '@/lib/api/rateLimiter';
 
-// Simple in-memory rate limiter: 10 requests per IP per 5 minutes
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 10;
 const RATE_WINDOW_MS = 5 * 60 * 1000;
 
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT) return false;
-  entry.count++;
-  return true;
-}
-
 export const POST = withErrorHandler(async (req: Request) => {
-  const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-  if (!checkRateLimit(ip)) {
+  const identifier = getRateLimitIdentifier(req);
+  try {
+    await enforceRateLimit('public-track', identifier, RATE_LIMIT, RATE_WINDOW_MS);
+  } catch {
     return apiError('Too many requests. Please try again later.', 'RATE_LIMITED', 429);
   }
 
