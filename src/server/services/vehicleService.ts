@@ -5,6 +5,7 @@ import {
   VehicleNotFoundError,
 } from './errors';
 import { uploadFile, deleteFile, getPublicUrl, getSignedUrl, STORAGE_BUCKETS, StorageError } from '@/lib/supabase/storage';
+import { validateUploadFile, UPLOAD_CATEGORIES } from '@/lib/supabase/upload-validation';
 import { vehicleImages } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { db } from '@/server/db/client';
@@ -223,12 +224,16 @@ export class VehicleService {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const ext = file.name.split('.').pop() ?? 'jpg';
-      const path = `${vehicleId}/${crypto.randomUUID()}.${ext}`;
+      const validation = await validateUploadFile(file, 'vehicleImages');
+      if (!validation.valid) {
+        throw new ValidationError(validation.reason);
+      }
 
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const result = await uploadFile(STORAGE_BUCKETS.vehicles, path, buffer, {
-        contentType: file.type,
+      const path = `${vehicleId}/${crypto.randomUUID()}.${validation.safeExtension}`;
+      const result = await uploadFile(STORAGE_BUCKETS.vehicles, path, validation.buffer, {
+        contentType: validation.claimedType,
+        maxFileSize: UPLOAD_CATEGORIES.vehicleImages.maxBytes,
+        upsert: false,
       });
 
       const publicUrl = getPublicUrl(STORAGE_BUCKETS.vehicles, result.path);
@@ -475,13 +480,28 @@ export class VehicleService {
   async addVehicleDocument(vehicleId: string, documentUrl: string) { return this.vehicleRepo.addVehicleDocument(vehicleId, documentUrl); }
   async deleteVehicleDocument(docId: string) { return this.vehicleRepo.deleteVehicleDocument(docId); }
 
-  async uploadVehicleDocument(vehicleId: string, file: File) {
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const ext = file.name.split('.').pop() ?? 'pdf';
-    const filename = `${vehicleId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { path } = await uploadFile('documents', filename, buffer, { contentType: file.type });
-const documentUrl = await getSignedUrl('documents', path);
-     return this.vehicleRepo.addVehicleDocument(vehicleId, documentUrl);
+async uploadVehicleDocument(vehicleId: string, file: File) {
+    if (!vehicleId) {
+      throw new ValidationError('Vehicle ID is required');
+    }
+    const existingVehicle = await this.vehicleRepo.findById(vehicleId);
+    if (!existingVehicle) {
+      throw new VehicleNotFoundError(vehicleId);
+    }
+
+    const validation = await validateUploadFile(file, 'vehicleDocuments');
+    if (!validation.valid) {
+      throw new ValidationError(validation.reason);
+    }
+
+    const filename = `${vehicleId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${validation.safeExtension}`;
+    const { path } = await uploadFile(STORAGE_BUCKETS.documents, filename, validation.buffer, {
+      contentType: validation.claimedType,
+      maxFileSize: UPLOAD_CATEGORIES.vehicleDocuments.maxBytes,
+      upsert: false,
+    });
+    const documentUrl = await getSignedUrl(STORAGE_BUCKETS.documents, path);
+    return this.vehicleRepo.addVehicleDocument(vehicleId, documentUrl);
   }
 
   async getVehicleStatusHistory(vehicleId: string) { return this.vehicleRepo.getVehicleStatusHistory(vehicleId); }

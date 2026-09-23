@@ -7,10 +7,11 @@ import {
   deleteFile,
   uploadFile,
   getSignedUrl,
+  getPublicUrl,
   STORAGE_BUCKETS,
   type StorageFile,
 } from '@/lib/supabase/storage';
-import { validateFileType, validateFileSize, getFileExtension } from '@/lib/supabase/storage-helpers';
+import { validateUploadFile, UPLOAD_CATEGORIES } from '@/lib/supabase/upload-validation';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { AuditService } from '@/server/services/auditService';
 import { db } from '@/server/db/client';
@@ -53,16 +54,16 @@ export interface BucketConfig {
 const CMS_BUCKET_CONFIG: BucketConfig = {
   name: CMS_BUCKET,
   label: 'Media',
-  allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml', 'video/mp4'],
-  maxSizeMB: 10,
+  allowedTypes: [...UPLOAD_CATEGORIES.cmsMedia.allowedTypes],
+  maxSizeMB: UPLOAD_CATEGORIES.cmsMedia.maxBytes / (1024 * 1024),
   publicAccess: true,
 };
 
 const VEHICLE_BUCKET_CONFIG: BucketConfig = {
   name: VEHICLE_BUCKET,
   label: 'Vehicles',
-  allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
-  maxSizeMB: 10,
+  allowedTypes: [...UPLOAD_CATEGORIES.vehicleImages.allowedTypes],
+  maxSizeMB: UPLOAD_CATEGORIES.vehicleImages.maxBytes / (1024 * 1024),
   publicAccess: true,
 };
 
@@ -112,11 +113,6 @@ function mapStorageFileToMediaItem(
     created_at: file.created_at,
     updated_at: file.updated_at,
   };
-}
-
-function getPublicUrl(bucket: string, path: string): string {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
 }
 
 async function verifyVehicleImagePath(path: string): Promise<boolean> {
@@ -192,31 +188,23 @@ export async function uploadMedia(
     }
 
     const config = CMS_BUCKET_CONFIG;
-    const maxSizeBytes = config.maxSizeMB * 1024 * 1024;
     const uploaded: MediaFileItem[] = [];
     const errors: string[] = [];
 
     for (const file of files) {
       if (!file || file.size === 0) continue;
 
-      const typeResult = validateFileType(file, config.allowedTypes);
-      if (!typeResult.valid) {
-        errors.push(`${file.name}: ${typeResult.reason}`);
+      const validation = await validateUploadFile(file, 'cmsMedia');
+      if (!validation.valid) {
+        errors.push(`${file.name}: ${validation.reason}`);
         continue;
       }
 
-      const sizeResult = validateFileSize(file, config.maxSizeMB);
-      if (!sizeResult.valid) {
-        errors.push(`${file.name}: ${sizeResult.reason}`);
-        continue;
-      }
-
-      const ext = getFileExtension(file.name);
-      const filePath = `${crypto.randomUUID()}.${ext}`;
-
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const result = await uploadFile(CMS_BUCKET, filePath, buffer, {
-        contentType: file.type,
+      const filePath = `${crypto.randomUUID()}.${validation.safeExtension}`;
+      const result = await uploadFile(CMS_BUCKET, filePath, validation.buffer, {
+        contentType: validation.claimedType,
+        maxFileSize: config.maxSizeMB * 1024 * 1024,
+        upsert: false,
       });
 
       const item: MediaFileItem = {
@@ -266,31 +254,23 @@ export async function uploadVehicleMedia(
     }
 
     const config = VEHICLE_BUCKET_CONFIG;
-    const maxSizeBytes = config.maxSizeMB * 1024 * 1024;
     const uploaded: MediaFileItem[] = [];
     const errors: string[] = [];
 
     for (const file of files) {
       if (!file || file.size === 0) continue;
 
-      const typeResult = validateFileType(file, config.allowedTypes);
-      if (!typeResult.valid) {
-        errors.push(`${file.name}: ${typeResult.reason}`);
+      const validation = await validateUploadFile(file, 'vehicleImages');
+      if (!validation.valid) {
+        errors.push(`${file.name}: ${validation.reason}`);
         continue;
       }
 
-      const sizeResult = validateFileSize(file, config.maxSizeMB);
-      if (!sizeResult.valid) {
-        errors.push(`${file.name}: ${sizeResult.reason}`);
-        continue;
-      }
-
-      const ext = getFileExtension(file.name);
-      const filePath = `${crypto.randomUUID()}.${ext}`;
-
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const result = await uploadFile(VEHICLE_BUCKET, filePath, buffer, {
-        contentType: file.type,
+      const filePath = `${crypto.randomUUID()}.${validation.safeExtension}`;
+      const result = await uploadFile(VEHICLE_BUCKET, filePath, validation.buffer, {
+        contentType: validation.claimedType,
+        maxFileSize: config.maxSizeMB * 1024 * 1024,
+        upsert: false,
       });
 
       const item: MediaFileItem = {

@@ -84,6 +84,19 @@ function assertPath(path: string): void {
   if (!path || path.trim().length === 0) {
     throw new StorageError('File path is required', 'MISSING_PATH');
   }
+  // Reject control characters (including NUL) that can corrupt storage keys.
+  if (/[\x00-\x1f]/.test(path)) {
+    throw new StorageError('File path contains invalid characters', 'INVALID_PATH', { path });
+  }
+  // Storage keys must be relative — no absolute paths or Windows separators.
+  if (path.startsWith('/') || path.includes('\\') || /^[a-zA-Z]:[\\/]/.test(path)) {
+    throw new StorageError('File path must be a relative storage key', 'INVALID_PATH', { path });
+  }
+  // Reject traversal / current-directory segments.
+  const segments = path.split('/');
+  if (segments.some((segment) => segment === '..' || segment === '.')) {
+    throw new StorageError('File path must not contain traversal segments', 'INVALID_PATH', { path });
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -3,22 +3,11 @@
 import { requireAuth } from '@/lib/auth';
 import { requirePermission } from '@/lib/auth/rbac';
 import { uploadFile, getSignedUrl, STORAGE_BUCKETS } from '@/lib/supabase/storage';
+import { validateUploadFile, UPLOAD_CATEGORIES } from '@/lib/supabase/upload-validation';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
+import { UUIDSchema } from '@/lib/validation/common';
+import { OrderRepository } from '@/server/repositories';
 import { randomUUID } from 'crypto';
-
-const ALLOWED_DOCUMENT_TYPES = new Set([
-  'application/pdf',
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'text/csv',
-]);
-
-const MAX_DOCUMENT_SIZE = 20 * 1024 * 1024; // 20MB
 
 export async function uploadOrderDocument(
   orderId: string,
@@ -27,26 +16,29 @@ export async function uploadOrderDocument(
   try {
     const auth = await requireAuth();
     await requirePermission(auth, 'orders.update');
+    UUIDSchema.parse(orderId);
+
+    const orderRepo = new OrderRepository();
+    const order = await orderRepo.orders.findById(orderId);
+    if (!order) {
+      return { success: false, error: 'Order not found', code: 'NOT_FOUND' };
+    }
 
     const file = formData.get('file') as File | null;
     if (!file) {
       return { success: false, error: 'No file provided' };
     }
 
-    if (file.size > MAX_DOCUMENT_SIZE) {
-      return { success: false, error: 'File size exceeds 20MB limit' };
+    const validation = await validateUploadFile(file, 'orderDocuments');
+    if (!validation.valid) {
+      return { success: false, error: validation.reason };
     }
 
-    if (!ALLOWED_DOCUMENT_TYPES.has(file.type)) {
-      return { success: false, error: `File type "${file.type}" is not allowed` };
-    }
-
-    const ext = file.name.split('.').pop() || 'bin';
-    const path = `orders/${orderId}/${randomUUID()}.${ext}`;
-
-    const bytes = await file.arrayBuffer();
-    await uploadFile(STORAGE_BUCKETS.documents, path, Buffer.from(bytes), {
-      contentType: file.type,
+    const path = `orders/${orderId}/${randomUUID()}.${validation.safeExtension}`;
+    await uploadFile(STORAGE_BUCKETS.documents, path, validation.buffer, {
+      contentType: validation.claimedType,
+      maxFileSize: UPLOAD_CATEGORIES.orderDocuments.maxBytes,
+      upsert: false,
     });
 
     const url = await getSignedUrl(STORAGE_BUCKETS.documents, path);

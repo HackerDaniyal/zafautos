@@ -6,19 +6,11 @@ import { DocumentService } from '@/server/services';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { AuditService } from '@/server/services/auditService';
 import { uploadFile, getSignedUrl, STORAGE_BUCKETS } from '@/lib/supabase/storage';
-import { validateFileType, validateFileSize } from '@/lib/supabase/storage-helpers';
+import { validateUploadFile, UPLOAD_CATEGORIES } from '@/lib/supabase/upload-validation';
 import { z } from 'zod';
 
 const documentService = new DocumentService();
 const auditService = new AuditService();
-
-const DOCUMENT_BUCKET_CONFIG = {
-  name: STORAGE_BUCKETS.documents,
-  label: 'Documents',
-  allowedTypes: ['application/pdf', 'image/jpeg', 'image/png'],
-  maxSizeMB: 20,
-  publicAccess: false,
-};
 
 export async function uploadDocumentFile(formData: FormData): Promise<ActionResult<{ url: string; fileType: string; fileSize: number }>> {
   try {
@@ -30,22 +22,19 @@ export async function uploadDocumentFile(formData: FormData): Promise<ActionResu
       return { success: false, error: 'No file provided', code: 'VALIDATION_ERROR' };
     }
 
-    const typeResult = validateFileType(file, DOCUMENT_BUCKET_CONFIG.allowedTypes);
-    if (!typeResult.valid) {
-      return { success: false, error: typeResult.reason ?? 'Invalid file type', code: 'VALIDATION_ERROR' };
+    const validation = await validateUploadFile(file, 'adminDocuments');
+    if (!validation.valid) {
+      return { success: false, error: validation.reason, code: 'VALIDATION_ERROR' };
     }
 
-    const sizeResult = validateFileSize(file, DOCUMENT_BUCKET_CONFIG.maxSizeMB);
-    if (!sizeResult.valid) {
-      return { success: false, error: sizeResult.reason ?? 'File too large', code: 'VALIDATION_ERROR' };
-    }
+    const path = `docs/${crypto.randomUUID()}.${validation.safeExtension}`;
+    const result = await uploadFile(STORAGE_BUCKETS.documents, path, validation.buffer, {
+      contentType: validation.claimedType,
+      maxFileSize: UPLOAD_CATEGORIES.adminDocuments.maxBytes,
+      upsert: false,
+    });
 
-    const ext = file.name.split('.').pop() ?? '';
-    const path = `docs/${crypto.randomUUID()}.${ext}`;
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const result = await uploadFile(DOCUMENT_BUCKET_CONFIG.name, path, buffer, { contentType: file.type });
-
-    const url = await getSignedUrl(DOCUMENT_BUCKET_CONFIG.name, result.path);
+    const url = await getSignedUrl(STORAGE_BUCKETS.documents, result.path);
 
     await auditService.logAction({
       action: 'document.file_uploaded',
@@ -55,7 +44,7 @@ export async function uploadDocumentFile(formData: FormData): Promise<ActionResu
       metadata: { fileName: file.name, fileSize: file.size },
     });
 
-    return { success: true, data: { url, fileType: file.type, fileSize: file.size } };
+    return { success: true, data: { url, fileType: validation.claimedType, fileSize: validation.buffer.byteLength } };
   } catch (error) {
     return handleError(error);
   }
