@@ -3,8 +3,12 @@ import { withErrorHandler } from '@/lib/api/errorHandler';
 import { withAuth } from '@/lib/api/apiAuth';
 import { apiSuccess } from '@/lib/api/response';
 import { UnauthorizedError } from '@/server/services/errors';
+import { enforceRateLimit, getRateLimitIdentifierAuthenticated } from '@/lib/api/rateLimiter';
 
 const orderService = new OrderService();
+
+const CREATE_RATE_LIMIT = 10;
+const CREATE_RATE_WINDOW_MS = 60 * 1000;
 
 export const GET = withAuth(async (req, auth) => {
   const { searchParams } = new URL(req.url);
@@ -40,6 +44,7 @@ export const GET = withAuth(async (req, auth) => {
 }, { permission: 'orders.read' });
 
 export const POST = withAuth(async (req, auth) => {
+  await enforceRateLimit('orders-create', getRateLimitIdentifierAuthenticated(auth.userId), CREATE_RATE_LIMIT, CREATE_RATE_WINDOW_MS);
   const body = await req.json();
   const order = await orderService.createOrder(body);
   return apiSuccess(order, undefined, 'Order created successfully', 201);

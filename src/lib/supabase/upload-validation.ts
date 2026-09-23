@@ -67,7 +67,10 @@ const ALLOWED_EXTENSIONS: Record<string, readonly string[]> = {
   'image/png': ['png'],
   'image/webp': ['webp'],
   'image/gif': ['gif'],
-  'image/svg+xml': ['svg', 'svgz'],
+  // svgz (gzip-compressed SVG) is intentionally NOT allowed: compressed
+  // content cannot be inspected for scriptable payloads, and gzip bytes
+  // already fail magic-byte detection as image/svg+xml.
+  'image/svg+xml': ['svg'],
   'application/pdf': ['pdf'],
   'text/csv': ['csv'],
   'video/mp4': ['mp4', 'm4v'],
@@ -188,6 +191,123 @@ function isExtensionAllowed(extension: string, claimedType: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// SVG safety inspection (Phase 8 — stored-XSS prevention)
+// ---------------------------------------------------------------------------
+// SVGs are permitted only for the public `cmsMedia` category (media bucket).
+// A direct navigation to a stored SVG executes its script in the storage
+// origin, and any inline-injection of its markup would execute in the app
+// origin — so uploads are rejected when they contain scriptable content.
+//
+// Policy: FAIL CLOSED with an allowlist-oriented structural scan of the
+// entity-decoded text. This deliberately rejects SMIL <animate>/<set>
+// (attribute/URL-rewriting XSS vectors), DOCTYPE/ENTITY declarations
+// (XXE / billion-laughs), event-handler attributes, javascript: and
+// dangerous data: URLs, external URL references in href/xlink:href/src,
+// @import and external url() references. Local fragment references
+// (href="#id", url(#grad)) and embedded raster data: URIs remain allowed.
+// All 201 repo-provided flag SVGs pass this scan unchanged.
+
+export type SvgSafetyResult =
+  | { safe: true }
+  | { safe: false; reason: string };
+
+function codePointOrEmpty(value: number): string {
+  if (!Number.isFinite(value) || value < 0 || value > 0x10ffff) return '';
+  try {
+    return String.fromCodePoint(value);
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Decode XML character references exactly once — the same single pass an XML
+ * parser performs before markup is interpreted. `&amp;` is replaced last so
+ * double-encoded references are NOT unwrapped (matching parser semantics:
+ * `&amp;lt;script&amp;gt;` stays inert text in a real XML document).
+ */
+function decodeXmlEntitiesOnce(text: string): string {
+  return text
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => codePointOrEmpty(parseInt(hex, 16)))
+    .replace(/&#([0-9]+);/g, (_, dec: string) => codePointOrEmpty(parseInt(dec, 10)))
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
+function truncateForReason(value: string): string {
+  return value.length > 80 ? `${value.slice(0, 80)}…` : value;
+}
+
+/**
+ * Inspect an SVG buffer for scriptable / externally-referenceable content.
+ * Returns `{ safe: false, reason }` on the FIRST violation found.
+ */
+export function inspectSvgSafety(buffer: Uint8Array): SvgSafetyResult {
+  // NUL bytes are forbidden in XML — their presence means the content is not
+  // a well-formed SVG regardless of what the text around them looks like.
+  if (buffer.includes(0)) {
+    return { safe: false, reason: 'SVG must not contain NUL bytes' };
+  }
+
+  const text = new TextDecoder('utf-8', { fatal: false }).decode(buffer);
+  const decoded = decodeXmlEntitiesOnce(text);
+
+  if (/<!doctype|<!entity/i.test(decoded)) {
+    return { safe: false, reason: 'SVG must not contain a DOCTYPE or ENTITY declaration' };
+  }
+  if (/<script/i.test(decoded)) {
+    return { safe: false, reason: 'SVG must not contain script elements' };
+  }
+  if (
+    /<foreignobject|<iframe|<embed|<object[\s>]|<frame|<frameset|<meta[\s>]|<link[\s>]|<base[\s>]|<form[\s>]|<handler|<set[\s>]|<animate/i.test(
+      decoded,
+    )
+  ) {
+    return {
+      safe: false,
+      reason: 'SVG must not contain embedded HTML, frames, or SMIL animate/set elements',
+    };
+  }
+  if (/[\s"'<]on[a-z]+\s*=/i.test(decoded)) {
+    return { safe: false, reason: 'SVG must not contain inline event handlers' };
+  }
+  if (/java\s*script\s*:/i.test(decoded)) {
+    return { safe: false, reason: 'SVG must not contain javascript: URLs' };
+  }
+  if (/data:text\/html|data:application\/xhtml|data:image\/svg/i.test(decoded)) {
+    return { safe: false, reason: 'SVG must not embed dangerous data: URLs' };
+  }
+
+  // URL-bearing attributes: only same-document fragments and embedded safe
+  // raster data are allowed — anything else (https:, //host, relative paths,
+  // unknown schemes) is an external reference.
+  const urlAttrPattern = /(?:xlink:href|href|src)\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
+  let urlMatch: RegExpExecArray | null;
+  while ((urlMatch = urlAttrPattern.exec(decoded)) !== null) {
+    const value = (urlMatch[1] ?? urlMatch[2] ?? '').trim();
+    if (value === '') continue;
+    if (value.startsWith('#')) continue;
+    if (/^data:image\/(png|jpe?g|gif|webp|bmp|avif)[;,]/i.test(value)) continue;
+    return {
+      safe: false,
+      reason: `SVG URL references must be local fragments or embedded raster data (found: "${truncateForReason(value)}")`,
+    };
+  }
+
+  if (/@import/i.test(decoded)) {
+    return { safe: false, reason: 'SVG must not contain @import rules' };
+  }
+  if (/url\s*\(\s*['"]?\s*(?:https?:|\/\/|[a-z][a-z0-9+.-]*:)/i.test(decoded)) {
+    return { safe: false, reason: 'SVG must not reference external resources via url()' };
+  }
+
+  return { safe: true };
+}
+
+// ---------------------------------------------------------------------------
 // Canonical upload validation
 // ---------------------------------------------------------------------------
 
@@ -267,6 +387,19 @@ export async function validateUploadFile(
       code: 'EXTENSION_MISMATCH',
       reason: 'File extension does not match the validated file type',
     };
+  }
+
+  // Phase 8: SVGs that pass type/extension checks must additionally contain no
+  // scriptable or externally-referenceable content (stored-XSS prevention).
+  if (claimedType === 'image/svg+xml') {
+    const svgSafety = inspectSvgSafety(buffer);
+    if (!svgSafety.safe) {
+      return {
+        valid: false,
+        code: 'UNSAFE_SVG_CONTENT',
+        reason: svgSafety.reason,
+      };
+    }
   }
 
   return {

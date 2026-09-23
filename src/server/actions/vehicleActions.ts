@@ -12,6 +12,7 @@ import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { AuditService } from '@/server/services/auditService';
 import { UUIDSchema } from '@/lib/validation/common';
 import { deleteFile } from '@/lib/supabase/storage';
+import { enforceFileUploadRateLimit } from '@/lib/api/rateLimiter';
 import { z } from 'zod';
 import type { VehicleStatus, VehicleListParams } from '@/lib/types/vehicle';
 import type { LookupEntity } from '@/server/repositories/vehicleRepository';
@@ -178,6 +179,11 @@ export async function uploadVehicleImages(
   try {
     const auth = await requireAuth();
     await requirePermission(auth, 'vehicles.update');
+    try {
+      await enforceFileUploadRateLimit(auth.userId);
+    } catch {
+      return { success: false, error: 'Too many uploads. Please try again later.', code: 'RATE_LIMIT_EXCEEDED' };
+    }
     UUIDSchema.parse(vehicleId);
 
     const files = formData.getAll('images').filter((f): f is File => f instanceof File);
@@ -968,6 +974,11 @@ export async function uploadVehicleDocumentFileAction(
   try {
     const auth = await requireAuth();
     await requirePermission(auth, 'vehicles.update');
+    try {
+      await enforceFileUploadRateLimit(auth.userId);
+    } catch {
+      return { success: false, error: 'Too many uploads. Please try again later.', code: 'RATE_LIMIT_EXCEEDED' };
+    }
     UUIDSchema.parse(vehicleId);
     const file = formData.get('file') as File | null;
     if (!file || file.size === 0) return { success: false, error: 'File is required', code: 'VALIDATION_ERROR' };

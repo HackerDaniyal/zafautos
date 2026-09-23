@@ -6,8 +6,26 @@ import { eq, and, sql, inArray } from 'drizzle-orm';
 import { requireAuth } from '@/lib/auth/session';
 import { z } from 'zod';
 import { VehicleRepository } from '@/server/repositories/vehicleRepository';
+import {
+  enforceRateLimit,
+  getRateLimitIdentifierAuthenticated,
+  getServerActionRateLimitIdentifier,
+} from '@/lib/api/rateLimiter';
 
 const vehicleRepo = new VehicleRepository();
+
+const ENQUIRY_RATE_LIMIT = 5;
+const ENQUIRY_RATE_WINDOW_MS = 10 * 60 * 1000;
+const TRACKING_RATE_LIMIT = 60;
+const TRACKING_RATE_WINDOW_MS = 10 * 60 * 1000;
+const COMPARE_SEARCH_RATE_LIMIT = 60;
+const COMPARE_SEARCH_RATE_WINDOW_MS = 60 * 1000;
+
+/** user:{id} when logged in, else trusted client IP, else null (skip — fail-open). */
+async function getPublicIdentifier(userId?: string | null): Promise<string | null> {
+  if (userId) return getRateLimitIdentifierAuthenticated(userId);
+  return getServerActionRateLimitIdentifier();
+}
 
 // ── Helpers ──────────────────────────────────────────
 
@@ -43,19 +61,32 @@ export type EnquiryInput = z.infer<typeof EnquirySchema>;
 export async function submitVehicleEnquiry(data: EnquiryInput) {
   const validated = EnquirySchema.parse(data);
 
-  // CRITICAL: Verify vehicle exists and is active/published
-  const vehicleValid = await validateActiveVehicle(validated.vehicleId);
-  if (!vehicleValid) {
-    return { success: false, error: 'Vehicle not found or no longer available', code: 'VEHICLE_NOT_FOUND' };
-  }
-
-  // Get user if logged in (optional)
+  // Optional login (also used as the rate-limit identifier when present)
   let userId: string | null = null;
   try {
     const auth = await requireAuth();
     userId = auth.userId;
   } catch {
     // Not logged in — that's fine for enquiries
+  }
+
+  const identifier = await getPublicIdentifier(userId);
+  if (identifier) {
+    try {
+      await enforceRateLimit('vehicle-enquiries', identifier, ENQUIRY_RATE_LIMIT, ENQUIRY_RATE_WINDOW_MS);
+    } catch {
+      return {
+        success: false,
+        error: 'Too many enquiries. Please try again later.',
+        code: 'RATE_LIMIT_EXCEEDED',
+      };
+    }
+  }
+
+  // CRITICAL: Verify vehicle exists and is active/published
+  const vehicleValid = await validateActiveVehicle(validated.vehicleId);
+  if (!vehicleValid) {
+    return { success: false, error: 'Vehicle not found or no longer available', code: 'VEHICLE_NOT_FOUND' };
   }
 
   // Structured message — not just concatenated strings
@@ -185,6 +216,18 @@ export async function trackVehicleView(vehicleId: string) {
     // Anonymous view — still track it
   }
 
+  // Best-effort tracking: when over the limit, silently skip instead of
+  // throwing — rate limiting must never break the page (and IP buckets can
+  // collide behind CGNAT).
+  const identifier = await getPublicIdentifier(userId);
+  if (identifier) {
+    try {
+      await enforceRateLimit('vehicle-views', identifier, TRACKING_RATE_LIMIT, TRACKING_RATE_WINDOW_MS);
+    } catch {
+      return;
+    }
+  }
+
   try {
     // Duplicate prevention: check if this user already viewed this vehicle recently (within 1 hour)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -276,6 +319,17 @@ export async function getVehiclesByIds(ids: string[]) {
 }
 
 export async function searchVehiclesForCompare(query: string, excludeIds: string[] = []) {
+  // Public typeahead search — throttle per client IP; degrade to no results
+  // when over the limit so the compare UI keeps functioning.
+  const identifier = await getServerActionRateLimitIdentifier();
+  if (identifier) {
+    try {
+      await enforceRateLimit('compare-search', identifier, COMPARE_SEARCH_RATE_LIMIT, COMPARE_SEARCH_RATE_WINDOW_MS);
+    } catch {
+      return [];
+    }
+  }
+
   // Sanitize inputs
   const safeQuery = (query || '').slice(0, 200).trim();
   const safeExcludeIds = excludeIds.filter((id) => z.string().uuid().safeParse(id).success).slice(0, 10);
@@ -329,6 +383,16 @@ export async function trackWhatsappClick(vehicleId: string, source: string = 've
     userId = auth.userId;
   } catch {
     // Anonymous click — still track
+  }
+
+  // Best-effort tracking: over-limit clicks are dropped silently.
+  const identifier = await getPublicIdentifier(userId);
+  if (identifier) {
+    try {
+      await enforceRateLimit('whatsapp-clicks', identifier, TRACKING_RATE_LIMIT, TRACKING_RATE_WINDOW_MS);
+    } catch {
+      return;
+    }
   }
 
   try {

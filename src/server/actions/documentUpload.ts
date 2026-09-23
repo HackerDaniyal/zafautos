@@ -7,6 +7,7 @@ import { validateUploadFile, UPLOAD_CATEGORIES } from '@/lib/supabase/upload-val
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { UUIDSchema } from '@/lib/validation/common';
 import { OrderRepository } from '@/server/repositories';
+import { enforceFileUploadRateLimit } from '@/lib/api/rateLimiter';
 import { randomUUID } from 'crypto';
 
 export async function uploadOrderDocument(
@@ -16,6 +17,11 @@ export async function uploadOrderDocument(
   try {
     const auth = await requireAuth();
     await requirePermission(auth, 'orders.update');
+    try {
+      await enforceFileUploadRateLimit(auth.userId);
+    } catch {
+      return { success: false, error: 'Too many uploads. Please try again later.', code: 'RATE_LIMIT_EXCEEDED' };
+    }
     UUIDSchema.parse(orderId);
 
     const orderRepo = new OrderRepository();

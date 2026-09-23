@@ -23,6 +23,9 @@ function authErrorResponse(error: unknown): NextResponse {
     error instanceof Error && 'code' in error
       ? (error as { code: string }).code
       : 'UNAUTHORIZED';
+  if (code === 'RATE_LIMIT_EXCEEDED') {
+    return apiError('Too many requests. Please try again later.', 'RATE_LIMIT_EXCEEDED', 429);
+  }
   const status = code === 'UNAUTHORIZED' || code === 'SESSION_EXPIRED' ? 401 : 403;
   return apiError(message, code, status);
 }

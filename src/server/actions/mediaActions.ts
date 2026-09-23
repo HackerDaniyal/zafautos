@@ -14,6 +14,7 @@ import {
 import { validateUploadFile, UPLOAD_CATEGORIES } from '@/lib/supabase/upload-validation';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { AuditService } from '@/server/services/auditService';
+import { enforceFileUploadRateLimit } from '@/lib/api/rateLimiter';
 import { db } from '@/server/db/client';
 import { vehicleImages } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
@@ -181,6 +182,11 @@ export async function uploadMedia(
   try {
     const auth = await requireAuth();
     await requirePermission(auth, 'vehicles.update');
+    try {
+      await enforceFileUploadRateLimit(auth.userId);
+    } catch {
+      return { success: false, error: 'Too many uploads. Please try again later.', code: 'RATE_LIMIT_EXCEEDED' };
+    }
 
     const files = formData.getAll('files') as File[];
     if (!files || files.length === 0) {
@@ -247,6 +253,11 @@ export async function uploadVehicleMedia(
   try {
     const auth = await requireAuth();
     await requirePermission(auth, 'vehicles.update');
+    try {
+      await enforceFileUploadRateLimit(auth.userId);
+    } catch {
+      return { success: false, error: 'Too many uploads. Please try again later.', code: 'RATE_LIMIT_EXCEEDED' };
+    }
 
     const files = formData.getAll('files') as File[];
     if (!files || files.length === 0) {

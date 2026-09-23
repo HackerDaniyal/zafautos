@@ -195,6 +195,17 @@ export async function uploadFile(
     );
   }
 
+  // Phase 8 defence-in-depth: SVG is a public-bucket format only (upload
+  // categories never permit it for private documents — this guard closes any
+  // future low-level bypass for the private documents bucket).
+  if (contentType === 'image/svg+xml' && PRIVATE_BUCKETS.has(bucket)) {
+    throw new StorageError(
+      'SVG uploads are not allowed in private buckets',
+      'SVG_PRIVATE_BUCKET_FORBIDDEN',
+      { bucket, path },
+    );
+  }
+
   const supabase = createServiceRoleClient();
   const { data, error } = await supabase.storage
     .from(bucket)

@@ -19,11 +19,33 @@ import {
   type ResetPasswordInput,
   type ChangePasswordInput,
 } from '@/lib/auth/validation';
+import {
+  enforceRateLimit,
+  getServerActionRateLimitIdentifier,
+  RateLimitExceededError,
+} from '@/lib/api/rateLimiter';
 
 const userService = new UserProvisioningService();
 
 const ROLE_COOKIE = 'zaf_role';
 const ROLE_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+
+const AUTH_RATE_WINDOW_MS = 15 * 60 * 1000;
+const RATE_LIMITED_MESSAGE = 'Too many attempts. Please try again later.';
+
+/**
+ * Per-IP limit for auth server actions. Skips enforcement when no trusted
+ * client IP is available (fail-open — consistent with DB fail-open behavior).
+ */
+async function limitAuthActionByIp(routeKey: string, limit: number): Promise<void> {
+  const identifier = await getServerActionRateLimitIdentifier();
+  if (!identifier) return;
+  await enforceRateLimit(routeKey, identifier, limit, AUTH_RATE_WINDOW_MS);
+}
+
+function rateLimitedResult<T = unknown>(): ActionResult<T> {
+  return { success: false, error: RATE_LIMITED_MESSAGE, code: 'RATE_LIMIT_EXCEEDED' };
+}
 
 async function setRoleCookie(role: string) {
   const store = await cookies();
@@ -47,7 +69,19 @@ async function clearRoleCookie() {
  */
 export async function login(data: LoginInput): Promise<ActionResult<{ role: string }>> {
   try {
+    // Per-IP brute-force bound (before any auth work).
+    await limitAuthActionByIp('auth-login-ip', 10);
+
     const validated = loginSchema.parse(data);
+
+    // Per-target bound: stops distributed attempts concentrated on one account.
+    await enforceRateLimit(
+      'auth-login-email',
+      `email:${validated.email.toLowerCase().trim()}`.slice(0, 255),
+      10,
+      AUTH_RATE_WINDOW_MS
+    );
+
     const supabase = await createClient();
 
     const { data: authData, error } = await supabase.auth.signInWithPassword({
@@ -73,6 +107,7 @@ export async function login(data: LoginInput): Promise<ActionResult<{ role: stri
 
     return { success: true, data: { role } };
   } catch (error) {
+    if (error instanceof RateLimitExceededError) return rateLimitedResult();
     return handleError(error);
   }
 }
@@ -92,6 +127,8 @@ export async function register(data: RegisterInput): Promise<ActionResult> {
   let authUserId: string | null = null;
 
   try {
+    await limitAuthActionByIp('auth-register', 5);
+
     const validated = registerSchema.parse(data);
     const supabase = await createClient();
 
@@ -148,6 +185,7 @@ export async function register(data: RegisterInput): Promise<ActionResult> {
         // Best-effort cleanup
       }
     }
+    if (error instanceof RateLimitExceededError) return rateLimitedResult();
     return handleError(error);
   }
 }
@@ -177,6 +215,8 @@ export async function logout(): Promise<ActionResult> {
  */
 export async function forgotPassword(data: ForgotPasswordInput): Promise<ActionResult> {
   try {
+    await limitAuthActionByIp('auth-forgot-password', 5);
+
     const validated = forgotPasswordSchema.parse(data);
     const supabase = await createClient();
 
@@ -192,6 +232,7 @@ export async function forgotPassword(data: ForgotPasswordInput): Promise<ActionR
 
     return { success: true, data: undefined };
   } catch (error) {
+    if (error instanceof RateLimitExceededError) return rateLimitedResult();
     return handleError(error);
   }
 }
@@ -225,6 +266,8 @@ export async function resetPassword(data: ResetPasswordInput): Promise<ActionRes
  */
 export async function changePassword(data: ChangePasswordInput): Promise<ActionResult> {
   try {
+    await limitAuthActionByIp('auth-change-password', 10);
+
     const validated = changePasswordSchema.parse(data);
     const supabase = await createClient();
 
@@ -263,6 +306,7 @@ export async function changePassword(data: ChangePasswordInput): Promise<ActionR
 
     return { success: true, data: undefined };
   } catch (error) {
+    if (error instanceof RateLimitExceededError) return rateLimitedResult();
     return handleError(error);
   }
 }
@@ -272,6 +316,8 @@ export async function changePassword(data: ChangePasswordInput): Promise<ActionR
  */
 export async function resendVerification(email: string): Promise<ActionResult> {
   try {
+    await limitAuthActionByIp('auth-resend-verification', 5);
+
     if (!email) {
       return { success: false, error: 'Email is required', code: 'VALIDATION_ERROR' };
     }
@@ -289,6 +335,7 @@ export async function resendVerification(email: string): Promise<ActionResult> {
 
     return { success: true, data: undefined };
   } catch (error) {
+    if (error instanceof RateLimitExceededError) return rateLimitedResult();
     return handleError(error);
   }
 }

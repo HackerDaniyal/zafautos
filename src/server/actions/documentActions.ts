@@ -7,6 +7,7 @@ import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { AuditService } from '@/server/services/auditService';
 import { uploadFile, getSignedUrl, STORAGE_BUCKETS } from '@/lib/supabase/storage';
 import { validateUploadFile, UPLOAD_CATEGORIES } from '@/lib/supabase/upload-validation';
+import { enforceFileUploadRateLimit } from '@/lib/api/rateLimiter';
 import { z } from 'zod';
 
 const documentService = new DocumentService();
@@ -16,6 +17,11 @@ export async function uploadDocumentFile(formData: FormData): Promise<ActionResu
   try {
     const auth = await requireAuth();
     await requirePermission(auth, 'settings.update');
+    try {
+      await enforceFileUploadRateLimit(auth.userId);
+    } catch {
+      return { success: false, error: 'Too many uploads. Please try again later.', code: 'RATE_LIMIT_EXCEEDED' };
+    }
 
     const file = formData.get('file') as File | null;
     if (!file || file.size === 0) {
