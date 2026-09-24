@@ -3,6 +3,7 @@ import { withErrorHandler } from '@/lib/api/errorHandler';
 import { withAuth } from '@/lib/api/apiAuth';
 import { apiSuccess } from '@/lib/api/response';
 import { ValidationError, UnauthorizedError } from '@/server/services/errors';
+import { hasMinRole } from '@/lib/auth/rbac';
 
 const customerService = new CustomerService();
 
@@ -20,6 +21,8 @@ export const PATCH = withAuth(async (req, auth) => {
     if (!customer || (customer as { id: string }).id !== customerId) {
       throw new UnauthorizedError('Access denied: cannot modify other customers settings');
     }
+  } else if (!hasMinRole(auth, 'admin')) {
+    throw new UnauthorizedError('Access denied: cannot modify customer settings');
   }
 
   const settings = await customerService.updateSettings(customerId, body);

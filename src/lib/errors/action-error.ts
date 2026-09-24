@@ -24,7 +24,10 @@ export function handleError(error: unknown): ActionError {
   }
   return {
     success: false,
-    error: error instanceof Error ? error.message : 'An unexpected error occurred',
+    error:
+      process.env.NODE_ENV === 'development' && error instanceof Error
+        ? error.message
+        : 'An unexpected error occurred',
     code: 'INTERNAL_ERROR',
   };
 }

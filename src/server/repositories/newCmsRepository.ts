@@ -195,8 +195,12 @@ export class NewCmsRepository {
     return { items, total: totalResult[0].count, page, limit, totalPages: Math.ceil(totalResult[0].count / limit) };
   }
 
-  async findBlogPostBySlug(slug: string) {
-    const [result] = await db.select().from(blogPosts).where(and(eq(blogPosts.slug, slug), isNull(blogPosts.deletedAt)));
+  async findBlogPostBySlug(slug: string, options?: { publishedOnly?: boolean }) {
+    const conditions = [eq(blogPosts.slug, slug), isNull(blogPosts.deletedAt)];
+    if (options?.publishedOnly) {
+      conditions.push(eq(blogPosts.status, 'published'));
+    }
+    const [result] = await db.select().from(blogPosts).where(and(...conditions));
     return result;
   }
 

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { UserProvisioningService } from '@/server/services/userProvisioningService';
 import { cookies } from 'next/headers';
+import { safeInternalPath } from '@/lib/security/safe-redirect';
 
 const userService = new UserProvisioningService();
 
@@ -28,7 +29,7 @@ function getDashboardForRole(role: string): string {
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next');
+  const next = safeInternalPath(searchParams.get('next'));
 
   if (code) {
     const supabase = await createClient();
@@ -76,8 +77,8 @@ export async function GET(request: Request) {
           maxAge: 60 * 60 * 24 * 7,
         });
 
-        // Redirect to the correct portal for their role
-        const destination = next || getDashboardForRole(role);
+        // Redirect to a validated internal path, or the role dashboard
+        const destination = next ?? getDashboardForRole(role);
 
         const forwardedHost = request.headers.get('x-forwarded-host');
         const isLocalEnv = process.env.NODE_ENV === 'development';

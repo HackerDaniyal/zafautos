@@ -6,6 +6,9 @@ import { AuthRepository } from '@/server/repositories';
 import { profiles } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
+import { requireAuth } from '@/lib/auth/session';
+import { hasMinRole } from '@/lib/auth/rbac';
+import { UnauthorizedError } from '@/server/services/errors';
 import { cookies } from 'next/headers';
 import {
   loginSchema,
@@ -134,11 +137,8 @@ export async function register(data: RegisterInput): Promise<ActionResult> {
 
     const existingUser = await userService.findUserByEmail(validated.email);
     if (existingUser) {
-      return {
-        success: false,
-        error: 'An account with this email already exists.',
-        code: 'USER_ALREADY_EXISTS',
-      };
+      // Non-enumerating: identical success response as a fresh registration.
+      return { success: true, data: undefined };
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -156,7 +156,8 @@ export async function register(data: RegisterInput): Promise<ActionResult> {
     });
 
     if (authError) {
-      return { success: false, error: authError.message, code: 'AUTH_ERROR' };
+      // Do not surface provider-specific messages (may reveal account existence).
+      return { success: false, error: 'Registration failed. Please try again.', code: 'AUTH_ERROR' };
     }
 
     if (!authData.user) {
@@ -455,7 +456,8 @@ export async function adminCreateUser(data: {
     });
 
     if (authError) {
-      return { success: false, error: authError.message, code: 'AUTH_ERROR' };
+      // Super-admin createUser: avoid leaking provider internals.
+      return { success: false, error: 'User creation failed', code: 'AUTH_ERROR' };
     }
 
     if (!authData.user) {
@@ -492,6 +494,11 @@ export async function adminCreateUser(data: {
  */
 export async function getProfileByUserId(userId: string): Promise<ActionResult<{ firstName: string | null; lastName: string | null; avatarUrl: string | null } | null>> {
   try {
+    const auth = await requireAuth();
+    if (auth.userId !== userId && !hasMinRole(auth, 'admin')) {
+      throw new UnauthorizedError('Access denied: cannot view other profiles');
+    }
+
     const authRepo = new AuthRepository();
     const [profile] = await authRepo.profiles.getClient()
       .select()

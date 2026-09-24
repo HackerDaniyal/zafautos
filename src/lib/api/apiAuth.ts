@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { requireAuth, getSession } from '@/lib/auth/session';
 import { requireRole, requirePermission } from '@/lib/auth/rbac';
 import { apiError } from '@/lib/api/response';
+import { DomainError } from '@/server/services/errors';
+import { ZodError } from 'zod';
 import type { AuthContext, UserRole } from '@/lib/auth/types';
 
 type RouteContext = { params: Promise<Record<string, string | string[]>> };
@@ -18,16 +20,55 @@ type AuthOptions = {
 };
 
 function authErrorResponse(error: unknown): NextResponse {
-  const message = error instanceof Error ? error.message : 'Unauthorized';
-  const code =
-    error instanceof Error && 'code' in error
-      ? (error as { code: string }).code
-      : 'UNAUTHORIZED';
-  if (code === 'RATE_LIMIT_EXCEEDED') {
-    return apiError('Too many requests. Please try again later.', 'RATE_LIMIT_EXCEEDED', 429);
+  // Auth-layer failures only — never echo raw messages for unexpected errors.
+  if (error instanceof ZodError) {
+    return apiError('Validation failed', 'VALIDATION_ERROR', 422, error.errors);
   }
-  const status = code === 'UNAUTHORIZED' || code === 'SESSION_EXPIRED' ? 401 : 403;
-  return apiError(message, code, status);
+  if (error instanceof DomainError) {
+    if (error.code === 'RATE_LIMIT_EXCEEDED') {
+      return apiError('Too many requests. Please try again later.', 'RATE_LIMIT_EXCEEDED', 429);
+    }
+    if (error.code === 'UNAUTHORIZED' || error.code === 'SESSION_EXPIRED') {
+      return apiError(error.message, error.code, 401);
+    }
+    if (error.code === 'INVALID_CREDENTIALS') {
+      return apiError(error.message, error.code, 401);
+    }
+    return apiError(error.message, error.code, 403);
+  }
+  console.error('[withAuth] unexpected error:', error);
+  return apiError('Internal Server Error', 'INTERNAL_ERROR', 500);
+}
+
+function handlerErrorResponse(error: unknown): NextResponse {
+  if (error instanceof ZodError) {
+    return apiError('Validation failed', 'VALIDATION_ERROR', 422, error.errors);
+  }
+  if (error instanceof DomainError) {
+    if (error.code === 'RATE_LIMIT_EXCEEDED') {
+      return apiError('Too many requests. Please try again later.', 'RATE_LIMIT_EXCEEDED', 429);
+    }
+    if (
+      error.code === 'UNAUTHORIZED' ||
+      error.code === 'SESSION_EXPIRED' ||
+      error.code === 'INVALID_CREDENTIALS'
+    ) {
+      return apiError(error.message, error.code, 401);
+    }
+    if (
+      error.code === 'VALIDATION_ERROR' ||
+      error.code === 'CONFLICT' ||
+      error.code.endsWith('_NOT_FOUND')
+    ) {
+      const status = error.code === 'CONFLICT' ? 409 : error.code === 'VALIDATION_ERROR' ? 422 : 404;
+      return apiError(error.message, error.code, status);
+    }
+    // Remaining DomainErrors are intentional domain messages (safe to surface).
+    return apiError(error.message, error.code, 400);
+  }
+  // Non-domain handler failures must not leak internals.
+  console.error('[withAuth handler] unexpected error:', error);
+  return apiError('Internal Server Error', 'INTERNAL_ERROR', 500);
 }
 
 /**
@@ -47,8 +88,9 @@ export function withAuth(
   options?: AuthOptions,
 ): (req: Request, context: RouteContext) => Promise<NextResponse> {
   return async (req: Request, context: RouteContext) => {
+    let auth: AuthContext;
     try {
-      const auth = await requireAuth();
+      auth = await requireAuth();
 
       if (options?.roles) {
         requireRole(auth, ...options.roles);
@@ -57,10 +99,14 @@ export function withAuth(
       if (options?.permission) {
         await requirePermission(auth, options.permission);
       }
-
-      return await handler(req, auth, context);
     } catch (error) {
       return authErrorResponse(error);
+    }
+
+    try {
+      return await handler(req, auth, context);
+    } catch (error) {
+      return handlerErrorResponse(error);
     }
   };
 }

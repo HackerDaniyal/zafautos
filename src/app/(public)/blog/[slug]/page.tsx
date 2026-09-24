@@ -13,7 +13,7 @@ const cmsService = new CmsService();
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   try {
-    const post = await cmsService.getBlogPostBySlug(slug);
+    const post = await cmsService.getPublishedBlogPostBySlug(slug);
     return { title: `${post.title} | ZafAutos Blog`, description: post.seoDescription || post.excerpt || '' };
   } catch { return { title: 'Blog Post | ZafAutos' }; }
 }
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
   let post;
-  try { post = await cmsService.getBlogPostBySlug(slug); } catch { notFound(); }
+  try { post = await cmsService.getPublishedBlogPostBySlug(slug); } catch { notFound(); }
 
   return (
     <div className="min-h-screen flex flex-col">

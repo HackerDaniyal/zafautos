@@ -22,11 +22,12 @@ import { PasswordInput } from './password-input';
 import { SocialLoginButtons } from './social-login-buttons';
 import { loginSchema, type LoginInput } from '@/lib/auth/validation';
 import { login, getDefaultDashboard } from '@/server/actions/authActions';
+import { safeInternalPath } from '@/lib/security/safe-redirect';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect');
+  const redirectTo = safeInternalPath(searchParams.get('redirect'));
   const [isPending, setIsPending] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
 
@@ -51,7 +52,7 @@ function LoginForm() {
         return;
       }
 
-      // Redirect based on DB role or custom redirect
+      // Redirect based on DB role or custom redirect (path must be safe)
       if (redirectTo) {
         router.push(redirectTo);
       } else {

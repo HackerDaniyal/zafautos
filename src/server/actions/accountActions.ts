@@ -25,7 +25,7 @@ import {
   manufacturers,
   models,
 } from '@/server/db/schema';
-import { eq, and, desc, asc, count, inArray, type SQL } from 'drizzle-orm';
+import { eq, and, desc, asc, count, inArray, or, exists, type SQL } from 'drizzle-orm';
 import { formatPrice } from '@/lib/utils';
 import { revalidatePath } from 'next/cache';
 
@@ -390,7 +390,19 @@ export async function getMyDocuments(params?: { page?: number; pageSize?: number
 export async function getMyMessageThreads() {
   const auth = await requireAuth();
 
-  // Get threads where user is sender or recipient
+  const isParticipant = exists(
+    db
+      .select({ id: messages.id })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.threadId, messageThreads.id),
+          or(eq(messages.senderId, auth.userId), eq(messages.recipientId, auth.userId)),
+          eq(messages.deletedAt, null as unknown as Date)
+        )
+      )
+  );
+
   const threads = await db
     .select({
       id: messageThreads.id,
@@ -399,7 +411,7 @@ export async function getMyMessageThreads() {
       updatedAt: messageThreads.updatedAt,
     })
     .from(messageThreads)
-    .where(eq(messageThreads.deletedAt, null as unknown as Date))
+    .where(and(eq(messageThreads.deletedAt, null as unknown as Date), isParticipant))
     .orderBy(desc(messageThreads.updatedAt));
 
   // For each thread, get the last message and unread count
@@ -452,6 +464,23 @@ export async function getMyThreadDetail(threadId: string) {
 
   if (!thread) return null;
 
+  const [participant] = await db
+    .select({ id: messages.id })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.threadId, threadId),
+        or(eq(messages.senderId, auth.userId), eq(messages.recipientId, auth.userId)),
+        eq(messages.deletedAt, null as unknown as Date)
+      )
+    )
+    .limit(1);
+
+  const isAdmin = auth.role === 'admin' || auth.role === 'super_admin';
+  if (!participant && !isAdmin) {
+    return null;
+  }
+
   // Get messages in thread with sender info
   const threadMessages = await db
     .select({
@@ -502,6 +531,23 @@ export async function sendMessage(data: { threadId?: string; recipientId: string
       })
       .returning({ id: messageThreads.id });
     threadId = newThread.id;
+  } else {
+    const [participant] = await db
+      .select({ id: messages.id })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.threadId, threadId),
+          or(eq(messages.senderId, auth.userId), eq(messages.recipientId, auth.userId)),
+          eq(messages.deletedAt, null as unknown as Date)
+        )
+      )
+      .limit(1);
+
+    const isAdmin = auth.role === 'admin' || auth.role === 'super_admin';
+    if (!participant && !isAdmin) {
+      return { success: false as const, error: 'Access denied to this thread', threadId: undefined };
+    }
   }
 
   // Insert message

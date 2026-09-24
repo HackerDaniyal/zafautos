@@ -3,6 +3,7 @@ import { withErrorHandler } from '@/lib/api/errorHandler';
 import { withAuth } from '@/lib/api/apiAuth';
 import { apiSuccess } from '@/lib/api/response';
 import { ValidationError, UnauthorizedError } from '@/server/services/errors';
+import { hasMinRole } from '@/lib/auth/rbac';
 
 const dealerService = new DealerService();
 
@@ -19,6 +20,8 @@ export const GET = withAuth(async (req, auth) => {
     if (!dealer || (dealer as { id: string }).id !== dealerId) {
       throw new UnauthorizedError('Access denied: cannot view other dealers assignments');
     }
+  } else if (!hasMinRole(auth, 'admin')) {
+    throw new UnauthorizedError('Access denied: cannot view dealer assignments');
   }
 
   const assignments = await dealerService.getAssignments(dealerId);

@@ -121,7 +121,7 @@ describe('API Route Security — IDOR Protection', () => {
   describe('Customer profile', () => {
     it('customers/profile checks ownership for customer role', () => {
       const source = readRoute('app/api/v1/customers/profile/route.ts');
-      expect(source).toContain("auth.role === 'customer'");
+      expect(source).toContain('hasMinRole');
       expect(source).toContain('auth.userId !== userId');
     });
   });
@@ -165,7 +165,7 @@ describe('API Route Security — IDOR Protection', () => {
   describe('Dealer profile', () => {
     it('dealers/profile checks ownership for dealer role', () => {
       const source = readRoute('app/api/v1/dealers/profile/route.ts');
-      expect(source).toContain("auth.role === 'dealer'");
+      expect(source).toContain('hasMinRole');
       expect(source).toContain('auth.userId !== userId');
     });
   });

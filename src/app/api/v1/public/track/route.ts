@@ -5,7 +5,7 @@ import { shipments, shipmentTracking } from '@/server/db/schema/shipping';
 import { vehicles } from '@/server/db/schema/vehicles';
 import { customers } from '@/server/db/schema/customers';
 import { users } from '@/server/db/schema/auth';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 import { withErrorHandler } from '@/lib/api/errorHandler';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { enforceRateLimit, getRateLimitIdentifier } from '@/lib/api/rateLimiter';
@@ -75,8 +75,9 @@ export const POST = withErrorHandler(async (req: Request) => {
     }
   }
 
-  // If no customer on order, check if email exists in users table
-  if (!emailVerified) {
+  // Guest/lead orders (no customerId): accept if the email belongs to any account.
+  // Orders with a customer: ONLY the linked customer email may access (no fallback).
+  if (!order.customerId) {
     const [userMatch] = await db
       .select({ id: users.id })
       .from(users)
@@ -150,6 +151,7 @@ export const POST = withErrorHandler(async (req: Request) => {
       })
       .from(shipmentTracking)
       .where(and(
+        inArray(shipmentTracking.shipmentId, ids),
         eq(shipmentTracking.deletedAt, null as unknown as Date),
       ))
       .orderBy(desc(shipmentTracking.createdAt));

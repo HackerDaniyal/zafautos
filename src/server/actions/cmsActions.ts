@@ -1013,7 +1013,8 @@ export async function getPublishedBlogPosts(options: { page?: number; limit?: nu
 
 export async function getBlogPostBySlug(slug: string): Promise<ActionResult> {
   try {
-    const data = await cmsService.getBlogPostBySlug(slug);
+    // Public action path — drafts must not be readable here.
+    const data = await cmsService.getPublishedBlogPostBySlug(slug);
     return { success: true, data };
   } catch (error) {
     return handleError(error);

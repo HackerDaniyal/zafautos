@@ -3,6 +3,7 @@ import { withErrorHandler } from '@/lib/api/errorHandler';
 import { withAuth } from '@/lib/api/apiAuth';
 import { apiSuccess } from '@/lib/api/response';
 import { ValidationError, UnauthorizedError } from '@/server/services/errors';
+import { hasMinRole } from '@/lib/auth/rbac';
 
 const customerService = new CustomerService();
 
@@ -14,7 +15,7 @@ export const GET = withAuth(async (req, auth) => {
     throw new ValidationError('User ID is required');
   }
 
-  if (auth.role === 'customer' && auth.userId !== userId) {
+  if (auth.userId !== userId && !hasMinRole(auth, 'admin')) {
     throw new UnauthorizedError('Access denied: cannot view other customers profile');
   }
 

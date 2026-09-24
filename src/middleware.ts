@@ -96,7 +96,9 @@ export async function middleware(request: NextRequest) {
   response.headers.set('Content-Security-Policy', csp);
   response.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
   response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
-  response.headers.set('Cross-Origin-Embedder-Policy', 'require-corp');
+  // COEP: require-corp intentionally NOT set — Supabase storage objects send
+  // CORP: null, which blocks cross-origin images under COEP (C10).
+  // COOP alone keeps window isolation without breaking public bucket assets.
 
   return response;
 }

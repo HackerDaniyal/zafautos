@@ -43,6 +43,13 @@ describe('Security Headers', () => {
     expect(middleware).toContain('Cross-Origin-Opener-Policy');
   });
 
+  it('middleware.ts does NOT set Cross-Origin-Embedder-Policy (C10)', () => {
+    const middleware = readFile('src/middleware.ts');
+    // COEP require-corp blocks Supabase storage images (CORP: null).
+    expect(middleware).not.toMatch(/headers\.set\(\s*['"]Cross-Origin-Embedder-Policy['"]/);
+    expect(middleware).not.toContain("Cross-Origin-Embedder-Policy', 'require-corp'");
+  });
+
   it('middleware.ts sets Cache-Control no-store', () => {
     const middleware = readFile('src/middleware.ts');
     expect(middleware).toContain('Cache-Control');

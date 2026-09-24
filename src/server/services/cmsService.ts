@@ -389,10 +389,14 @@ export class CmsService {
     return post;
   }
 
-  async getBlogPostBySlug(slug: string) {
-    const post = await newCmsRepository.findBlogPostBySlug(slug);
+  async getBlogPostBySlug(slug: string, options?: { publishedOnly?: boolean }) {
+    const post = await newCmsRepository.findBlogPostBySlug(slug, options);
     if (!post) throw new CmsPageNotFoundError(slug);
     return post;
+  }
+
+  async getPublishedBlogPostBySlug(slug: string) {
+    return this.getBlogPostBySlug(slug, { publishedOnly: true });
   }
 
   async getPublishedBlogPosts(params: PaginationParams) {

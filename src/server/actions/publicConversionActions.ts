@@ -2,7 +2,7 @@
 
 import { db } from '@/server/db/client';
 import { vehicleEnquiries, vehicleWishlist, vehicleViews, vehicles, vehicleImages, manufacturers, models, bodyTypes, fuelTypes, transmissions, countries, whatsappClicks } from '@/server/db/schema';
-import { eq, and, sql, inArray } from 'drizzle-orm';
+import { eq, and, sql, inArray, isNull } from 'drizzle-orm';
 import { requireAuth } from '@/lib/auth/session';
 import { z } from 'zod';
 import { VehicleRepository } from '@/server/repositories/vehicleRepository';
@@ -264,7 +264,16 @@ export async function getVehiclesByIds(ids: string[]) {
   const safeIds = ids.filter((id) => z.string().uuid().safeParse(id).success).slice(0, 50);
   if (safeIds.length === 0) return [];
 
-  const vehicleRows = await db.select().from(vehicles).where(inArray(vehicles.id, safeIds));
+  const vehicleRows = await db
+    .select()
+    .from(vehicles)
+    .where(
+      and(
+        inArray(vehicles.id, safeIds),
+        eq(vehicles.status, 'active'),
+        isNull(vehicles.deletedAt)
+      )
+    );
   if (vehicleRows.length === 0) return [];
 
   const vIds = vehicleRows.map((v) => v.id);

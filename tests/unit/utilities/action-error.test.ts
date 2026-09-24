@@ -50,15 +50,35 @@ describe('handleError', () => {
     });
   });
 
-  it('returns INTERNAL_ERROR code for generic Error', () => {
+  it('does not leak generic Error messages outside development', () => {
+    const prev = process.env.NODE_ENV;
+    // Vitest sets NODE_ENV=test; treat non-development as production-like.
     const error = new Error('Something broke');
     const result = handleError(error);
 
-    expect(result).toEqual({
-      success: false,
-      error: 'Something broke',
-      code: 'INTERNAL_ERROR',
-    });
+    expect(result.code).toBe('INTERNAL_ERROR');
+    expect(result.success).toBe(false);
+    // NODE_ENV is 'test' (not 'development') → generic message
+    expect(result.error).toBe('An unexpected error occurred');
+    expect(result.error).not.toContain('Something broke');
+    expect(prev).toBeDefined();
+  });
+
+  it('returns raw Error message only in development', () => {
+    const original = process.env.NODE_ENV;
+    // @ts-expect-error test-only mutation
+    process.env.NODE_ENV = 'development';
+    try {
+      const result = handleError(new Error('dev detail'));
+      expect(result).toEqual({
+        success: false,
+        error: 'dev detail',
+        code: 'INTERNAL_ERROR',
+      });
+    } finally {
+      // @ts-expect-error test-only mutation
+      process.env.NODE_ENV = original;
+    }
   });
 
   it('returns INTERNAL_ERROR for unknown error', () => {
