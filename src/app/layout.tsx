@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from 'next';
 import { Inter, Oswald } from 'next/font/google';
+import { headers } from 'next/headers';
 import './globals.css';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
@@ -31,11 +32,20 @@ export const metadata: Metadata = {
   description: 'Imported. Inspected. Ready. Zaf Autos Japan marketplace.',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // next-themes renders its own theme-init <script> at render time. Under
+  // script-src 'nonce-…' 'strict-dynamic' that inline script is blocked
+  // unless it carries the request nonce (it was the only nonce-less script
+  // in the document). Middleware forwards the full CSP on the REQUEST
+  // headers, so extract the nonce here and hand it to the provider.
+  const requestHeaders = await headers();
+  const csp = requestHeaders.get('content-security-policy');
+  const nonce = csp ? /nonce-([^;'\s]+)/.exec(csp)?.[1] : undefined;
+
   return (
     <html
       lang="en"
@@ -50,6 +60,7 @@ export default function RootLayout({
           forcedTheme="light"
           enableSystem={false}
           disableTransitionOnChange
+          nonce={nonce}
         >
           <QueryProvider>{children}</QueryProvider>
         </ThemeProvider>

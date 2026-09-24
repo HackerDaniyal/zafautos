@@ -58,10 +58,22 @@ function buildContentSecurityPolicy(nonce: string): string {
   const supabaseOrigin = getSupabaseOrigin();
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    // Dev-only 'unsafe-eval': webpack's dev runtime (react-refresh/HMR) evaluates
+    // module factories with eval. Without it every factory throws EvalError,
+    // hydration never completes, and all client interactivity is dead on localhost.
+    // Production bundles never eval, so this is never emitted for prod.
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${
+      process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''
+    }`,
     "script-src-attr 'none'",
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' blob: ${supabaseOrigin}`,
+    // Diagnosed from blocked console errors on the public homepage (image-only
+    // origins, no script capability): cdn.simpleicons.org = MakeLogo brand marks
+    // in Shop By Make; placehold.co = vehicle card placeholder images from
+    // getPlaceholderImageUrl. (logo.clearbit.com was also diagnosed here, but
+    // its API is sunset and the host no longer resolves — MakeLogo no longer
+    // requests it, so it is deliberately not allowlisted.)
+    `img-src 'self' blob: ${supabaseOrigin} https://cdn.simpleicons.org https://placehold.co`,
     "font-src 'self'",
     `connect-src 'self' ${supabaseOrigin}`,
     "frame-src 'none'",

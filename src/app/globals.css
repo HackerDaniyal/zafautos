@@ -91,6 +91,16 @@
   html {
     scroll-behavior: smooth;
   }
+
+  html, body {
+    /* `clip` hides horizontal overflow WITHOUT making body a scroll
+       container. `hidden` made body the sticky element's scrollport
+       (it never scrolls), so the sticky public navbar detached from
+       top:0 and tracked page scroll instead (measured headerTop:-900
+       at scrollY 900). `clip` is not a scroll container, so sticky
+       elements keep the viewport as their scrollport. */
+    overflow-x: clip;
+  }
 }
 
 /* ── Admin dark theme (scoped via .admin-theme on wrapper) ── */

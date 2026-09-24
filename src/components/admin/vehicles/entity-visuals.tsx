@@ -23,39 +23,27 @@ export function normalizeName(value: string): string {
 
 // Simple Icons slug overrides (slug differs from the normalized brand name)
 const SI_SLUG_OVERRIDES: Record<string, string> = {
-  mercedesbenz: 'mercedes',
   rollsroyce: 'rollsroyce',
   alfaromeo: 'alfaromeo',
-  // Japanese brands that exist in Simple Icons
-  lexus: 'lexus',
-  // Brands NOT in Simple Icons - skip Simple Icons entirely, go straight to Clearbit
-  // daihatsu, isuzu, hino, subaru, suzuki, mitsubishi, nissan, toyota, honda, mazda are in Simple Icons
 };
 
+// Brands NOT in Simple Icons (verified 404 for every slug variant):
+// mercedes/mercedesbenz/mercedes-benz and lexus. These skip Simple Icons
+// entirely and fall through to the letter-avatar fallback below.
 const SKIP_SIMPLE_ICONS = new Set([
   'daihatsu',
   'isuzu',
   'hino',
+  'mercedes',
+  'mercedesbenz',
+  'lexus',
 ]);
-
-// Clearbit domain overrides for brands whose main domain isn't obvious
-const DOMAIN_OVERRIDES: Record<string, string> = {
-  mercedes: 'mercedes-benz.com',
-  mercedesbenz: 'mercedes-benz.com',
-  rollsroyce: 'rolls-roycemotorcars.com',
-  hino: 'hino.global',
-  nissan: 'nissan-global.com',
-  mitsubishi: 'mitsubishi-motors.com',
-  daihatsu: 'daihatsu.co.jp',
-  isuzu: 'isuzu.co.jp',
-  subaru: 'subaru.co.jp',
-  suzuki: 'suzuki.co.jp',
-};
 
 /**
  * Auto-fetched official logo URL derived from a make name.
  * Uses the Simple Icons CDN which serves real brand marks in their official
- * brand color. For brands not in Simple Icons, returns empty (falls back to Clearbit).
+ * brand color. For brands not in Simple Icons, returns empty (MakeLogo then
+ * renders its letter-avatar fallback).
  */
 export function getSuggestedBrandLogoUrl(name?: string | null): string {
   const key = normalizeName(name ?? '');
@@ -66,15 +54,14 @@ export function getSuggestedBrandLogoUrl(name?: string | null): string {
 }
 
 function getBrandCandidates(name: string, url?: string | null): string[] {
-  const key = normalizeName(name);
   const list: string[] = [];
   if (url) list.push(url);
   const si = getSuggestedBrandLogoUrl(name);
   if (si) list.push(si); // only add Simple Icons if brand is in it
-  if (key) {
-    const domain = DOMAIN_OVERRIDES[key] ?? `${key}.com`;
-    list.push(`https://logo.clearbit.com/${domain}`);
-  }
+  // logo.clearbit.com fallback removed: the Clearbit Logo API was sunset and
+  // the hostname no longer resolves (verified NODATA against the domain's
+  // authoritative nameservers), so the request could only ever fail. Brands
+  // without a Simple Icons mark now go straight to the letter avatar.
   return list;
 }
 
