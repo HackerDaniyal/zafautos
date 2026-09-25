@@ -11,7 +11,8 @@ const globalForPostgres = globalThis as unknown as {
 
 if (!globalForPostgres.__postgresClient) {
   globalForPostgres.__postgresClient = postgres(env.DATABASE_URL, {
-    max: 10,
+    max: 1,
+    prepare: false,
     ssl: 'require',
   });
   globalForPostgres.__db = drizzle(globalForPostgres.__postgresClient);
