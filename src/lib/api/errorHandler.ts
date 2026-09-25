@@ -2,6 +2,7 @@
 import { ZodError } from 'zod';
 import { DomainError } from '@/server/services/errors';
 import { apiError } from './response';
+import { RateLimitExceededError } from './rateLimiter';
 
 export type RequestContext = { params: Promise<Record<string, string | string[]>> } | unknown;
 export type RequestHandler = (req: Request, context?: RequestContext) => Promise<NextResponse>;
@@ -66,6 +67,9 @@ export function withErrorHandler(handler: RequestHandler): RequestHandler {
             
           case 'RATE_LIMIT_EXCEEDED':
             status = 429;
+            if (error instanceof RateLimitExceededError && error.retryAfterSeconds) {
+              headers.set('Retry-After', String(error.retryAfterSeconds));
+            }
             break;
 
           case 'VALIDATION_ERROR':

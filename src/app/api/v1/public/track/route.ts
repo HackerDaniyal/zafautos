@@ -8,7 +8,7 @@ import { users } from '@/server/db/schema/auth';
 import { eq, and, desc, inArray } from 'drizzle-orm';
 import { withErrorHandler } from '@/lib/api/errorHandler';
 import { apiSuccess, apiError } from '@/lib/api/response';
-import { enforceRateLimit, getRateLimitIdentifier } from '@/lib/api/rateLimiter';
+import { enforceRateLimit, getRateLimitIdentifier, RateLimitExceededError } from '@/lib/api/rateLimiter';
 
 const RATE_LIMIT = 10;
 const RATE_WINDOW_MS = 5 * 60 * 1000;
@@ -17,8 +17,12 @@ export const POST = withErrorHandler(async (req: Request) => {
   const identifier = getRateLimitIdentifier(req);
   try {
     await enforceRateLimit('public-track', identifier, RATE_LIMIT, RATE_WINDOW_MS);
-  } catch {
-    return apiError('Too many requests. Please try again later.', 'RATE_LIMITED', 429);
+  } catch (error) {
+    const headers = new Headers();
+    if (error instanceof RateLimitExceededError && error.retryAfterSeconds) {
+      headers.set('Retry-After', String(error.retryAfterSeconds));
+    }
+    return apiError('Too many requests. Please try again later.', 'RATE_LIMITED', 429, undefined, headers);
   }
 
   const body = await req.json();

@@ -51,8 +51,11 @@ const {
   getRateLimitIdentifier,
   getRateLimitIdentifierAuthenticated,
   getServerActionRateLimitIdentifier,
+  getTrustedClientIp,
+  normalizeClientIp,
   cleanupExpiredRateLimits,
   enforceFileUploadRateLimit,
+  MAX_IDENTIFIER_LENGTH,
   RATE_LIMIT_CLEANUP_PROBABILITY,
 } = await import('@/lib/api/rateLimiter');
 
@@ -102,7 +105,7 @@ describe('Rate Limiter', () => {
     });
   });
 
-  describe('getRateLimitIdentifier()', () => {
+  describe('getRateLimitIdentifier() — trusted client-IP model', () => {
     function makeRequest(headers: Record<string, string | null>): NextRequest {
       return {
         headers: {
@@ -111,14 +114,101 @@ describe('Rate Limiter', () => {
       } as unknown as NextRequest;
     }
 
-    it('returns first forwarded-for value', () => {
-      const req = makeRequest({ 'x-forwarded-for': '1.2.3.4, 5.6.7.8' });
+    it('uses cf-connecting-ip as the canonical client IP', () => {
+      const req = makeRequest({ 'cf-connecting-ip': '1.2.3.4' });
       expect(getRateLimitIdentifier(req)).toBe('1.2.3.4');
     });
 
-    it('returns unknown when no forwarded-for header', () => {
-      const req = makeRequest({});
-      expect(getRateLimitIdentifier(req)).toBe('unknown');
+    it('falls back to x-real-ip when cf-connecting-ip is absent', () => {
+      const req = makeRequest({ 'x-real-ip': '5.6.7.8' });
+      expect(getRateLimitIdentifier(req)).toBe('5.6.7.8');
+    });
+
+    it('falls back to x-vercel-forwarded-for when the higher-priority headers are absent', () => {
+      const req = makeRequest({ 'x-vercel-forwarded-for': '9.8.7.6' });
+      expect(getRateLimitIdentifier(req)).toBe('9.8.7.6');
+    });
+
+    it('never reads x-forwarded-for — a client-controlled header cannot select the bucket', () => {
+      const req = makeRequest({ 'x-forwarded-for': '1.2.3.4' });
+      expect(getRateLimitIdentifier(req)).toBeNull();
+    });
+
+    it('multi-entry XFF cannot mint attacker-chosen leftmost buckets', () => {
+      const req = makeRequest({
+        'x-forwarded-for': 'attacker-1, attacker-2, 10.0.0.1',
+        'cf-connecting-ip': '198.51.100.7',
+      });
+      expect(getRateLimitIdentifier(req)).toBe('198.51.100.7');
+    });
+
+    it('for comma-separated trusted values only the rightmost hop is used', () => {
+      const req = makeRequest({ 'x-vercel-forwarded-for': '203.0.113.9, 198.51.100.7' });
+      expect(getRateLimitIdentifier(req)).toBe('198.51.100.7');
+    });
+
+    it('accepts valid IPv4 and IPv6 literals', () => {
+      const v4 = makeRequest({ 'cf-connecting-ip': '203.0.113.42' });
+      const v6 = makeRequest({ 'cf-connecting-ip': '2001:db8::1' });
+      const v6Mapped = makeRequest({ 'cf-connecting-ip': '::ffff:192.0.2.1' });
+      expect(getRateLimitIdentifier(v4)).toBe('203.0.113.42');
+      expect(getRateLimitIdentifier(v6)).toBe('2001:db8::1');
+      expect(getRateLimitIdentifier(v6Mapped)).toBe('::ffff:192.0.2.1');
+    });
+
+    it('rejects invalid, empty, control-character and oversized header values', () => {
+      expect(getRateLimitIdentifier(makeRequest({ 'cf-connecting-ip': 'not-an-ip' }))).toBeNull();
+      expect(getRateLimitIdentifier(makeRequest({ 'cf-connecting-ip': '   ' }))).toBeNull();
+      expect(
+        getRateLimitIdentifier(makeRequest({ 'cf-connecting-ip': '1.2.3.4\r\nX-Injected: 1' }))
+      ).toBeNull();
+      expect(
+        getRateLimitIdentifier(makeRequest({ 'cf-connecting-ip': '1.2.3.4'.padEnd(46, '9') }))
+      ).toBeNull();
+    });
+
+    it('returns null when no trusted header exists (no shared bucket)', () => {
+      expect(getRateLimitIdentifier(makeRequest({}))).toBeNull();
+    });
+  });
+
+  describe('normalizeClientIp()', () => {
+    it('accepts valid IPv4/IPv6 and trims whitespace', () => {
+      expect(normalizeClientIp(' 8.8.8.8 ')).toBe('8.8.8.8');
+      expect(normalizeClientIp('::1')).toBe('::1');
+    });
+
+    it('rejects junk, empty, non-IP and over-long values', () => {
+      expect(normalizeClientIp(null)).toBeNull();
+      expect(normalizeClientIp(undefined)).toBeNull();
+      expect(normalizeClientIp('')).toBeNull();
+      expect(normalizeClientIp('localhost')).toBeNull();
+      expect(normalizeClientIp('1.2.3.4; DROP TABLE rate_limits')).toBeNull();
+      expect(normalizeClientIp('a'.repeat(46))).toBeNull();
+    });
+  });
+
+  describe('getTrustedClientIp()', () => {
+    function makeHeaders(headers: Record<string, string | null>) {
+      return { get: (name: string) => headers[name] ?? null };
+    }
+
+    it('prefers cf-connecting-ip over x-real-ip and x-vercel-forwarded-for', () => {
+      const ip = getTrustedClientIp(
+        makeHeaders({
+          'cf-connecting-ip': '1.1.1.1',
+          'x-real-ip': '2.2.2.2',
+          'x-vercel-forwarded-for': '3.3.3.3',
+        })
+      );
+      expect(ip).toBe('1.1.1.1');
+    });
+
+    it('skips an invalid higher-priority value and uses the next trusted header', () => {
+      const ip = getTrustedClientIp(
+        makeHeaders({ 'cf-connecting-ip': 'garbage', 'x-real-ip': '4.4.4.4' })
+      );
+      expect(ip).toBe('4.4.4.4');
     });
   });
 
@@ -128,16 +218,44 @@ describe('Rate Limiter', () => {
     });
   });
 
+  describe('identifier length / malformed input never reaches the database', () => {
+    it('skips the DB round-trip for identifiers longer than varchar(255)', async () => {
+      const oversized = 'x'.repeat(MAX_IDENTIFIER_LENGTH + 1);
+      await expect(enforceRateLimit('test-route', oversized, 100, 60000)).resolves.toBeUndefined();
+      expect(mockReturning).not.toHaveBeenCalled();
+    });
+
+    it('skips the DB round-trip for a null identifier (malformed headers)', async () => {
+      await expect(enforceRateLimit('test-route', null, 100, 60000)).resolves.toBeUndefined();
+      expect(mockReturning).not.toHaveBeenCalled();
+    });
+
+    it('still enforces at exactly varchar(255)', async () => {
+      mockReturning.mockResolvedValueOnce([{ requestCount: 1 }]);
+      await enforceRateLimit('test-route', 'x'.repeat(MAX_IDENTIFIER_LENGTH), 100, 60000);
+      expect(mockReturning).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('getServerActionRateLimitIdentifier()', () => {
-    it('returns first forwarded-for hop from next/headers', async () => {
+    it('uses the trusted client-IP model from next/headers', async () => {
       const { headers } = await import('next/headers');
       (headers as Mock).mockResolvedValueOnce({
-        get: (name: string) => (name === 'x-forwarded-for' ? '7.7.7.7, 8.8.8.8' : null),
+        get: (name: string) =>
+          name === 'cf-connecting-ip' ? '7.7.7.7' : name === 'x-forwarded-for' ? '8.8.8.8' : null,
       });
       await expect(getServerActionRateLimitIdentifier()).resolves.toBe('7.7.7.7');
     });
 
-    it('returns null when x-forwarded-for is absent (no shared bucket)', async () => {
+    it('returns null when only x-forwarded-for is present (no shared bucket)', async () => {
+      const { headers } = await import('next/headers');
+      (headers as Mock).mockResolvedValueOnce({
+        get: (name: string) => (name === 'x-forwarded-for' ? '9.9.9.9' : null),
+      });
+      await expect(getServerActionRateLimitIdentifier()).resolves.toBeNull();
+    });
+
+    it('returns null when no trusted header is present (no shared bucket)', async () => {
       const { headers } = await import('next/headers');
       (headers as Mock).mockResolvedValueOnce({ get: () => null });
       await expect(getServerActionRateLimitIdentifier()).resolves.toBeNull();
@@ -234,6 +352,49 @@ describe('Rate Limiter', () => {
     it('propagates RateLimitExceededError when the shared bucket is exhausted', async () => {
       mockReturning.mockResolvedValueOnce([{ requestCount: 61 }]);
       await expect(enforceFileUploadRateLimit('user-123')).rejects.toThrow(RateLimitExceededError);
+    });
+  });
+
+  describe('429 response content', () => {
+    it('over-limit error carries a generic message with no routeKey/count/limit', async () => {
+      mockReturning.mockResolvedValueOnce([{ requestCount: 101 }]);
+      const err = await enforceRateLimit('analytics-events', 'user-1', 100, 60000).catch(
+        (e: unknown) => e
+      );
+      expect(err).toBeInstanceOf(RateLimitExceededError);
+      const e = err as InstanceType<typeof RateLimitExceededError>;
+      expect(e.message).toBe('Too many requests. Please try again later.');
+      expect(e.code).toBe('RATE_LIMIT_EXCEEDED');
+      expect(e.message).not.toContain('analytics-events');
+      expect(e.message).not.toContain('101');
+      expect(e.message).not.toContain('100');
+      expect(e.routeKey).toBe('analytics-events');
+      expect(e.retryAfterSeconds).toBeGreaterThanOrEqual(1);
+      expect(e.retryAfterSeconds).toBeLessThanOrEqual(60);
+    });
+
+    it('withErrorHandler maps it to 429 with Retry-After and a sanitized body', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        const { withErrorHandler } = await import('@/lib/api/errorHandler');
+        const handler = withErrorHandler(async () => {
+          mockReturning.mockResolvedValueOnce([{ requestCount: 101 }]);
+          await enforceRateLimit('analytics-events', 'user-1', 100, 60000);
+          throw new Error('unreachable');
+        });
+        const res = await handler(new Request('http://localhost/api/v1/analytics/events'));
+        expect(res.status).toBe(429);
+        expect(res.headers.get('Retry-After')).toMatch(/^\d+$/);
+        expect(Number(res.headers.get('Retry-After'))).toBeGreaterThanOrEqual(1);
+        const body = JSON.stringify(await res.json());
+        expect(body).toContain('Too many requests. Please try again later.');
+        expect(body).not.toContain('analytics-events');
+        expect(body).not.toContain('101');
+        expect(body).not.toContain('100');
+        expect(body).not.toContain('"limit"');
+      } finally {
+        consoleSpy.mockRestore();
+      }
     });
   });
 });

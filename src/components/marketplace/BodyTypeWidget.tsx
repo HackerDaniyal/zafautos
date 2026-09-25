@@ -39,7 +39,7 @@ export function BodyTypeWidget({ bodyTypes, counts }: BodyTypeWidgetProps) {
   return (
     <div className="rounded-xl bg-white p-4 shadow-sm border border-gray-200">
       <h3 className="text-sm font-semibold text-gray-900 mb-3">Find Cars by Type</h3>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 overflow-hidden">
         {bodyTypes.map((bt) => {
           const img = BODY_TYPE_IMAGES[bt.name.toLowerCase()];
           return (

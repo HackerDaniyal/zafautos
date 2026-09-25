@@ -104,14 +104,14 @@ export function VehicleImageGallery({ images = [], alt = 'Vehicle', className }:
               <Button
                 size="icon"
                 variant="secondary"
-                className="absolute top-3 right-3 z-10 rounded-full bg-black/50 hover:bg-gray-900 text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                className="absolute top-3 right-3 z-10 rounded-full bg-black/50 hover:bg-gray-900 text-white sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm"
                 aria-label="View fullscreen"
               >
                 <Expand className="h-4 w-4" />
               </Button>
             </DialogTrigger>
           </div>
-          <DialogContent className="max-w-7xl w-full h-[90vh] p-0 bg-black/95 border-none" onKeyDown={handleKeyDown}>
+          <DialogContent className="max-w-7xl w-full h-[90vh] p-2 sm:p-0 bg-black/95 border-none" onKeyDown={handleKeyDown}>
             <button onClick={() => setIsDialogOpen(false)} className="absolute top-4 right-4 z-50 text-white/70 hover:text-white transition-colors" aria-label="Close">
               <X className="h-6 w-6" />
             </button>
@@ -151,7 +151,7 @@ export function VehicleImageGallery({ images = [], alt = 'Vehicle', className }:
             <Button
               size="icon"
               variant="secondary"
-              className="absolute top-3 right-3 z-10 rounded-full bg-black/50 hover:bg-gray-900 text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+              className="absolute top-3 right-3 z-10 rounded-full bg-black/50 hover:bg-gray-900 text-white sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm"
               aria-label="View fullscreen"
             >
               <Expand className="h-4 w-4" />
@@ -163,14 +163,14 @@ export function VehicleImageGallery({ images = [], alt = 'Vehicle', className }:
             <>
               <button
                 onClick={() => setSelectedIndex((p) => (p > 0 ? p - 1 : displayImages.length - 1))}
-                className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm"
                 aria-label="Previous image"
               >
                 ‹
               </button>
               <button
                 onClick={() => setSelectedIndex((p) => (p < displayImages.length - 1 ? p + 1 : 0))}
-                className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm"
                 aria-label="Next image"
               >
                 ›
@@ -180,25 +180,25 @@ export function VehicleImageGallery({ images = [], alt = 'Vehicle', className }:
         </div>
 
         {/* Fullscreen Dialog */}
-        <DialogContent className="max-w-7xl w-full h-[90vh] p-0 bg-black/95 border-none" onKeyDown={handleKeyDown}>
-          <button onClick={() => setIsDialogOpen(false)} className="absolute top-4 right-4 z-50 text-white/70 hover:text-white transition-colors" aria-label="Close fullscreen">
-            <X className="h-6 w-6" />
-          </button>
-          <Carousel
-            className="w-full h-full flex flex-col"
-            opts={{ startIndex: selectedIndex, loop: true }}
-            setApi={(api) => {
-              if (!api) return;
-              api.on('select', () => setSelectedIndex(api.selectedScrollSnap()));
-            }}
-          >
-            <div className="absolute top-4 left-4 z-50 text-white font-medium bg-black/50 px-3 py-1.5 rounded-full backdrop-blur-md text-sm tabular-nums">
-              {selectedIndex + 1} / {displayImages.length}
-            </div>
-            <CarouselContent className="h-full flex-1 ml-0">
-              {displayImages.map((src, idx) => (
-                <CarouselItem key={idx} className="relative h-full flex items-center justify-center pl-0">
-                  <div className="relative w-full h-full p-6 md:p-16">
+          <DialogContent className="max-w-7xl w-full h-[90vh] p-2 sm:p-0 bg-black/95 border-none" onKeyDown={handleKeyDown}>
+            <button onClick={() => setIsDialogOpen(false)} className="absolute top-4 right-4 z-50 text-white/70 hover:text-white transition-colors" aria-label="Close fullscreen">
+              <X className="h-6 w-6" />
+            </button>
+            <Carousel
+              className="w-full h-full flex flex-col"
+              opts={{ startIndex: selectedIndex, loop: true }}
+              setApi={(api) => {
+                if (!api) return;
+                api.on('select', () => setSelectedIndex(api.selectedScrollSnap()));
+              }}
+            >
+              <div className="absolute top-4 left-4 z-50 text-white font-medium bg-black/50 px-3 py-1.5 rounded-full backdrop-blur-md text-sm tabular-nums">
+                {selectedIndex + 1} / {displayImages.length}
+              </div>
+              <CarouselContent className="h-full flex-1 ml-0">
+                {displayImages.map((src, idx) => (
+                  <CarouselItem key={idx} className="relative h-full flex items-center justify-center pl-0">
+                    <div className="relative w-full h-full p-4 sm:p-6 md:p-16">
                     <img
                       src={src}
                       alt={`${alt} — fullscreen ${idx + 1}`}

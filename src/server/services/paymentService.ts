@@ -1,6 +1,7 @@
 ﻿import { PaymentsRepository } from '@/server/repositories';
 import { z } from 'zod';
 import { PaymentNotFoundError, ValidationError, InvoiceNotFoundError, TransactionNotFoundError } from './errors';
+import { providerMessage } from '@/lib/errors/providerMessage';
 import { auditService } from './auditService';
 import { isValidPaymentTransition, isValidInvoiceTransition, type PaymentStatus, type InvoiceStatus } from '@/lib/types/payment';
 import { notificationService } from './notificationService';
@@ -369,7 +370,7 @@ export class PaymentService {
         await this.changePaymentStatus(id, status, userId);
         results.push({ id, success: true });
       } catch (error) {
-        results.push({ id, success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+        results.push({ id, success: false, error: error instanceof Error ? providerMessage(error.message, 'Operation failed') : 'Unknown error' });
       }
     }
     return results;
@@ -382,7 +383,7 @@ export class PaymentService {
         await this.softDeletePayment(id, userId);
         results.push({ id, success: true });
       } catch (error) {
-        results.push({ id, success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+        results.push({ id, success: false, error: error instanceof Error ? providerMessage(error.message, 'Operation failed') : 'Unknown error' });
       }
     }
     return results;
@@ -488,7 +489,7 @@ export class PaymentService {
         await this.softDeleteInvoice(id, userId);
         results.push({ id, success: true });
       } catch (error) {
-        results.push({ id, success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+        results.push({ id, success: false, error: error instanceof Error ? providerMessage(error.message, 'Operation failed') : 'Unknown error' });
       }
     }
     return results;

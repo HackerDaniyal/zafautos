@@ -176,7 +176,7 @@ export default async function VehiclesPage({ searchParams }: VehiclesPageProps) 
         <div className="mx-auto max-w-[1440px] px-4 py-10">
           <div className="mb-8 space-y-2">
             <div className="h-10 w-48 rounded bg-muted animate-pulse" />
-            <div className="h-5 w-96 rounded bg-muted animate-pulse" />
+            <div className="h-5 w-full max-w-md rounded bg-muted animate-pulse" />
           </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (

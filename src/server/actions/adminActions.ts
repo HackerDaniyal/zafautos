@@ -1,6 +1,8 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
+import { providerMessage } from '@/lib/errors/providerMessage';
 import { UserProvisioningService } from '@/server/services/userProvisioningService';
 import { handleError, type ActionResult } from '@/lib/errors/action-error';
 import { requireRole } from '@/lib/auth/rbac';
@@ -29,7 +31,7 @@ export async function adminBootstrap(data: {
       };
     }
 
-    const supabase = await createClient();
+    const supabase = createServiceRoleClient();
 
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: data.email,
@@ -42,7 +44,7 @@ export async function adminBootstrap(data: {
     });
 
     if (authError) {
-      return { success: false, error: authError.message, code: 'AUTH_ERROR' };
+      return { success: false, error: providerMessage(authError.message, 'User creation failed'), code: 'AUTH_ERROR' };
     }
 
     if (!authData.user) {
@@ -103,7 +105,7 @@ export async function inviteUser(data: {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-    const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
+    const { data: inviteData, error: inviteError } = await createServiceRoleClient().auth.admin.inviteUserByEmail(
       data.email,
       {
         redirectTo: `${appUrl}/auth/accept-invite`,
@@ -116,7 +118,7 @@ export async function inviteUser(data: {
     );
 
     if (inviteError) {
-      return { success: false, error: inviteError.message, code: 'AUTH_ERROR' };
+      return { success: false, error: providerMessage(inviteError.message, 'Invitation failed'), code: 'AUTH_ERROR' };
     }
 
     if (!inviteData.user) {
@@ -256,9 +258,9 @@ export async function deleteUser(targetUserId: string): Promise<ActionResult> {
 
     await userService.softDeleteUser(targetUserId, user.id);
 
-    const { error: deleteError } = await supabase.auth.admin.deleteUser(targetUserId);
+    const { error: deleteError } = await createServiceRoleClient().auth.admin.deleteUser(targetUserId);
     if (deleteError) {
-      return { success: false, error: deleteError.message, code: 'AUTH_ERROR' };
+      return { success: false, error: providerMessage(deleteError.message, 'User deletion failed'), code: 'AUTH_ERROR' };
     }
 
     return { success: true, data: undefined };
@@ -288,13 +290,13 @@ export async function adminResetPassword(targetUserId: string): Promise<ActionRe
       return { success: false, error: 'User not found', code: 'USER_NOT_FOUND' };
     }
 
-    const { error } = await supabase.auth.admin.generateLink({
+    const { error } = await createServiceRoleClient().auth.admin.generateLink({
       type: 'magiclink',
       email: target.email,
     });
 
     if (error) {
-      return { success: false, error: error.message, code: 'AUTH_ERROR' };
+      return { success: false, error: providerMessage(error.message, 'Password reset failed'), code: 'AUTH_ERROR' };
     }
 
     return { success: true, data: undefined };
@@ -330,12 +332,12 @@ export async function resendInvitation(targetUserId: string): Promise<ActionResu
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-    const { error } = await supabase.auth.admin.inviteUserByEmail(target.email, {
+    const { error } = await createServiceRoleClient().auth.admin.inviteUserByEmail(target.email, {
       redirectTo: `${appUrl}/auth/accept-invite`,
     });
 
     if (error) {
-      return { success: false, error: error.message, code: 'AUTH_ERROR' };
+      return { success: false, error: providerMessage(error.message, 'Invitation failed'), code: 'AUTH_ERROR' };
     }
 
     return { success: true, data: undefined };

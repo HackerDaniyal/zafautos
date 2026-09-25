@@ -183,7 +183,7 @@ export function PublicFooter({ menuItems = [], company }: PublicFooterProps) {
             <div className="flex items-center gap-1.5 text-sm text-gray-400">
               <span>Developed by</span>
               <a
-                href="https://daniyalalam.com"
+                href="https://daniyalalam.online"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-semibold text-white hover:text-signal-red transition-colors"

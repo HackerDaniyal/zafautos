@@ -1,6 +1,7 @@
 ﻿import { ShippingRepository } from '@/server/repositories';
 import { z } from 'zod';
 import { ShipmentNotFoundError, ValidationError, InvalidOrderStatusTransitionError } from './errors';
+import { providerMessage } from '@/lib/errors/providerMessage';
 import { isValidShipmentTransition, type ShipmentStatus } from '@/lib/types/shipping';
 import { db } from '@/server/db/client';
 import { orders } from '@/server/db/schema/orders';
@@ -327,7 +328,7 @@ export class ShippingService {
         results.push({
           id,
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? providerMessage(error.message, 'Operation failed') : 'Unknown error',
         });
       }
     }
@@ -347,7 +348,7 @@ export class ShippingService {
         results.push({
           id,
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? providerMessage(error.message, 'Operation failed') : 'Unknown error',
         });
       }
     }

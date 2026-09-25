@@ -20,7 +20,7 @@ export function HeroContainer({
   ...props
 }: HeroContainerProps) {
   return (
-    <div className={cn("relative overflow-hidden bg-gray-50 py-24 md:py-32 lg:py-40", className)} {...props}>
+    <div className={cn("relative overflow-hidden bg-gray-50 py-14 sm:py-20 md:py-32 lg:py-40", className)} {...props}>
       {backgroundSlot && (
         <div className="absolute inset-0 z-0">
           {backgroundSlot}
@@ -35,14 +35,14 @@ export function HeroContainer({
       <MainContainer className="relative z-10 flex justify-center">
         <div className="flex max-w-[800px] flex-col items-center text-center gap-6">
           <h1 className={cn(
-            "font-[Oswald] text-5xl font-bold uppercase leading-[0.95] tracking-[0.5px] sm:text-6xl md:text-7xl lg:text-[72px]",
+            "font-[Oswald] text-3xl font-bold uppercase leading-[0.95] tracking-[0.5px] sm:text-5xl md:text-6xl lg:text-7xl xl:text-[72px]",
             hasBackground ? "text-white" : "text-gray-900"
           )}>
             {title}
           </h1>
           {subtitle && (
             <p className={cn(
-              "max-w-[600px] text-lg leading-relaxed sm:text-xl",
+              "max-w-[600px] text-base leading-relaxed sm:text-lg md:text-xl",
               hasBackground ? "text-white/80" : "text-gray-600"
             )}>
               {subtitle}

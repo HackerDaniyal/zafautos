@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth, getSession } from '@/lib/auth/session';
 import { requireRole, requirePermission } from '@/lib/auth/rbac';
 import { apiError } from '@/lib/api/response';
+import { RateLimitExceededError } from '@/lib/api/rateLimiter';
 import { DomainError } from '@/server/services/errors';
 import { ZodError } from 'zod';
 import type { AuthContext, UserRole } from '@/lib/auth/types';
@@ -19,6 +20,21 @@ type AuthOptions = {
   permission?: string;
 };
 
+/** Generic 429 — no routeKey/count/limit (calibration info); Retry-After when known. */
+function rateLimitErrorResponse(error: DomainError): NextResponse {
+  const headers = new Headers();
+  if (error instanceof RateLimitExceededError && error.retryAfterSeconds) {
+    headers.set('Retry-After', String(error.retryAfterSeconds));
+  }
+  return apiError(
+    'Too many requests. Please try again later.',
+    'RATE_LIMIT_EXCEEDED',
+    429,
+    undefined,
+    headers,
+  );
+}
+
 function authErrorResponse(error: unknown): NextResponse {
   // Auth-layer failures only — never echo raw messages for unexpected errors.
   if (error instanceof ZodError) {
@@ -26,7 +42,7 @@ function authErrorResponse(error: unknown): NextResponse {
   }
   if (error instanceof DomainError) {
     if (error.code === 'RATE_LIMIT_EXCEEDED') {
-      return apiError('Too many requests. Please try again later.', 'RATE_LIMIT_EXCEEDED', 429);
+      return rateLimitErrorResponse(error);
     }
     if (error.code === 'UNAUTHORIZED' || error.code === 'SESSION_EXPIRED') {
       return apiError(error.message, error.code, 401);
@@ -46,7 +62,7 @@ function handlerErrorResponse(error: unknown): NextResponse {
   }
   if (error instanceof DomainError) {
     if (error.code === 'RATE_LIMIT_EXCEEDED') {
-      return apiError('Too many requests. Please try again later.', 'RATE_LIMIT_EXCEEDED', 429);
+      return rateLimitErrorResponse(error);
     }
     if (
       error.code === 'UNAUTHORIZED' ||

@@ -1,6 +1,7 @@
 ﻿import React from 'react';
 import { PublicNavbar } from '@/components/layout/PublicNavbar';
 import { PublicFooter } from '@/components/layout/PublicFooter';
+import { BackToTopCar } from '@/components/layout/BackToTopCar';
 import { PublicCurrencyLayout } from '@/components/layout/PublicCurrencyLayout';
 import { WishlistCompareProvider } from '@/contexts/WishlistCompareContext';
 import { CmsRepository } from '@/server/repositories';
@@ -132,6 +133,7 @@ export default async function PublicLayout({
             {children}
           </main>
           <PublicFooter menuItems={footerMenu} company={companySettings} />
+          <BackToTopCar />
         </div>
       </WishlistCompareProvider>
     </PublicCurrencyLayout>

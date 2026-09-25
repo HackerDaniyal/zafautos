@@ -24,8 +24,8 @@ export function CompareBar({
 
   return (
     <div className={cn('fixed inset-x-0 bottom-0 bg-white border-t border-gray-200 py-3 md:static md:bottom-auto md:rounded-lg md:my-4', className)}>
-      <div className="mx-auto flex max-w-[1280px] items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-2">
+      <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-2 px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
           {selectedIds.map((id) => (
             <div key={id} className="flex items-center gap-1 rounded bg-gray-50 px-2 py-1 text-sm">
               <span className="text-gray-900">{id}</span>

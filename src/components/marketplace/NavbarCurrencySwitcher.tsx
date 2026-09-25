@@ -54,7 +54,7 @@ export function NavbarCurrencySwitcher() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 w-48 rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden">
+        <div className="absolute right-0 top-full mt-1 z-50 w-48 max-w-[calc(100vw-1rem)] rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden">
           <div className="max-h-64 overflow-y-auto py-1">
             {activeCurrencies.map((currency) => {
               const isActive = currency.code === selectedCurrency;

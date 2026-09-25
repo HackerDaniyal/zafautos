@@ -58,7 +58,7 @@ export function QuickSearch({ makes, bodyTypes }: QuickSearchProps) {
   return (
     <div className="relative -mt-12 z-20 mx-auto w-full max-w-5xl px-4 flex flex-col">
       <div className="rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-md">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
           <div className="space-y-1.5">
             <Label className="text-[11px] font-medium text-gray-500">Make</Label>
             <select
@@ -129,7 +129,7 @@ export function QuickSearch({ makes, bodyTypes }: QuickSearchProps) {
             </select>
           </div>
 
-          <div className="flex items-end">
+          <div className="col-span-full sm:col-span-1 flex items-end">
             <Button
               type="button"
               onClick={handleSearch}

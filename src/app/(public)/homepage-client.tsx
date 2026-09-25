@@ -17,6 +17,7 @@ import { MainContainer } from '@/components/layout/MainContainer';
 import { ContinentFilter } from '@/components/marketplace/ContinentFilter';
 import { WidgetVehicleCard } from '@/components/marketplace/WidgetVehicleCard';
 import { BodyTypeWidget } from '@/components/marketplace/BodyTypeWidget';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
@@ -227,15 +228,49 @@ export function HomepageClient({
         {/* Quick Search */}
         <QuickSearch makes={filteredMakes} bodyTypes={bodyTypes} />
 
+        {/* Mobile Browsing Controls — compact, before vehicle results */}
+        <MainContainer className="pt-4 pb-2 lg:hidden">
+          <div className="flex flex-col gap-3">
+            <CurrencySwitcher variant="sidebar" />
+            <Accordion type="single" collapsible className="rounded-xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+              <AccordionItem value="destination" className="border-b-0 px-4">
+                <AccordionTrigger className="py-3 text-sm font-semibold text-gray-900 hover:no-underline hover:text-[#E5231B]">
+                  Destination Country
+                </AccordionTrigger>
+                <AccordionContent className="pb-4 pt-0">
+                  <ContinentFilter
+                    variant="sidebar"
+                    navigationMode
+                    continents={filteredContinents}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+            <Accordion type="single" collapsible className="rounded-xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+              <AccordionItem value="bodytype" className="border-b-0 px-4">
+                <AccordionTrigger className="py-3 text-sm font-semibold text-gray-900 hover:no-underline hover:text-[#E5231B]">
+                  Find Cars by Type
+                </AccordionTrigger>
+                <AccordionContent className="pb-4 pt-0">
+                  <BodyTypeWidget
+                    bodyTypes={bodyTypes}
+                    counts={Object.fromEntries(bodyTypes.map((bt) => [bt.name, bt.count ?? 0]))}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+        </MainContainer>
+
         {/* Vehicle Listings with Sidebar */}
         <MainContainer className="pt-6 pb-4 lg:pt-8 lg:pb-4">
           <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr_220px] gap-5 lg:gap-6 items-start">
             {/* Left Sidebar */}
             <MarketplaceSidebar filters={filters} onFilterChange={setFilters} makes={filteredMakes} />
             <div className="flex flex-col gap-6">
-              {/* Compact Vehicle Cards — 6 per row */}
+              {/* Compact Vehicle Cards — responsive grid */}
               {compact33.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                   {compact33.map((vehicle) => (
                     <WidgetVehicleCard key={vehicle.id} vehicle={vehicle} />
                   ))}
@@ -243,7 +278,7 @@ export function HomepageClient({
               )}
             </div>
 
-            {/* Right Sidebar - Currency + Destination Country + Body Type */}
+            {/* Right Sidebar - Desktop only */}
             <aside className="hidden lg:flex flex-col gap-4">
               <CurrencySwitcher variant="sidebar" />
               <div className="rounded-xl bg-white p-4 shadow-sm border border-gray-200">

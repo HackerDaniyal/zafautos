@@ -1,6 +1,8 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
+import { providerMessage } from '@/lib/errors/providerMessage';
 import { UserProvisioningService } from '@/server/services/userProvisioningService';
 import { AuthRepository } from '@/server/repositories';
 import { profiles } from '@/server/db/schema';
@@ -100,7 +102,7 @@ export async function login(data: LoginInput): Promise<ActionResult<{ role: stri
           code: 'EMAIL_NOT_CONFIRMED',
         };
       }
-      return { success: false, error: error.message, code: 'AUTH_ERROR' };
+      return { success: false, error: providerMessage(error.message, 'Unable to sign in. Please try again.'), code: 'AUTH_ERROR' };
     }
 
     const dbUser = await userService.findUserById(authData.user.id);
@@ -180,7 +182,7 @@ export async function register(data: RegisterInput): Promise<ActionResult> {
   } catch (error) {
     if (authUserId) {
       try {
-        const supabase = await createClient();
+        const supabase = createServiceRoleClient();
         await supabase.auth.admin.deleteUser(authUserId);
       } catch {
         // Best-effort cleanup
@@ -200,7 +202,7 @@ export async function logout(): Promise<ActionResult> {
     const { error } = await supabase.auth.signOut();
 
     if (error) {
-      return { success: false, error: error.message, code: 'AUTH_ERROR' };
+      return { success: false, error: providerMessage(error.message, 'Unable to sign out. Please try again.'), code: 'AUTH_ERROR' };
     }
 
     try { await clearRoleCookie(); } catch { /* non-fatal */ }
@@ -228,7 +230,7 @@ export async function forgotPassword(data: ForgotPasswordInput): Promise<ActionR
     });
 
     if (error) {
-      return { success: false, error: error.message, code: 'AUTH_ERROR' };
+      return { success: false, error: providerMessage(error.message, 'Unable to send the password reset email. Please try again later.'), code: 'AUTH_ERROR' };
     }
 
     return { success: true, data: undefined };
@@ -252,7 +254,7 @@ export async function resetPassword(data: ResetPasswordInput): Promise<ActionRes
     });
 
     if (error) {
-      return { success: false, error: error.message, code: 'AUTH_ERROR' };
+      return { success: false, error: providerMessage(error.message, 'Unable to reset the password. Please try again.'), code: 'AUTH_ERROR' };
     }
 
     return { success: true, data: undefined };
@@ -302,7 +304,7 @@ export async function changePassword(data: ChangePasswordInput): Promise<ActionR
     });
 
     if (updateError) {
-      return { success: false, error: updateError.message, code: 'AUTH_ERROR' };
+      return { success: false, error: providerMessage(updateError.message, 'Unable to update the password. Please try again.'), code: 'AUTH_ERROR' };
     }
 
     return { success: true, data: undefined };
@@ -331,7 +333,7 @@ export async function resendVerification(email: string): Promise<ActionResult> {
     });
 
     if (error) {
-      return { success: false, error: error.message, code: 'AUTH_ERROR' };
+      return { success: false, error: providerMessage(error.message, 'Unable to send the verification email. Please try again later.'), code: 'AUTH_ERROR' };
     }
 
     return { success: true, data: undefined };
@@ -445,7 +447,7 @@ export async function adminCreateUser(data: {
       };
     }
 
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    const { data: authData, error: authError } = await createServiceRoleClient().auth.admin.createUser({
       email: data.email,
       password: data.password,
       email_confirm: true,
@@ -478,7 +480,7 @@ export async function adminCreateUser(data: {
   } catch (error) {
     if (authUserId) {
       try {
-        const supabase = await createClient();
+        const supabase = createServiceRoleClient();
         await supabase.auth.admin.deleteUser(authUserId);
       } catch {
         // Best-effort cleanup

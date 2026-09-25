@@ -51,21 +51,23 @@ export default function ShippingError({
           </Button>
         </div>
 
-        <button
-          onClick={() => setShowDetails(!showDetails)}
-          className={cn(
-            'mt-6 inline-flex items-center gap-1.5 text-sm text-ash transition-colors hover:text-pure-white',
-          )}
-        >
-          {showDetails ? (
-            <ChevronUp className="size-4" />
-          ) : (
-            <ChevronDown className="size-4" />
-          )}
-          {showDetails ? 'Hide details' : 'Show details'}
-        </button>
+        {process.env.NODE_ENV === 'development' && (
+          <button
+            onClick={() => setShowDetails(!showDetails)}
+            className={cn(
+              'mt-6 inline-flex items-center gap-1.5 text-sm text-ash transition-colors hover:text-pure-white',
+            )}
+          >
+            {showDetails ? (
+              <ChevronUp className="size-4" />
+            ) : (
+              <ChevronDown className="size-4" />
+            )}
+            {showDetails ? 'Hide details' : 'Show details'}
+          </button>
+        )}
 
-        {showDetails && (
+        {process.env.NODE_ENV === 'development' && showDetails && (
           <pre className="mt-4 max-h-60 overflow-auto rounded-[6px] border border-iron bg-deep-carbon p-4 text-left text-xs text-ash">
             {error.stack || error.message}
           </pre>

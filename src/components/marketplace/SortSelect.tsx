@@ -35,7 +35,7 @@ export function SortSelect({
 }: SortSelectProps) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className={cn('w-[200px] rounded-[6px] border border-gray-200 bg-gray-50 text-gray-900', className)}>
+      <SelectTrigger className={cn('w-full max-w-[200px] rounded-[6px] border border-gray-200 bg-gray-50 text-gray-900', className)}>
         <ArrowUpDown className="mr-2 h-4 w-4 text-gray-500" />
         <SelectValue placeholder="Sort by" />
       </SelectTrigger>

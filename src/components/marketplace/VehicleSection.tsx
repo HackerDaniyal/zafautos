@@ -21,15 +21,15 @@ export function VehicleSection({ vehicles, className }: VehicleSectionProps) {
   return (
     <div
       className={cn(
-        'grid grid-cols-1 items-stretch gap-3',
-        'sm:grid-cols-2 sm:gap-3.5',
-        'md:grid-cols-3 md:gap-3.5',
-        'lg:grid-cols-5 lg:gap-4',
+        'flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory',
+        'lg:grid lg:grid-cols-5 lg:gap-4 lg:overflow-visible lg:pb-0 lg:snap-none',
         className
       )}
     >
       {unique.map((vehicle) => (
-        <CompactVehicleCard key={vehicle.id} vehicle={vehicle} />
+        <div key={vehicle.id} className="min-w-[260px] max-w-[260px] snap-start lg:min-w-0 lg:max-w-none lg:snap-none">
+          <CompactVehicleCard vehicle={vehicle} />
+        </div>
       ))}
     </div>
   );

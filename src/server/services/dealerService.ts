@@ -3,6 +3,7 @@ import { users } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { DealerNotFoundError, ValidationError } from './errors';
+import { providerMessage } from '@/lib/errors/providerMessage';
 import { isValidDealerTransition, type DealerStatus } from '@/lib/types/dealer';
 
 // ──────────────────────────────────────────────────────────────
@@ -158,7 +159,7 @@ export class DealerService {
         results.push({
           id,
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? providerMessage(error.message, 'Operation failed') : 'Unknown error',
         });
       }
     }
@@ -175,7 +176,7 @@ export class DealerService {
         results.push({
           id,
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? providerMessage(error.message, 'Operation failed') : 'Unknown error',
         });
       }
     }

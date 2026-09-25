@@ -1,4 +1,6 @@
-﻿import React from 'react';
+﻿"use client";
+
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -42,6 +44,15 @@ const DEFAULT_NAV_ITEMS: { name: string; href: string; external?: boolean; openI
 ];
 
 export function PublicNavbar({ menuItems = [] }: PublicNavbarProps) {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const hasMenuItems = menuItems.length > 0;
   const navItems = hasMenuItems
     ? menuItems
@@ -56,7 +67,13 @@ export function PublicNavbar({ menuItems = [] }: PublicNavbarProps) {
     : DEFAULT_NAV_ITEMS;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#0A0A0A] backdrop-blur supports-[backdrop-filter]:bg-[#0A0A0A]/95">
+      <header
+      className={`sticky top-0 z-50 w-full bg-[#0A0A0A] backdrop-blur-lg supports-[backdrop-filter]:bg-[#0A0A0A]/95 transition-all duration-300 ${
+        scrolled
+          ? 'border-b border-[#1A1A1A] shadow-lg shadow-black/30'
+          : 'border-b border-transparent'
+      }`}
+    >
       <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between px-4 md:px-6 lg:px-8">
         {/* Logo */}
         <div className="flex gap-6 md:gap-10">
@@ -91,10 +108,8 @@ export function PublicNavbar({ menuItems = [] }: PublicNavbarProps) {
         </div>
 
         {/* CTA & Mobile Nav */}
-        <div className="flex items-center gap-3">
-          <div className="hidden md:block">
-            <NavbarCurrencySwitcher />
-          </div>
+        <div className="flex items-center gap-2 md:gap-3">
+          <NavbarCurrencySwitcher />
           <Link href="/login" className="hidden md:block">
             <Button variant="ghost" className="text-gray-300 hover:text-white hover:bg-white/10">
               Login
@@ -141,9 +156,6 @@ export function PublicNavbar({ menuItems = [] }: PublicNavbarProps) {
                   )
                 ))}
                 <div className="h-4" />
-                <div className="px-1">
-                  <NavbarCurrencySwitcher />
-                </div>
                 <Link href="/login" className="w-full">
                   <Button variant="outline" className="w-full justify-start border-white/20 text-white hover:bg-white/10 rounded-[6px]">
                     Login

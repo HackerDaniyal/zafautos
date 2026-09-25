@@ -3,6 +3,7 @@ import { users } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { CustomerNotFoundError, ValidationError } from './errors';
+import { providerMessage } from '@/lib/errors/providerMessage';
 import { isValidCustomerTransition, type CustomerStatus } from '@/lib/types/customer';
 
 // ──────────────────────────────────────────────────────────────
@@ -190,7 +191,7 @@ export class CustomerService {
         results.push({
           id,
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? providerMessage(error.message, 'Operation failed') : 'Unknown error',
         });
       }
     }
@@ -210,7 +211,7 @@ export class CustomerService {
         results.push({
           id,
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? providerMessage(error.message, 'Operation failed') : 'Unknown error',
         });
       }
     }

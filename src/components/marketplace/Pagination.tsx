@@ -39,7 +39,7 @@ export function Pagination({
   });
 
   return (
-    <nav className={cn('flex items-center space-x-2', className)} aria-label="Pagination">
+    <nav className={cn('flex items-center gap-1 overflow-x-auto scrollbar-none', className)} aria-label="Pagination">
       <Button variant="ghost" size="icon" onClick={handlePrev} disabled={currentPage === 1} aria-label="Previous page">
         <ChevronLeft className="h-4 w-4" />
       </Button>

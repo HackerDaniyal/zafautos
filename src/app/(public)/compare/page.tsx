@@ -47,7 +47,7 @@ function VehiclePicker({ onSelect, excluded }: { onSelect: (v: CompareVehicle) =
       <button
         type="button"
         onClick={handleOpen}
-        className="w-full h-full min-h-[300px] flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-gray-300 text-gray-400 hover:border-[#E5231B]/40 hover:text-[#E5231B] transition-colors"
+        className="w-full h-full min-h-[200px] sm:min-h-[300px] flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-gray-300 text-gray-400 hover:border-[#E5231B]/40 hover:text-[#E5231B] transition-colors"
       >
         <Scale className="h-8 w-8" strokeWidth={1.5} />
         <span className="text-sm font-semibold uppercase tracking-wider">Add Vehicle</span>
@@ -224,7 +224,7 @@ export default function ComparePage() {
         </div>
 
         {/* Vehicle Cards */}
-        <div className="grid grid-cols-2 gap-8 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 mb-10">
           {selected.map((v) => (
             <CompareColumn key={v.id} vehicle={v} onRemove={() => removeVehicle(v.id)} />
           ))}
@@ -236,7 +236,8 @@ export default function ComparePage() {
         {/* Comparison Table */}
         {selected.length >= 2 && (
           <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[600px]">
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-5 text-xs font-semibold text-gray-400 uppercase tracking-wider bg-gray-50 w-40">Spec</th>
@@ -270,6 +271,7 @@ export default function ComparePage() {
                 })}
               </tbody>
             </table>
+            </div>
             {SPEC_KEYS.length > 5 && (
               <div className="border-t border-gray-100 py-2 text-center">
                 <button

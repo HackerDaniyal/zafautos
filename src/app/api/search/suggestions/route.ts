@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/server/db/client';
 import { manufacturers, models, vehicles } from '@/server/db/schema';
 import { and, like, sql, eq, isNull } from 'drizzle-orm';
-import { enforceRateLimit, getRateLimitIdentifier } from '@/lib/api/rateLimiter';
+import { enforceRateLimit, getRateLimitIdentifier, RateLimitExceededError } from '@/lib/api/rateLimiter';
 import { apiError } from '@/lib/api/response';
 
 const MAX_SUGGESTIONS = 8;
@@ -13,8 +13,12 @@ const RATE_WINDOW_MS = 60 * 1000;
 export async function GET(request: NextRequest) {
   try {
     await enforceRateLimit('search-suggestions', getRateLimitIdentifier(request), RATE_LIMIT, RATE_WINDOW_MS);
-  } catch {
-    return apiError('Too many requests. Please try again later.', 'RATE_LIMITED', 429);
+  } catch (error) {
+    const headers = new Headers();
+    if (error instanceof RateLimitExceededError && error.retryAfterSeconds) {
+      headers.set('Retry-After', String(error.retryAfterSeconds));
+    }
+    return apiError('Too many requests. Please try again later.', 'RATE_LIMITED', 429, undefined, headers);
   }
 
   const { searchParams } = new URL(request.url);

@@ -29,11 +29,11 @@ interface SpecRowProps {
 
 function SpecRow({ label, value }: SpecRowProps) {
   return (
-    <div className="flex items-center gap-4 py-2.5 border-b border-gray-200 last:border-0">
-      <dt className="w-32 shrink-0 text-[11px] font-medium text-gray-500 uppercase tracking-[0.08em]">
+    <div className="flex items-start gap-4 py-2.5 border-b border-gray-200 last:border-0">
+      <dt className="w-24 sm:w-32 shrink-0 text-[11px] font-medium text-gray-500 uppercase tracking-[0.08em]">
         {label}
       </dt>
-      <dd className="text-[13px] font-medium text-gray-900">{value}</dd>
+      <dd className="min-w-0 text-[13px] font-medium text-gray-900 break-words">{value}</dd>
     </div>
   );
 }
