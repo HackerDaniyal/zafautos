@@ -145,9 +145,9 @@ export function VehicleDetailClient({ vehicle, images, features, similar }: Vehi
         <span className="text-gray-900">{vehicle.year} {vehicle.make} {vehicle.model}</span>
       </nav>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_380px]">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
         {/* Left: Gallery + Details */}
-        <div className="space-y-8">
+        <div className="min-w-0 space-y-8">
           {/* Image Gallery */}
           <VehicleImageGallery images={galleryImages} alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} />
 
